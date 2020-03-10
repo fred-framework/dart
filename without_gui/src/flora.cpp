@@ -22,9 +22,6 @@ flora::flora(input_to_flora *input_fl)
         cout <<"Please a number of slots > 0";
         exit(-1);
     }
-    
-    
-
 }
 
 flora::~flora()
@@ -48,9 +45,6 @@ void flora::clear_vectors()
     y_vector.clear();
     w_vector.clear();
     h_vector.clear();
-
-
-
 }
 
 void flora::prep_input()
@@ -81,7 +75,6 @@ void flora::prep_input()
              << dsp_vector[ptr] << endl;
       }
     }
-
 
 void flora::start_optimizer()
 {
