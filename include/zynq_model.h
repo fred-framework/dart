@@ -30,9 +30,13 @@ typedef struct {
     Vec *dsp;
     Vec2d* conn_vector;
     Vecpos *fbdn_slot;
+    Taskset *task_set;
+    Platform *platform;
+    vector<double> *slacks;
 }param_to_solver;
 
 typedef  struct{
+    unsigned long num_partition;
     std::vector<int> *x;
     std::vector<int> *y;
     std::vector<int> *w;
@@ -40,6 +44,7 @@ typedef  struct{
     std::vector<int> *clb_from_solver;
     std::vector<int> *bram_from_solver;
     std::vector<int> *dsp_from_solver;
+    
 }param_from_solver;
 
 int zynq_start_optimizer(param_to_solver *, param_from_solver *);
