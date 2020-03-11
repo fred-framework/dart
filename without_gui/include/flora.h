@@ -48,17 +48,8 @@ class flora //: public QDialog
     //Q_OBJECT
 
 public:
-    //explicit fp(QWidget *parent = nullptr);
     explicit flora(input_to_flora*);
     ~flora();
-/*
-    QGraphicsScene scene;
-    QGraphicsRectItem *fp_rect;
-    QBrush brush, brush_background;
-    QTableWidget *table;
-    QString file_path;
-*/
-
 
     zynq_7010 *zynq;
 
@@ -67,15 +58,11 @@ public:
     virtex_5 *virt_5;
     pynq *pynq_inst;
  */ 
-//    QString str;
     param_to_solver param;
     input_to_flora *flora_input;
 
     unsigned long num_slots = 0;
-    bool paint_rect = false;
     enum fpga_type type = ZYNQ;
-    unsigned long virtex_scale = 3;
-    float utilization;
     unsigned long connections;
 
     std::vector<unsigned long> clb_vector =  std::vector<unsigned long>(MAX_SLOTS);
@@ -115,31 +102,18 @@ public:
                                     &bram_from_solver,
                                     &dsp_from_solver};
 
-    unsigned long clb_width = 10;
-    unsigned long clb_height = 8, bram_height = 40, dsp_height = 20;
-    unsigned long total_height;
+    std::vector<std::string> cell_name = std::vector<std::string>(MAX_SLOTS);
 
     void clear_vectors();
     void prep_input();
     void start_optimizer();
+    void generate_xdc();
 
     void init_fpga(enum fpga_type);
     void init_gui();
     void plot_rects(param_from_solver *);
     bool is_compatible(std::vector<slot> ptr, unsigned long slot_num, int max, unsigned long min, int type);
 
-//private:
-//    Ui::fp *ui;
-/*
-private slots:
-    void set_pressed();
-    void enter_pressed();
-    void start_pressed();
-    void set_browse();
-    void fpga_pressed();
-    void set_util();
-    void generate_xdc();
-*/
 };
 
 #endif // FP_H

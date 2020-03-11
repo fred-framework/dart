@@ -12,5 +12,7 @@ int main(int argc, char* argv[])
     fl.clear_vectors();
     fl.prep_input();
     fl.start_optimizer();
+    fl.generate_xdc();
+
     return 0;
 }

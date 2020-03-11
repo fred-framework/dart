@@ -1,4 +1,6 @@
 #include "flora.h"
+#include "fine_grained.h"
+#include "generate_xdc.h"
 #include "fpga.h"
 #include <iostream>
 #include <string>
@@ -70,7 +72,10 @@ void flora::prep_input()
 
         str = csv_data.get_value(i, k++);
         dsp_vector[ptr] = std::stoi(str);
+        
+        cell_name[i] = csv_data.get_value(i, k++);
         k = 0;
+
         cout << "\t " << clb_vector[ptr] << "\t " << bram_vector[ptr] << "\t " 
              << dsp_vector[ptr] << endl;
       }
@@ -106,9 +111,21 @@ void flora::start_optimizer()
     }
 
 }
-//call milp solver
 
+void flora::generate_xdc()
+{
+    param_from_solver *from_sol_ptr = &from_solver;
 
+    if(type == ZYNQ) {
+        zynq_fine_grained *fg_zynq_instance = new zynq_fine_grained();
+        generate_xdc_file(fg_zynq_instance, from_sol_ptr, param, num_slots, cell_name);
+    }
+
+    else if(type ==PYNQ) {
+        pynq_fine_grained *fg_pynq_instance = new pynq_fine_grained();
+        generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, num_slots, cell_name);
+    }
+}
 
 //call generate xdc
 
