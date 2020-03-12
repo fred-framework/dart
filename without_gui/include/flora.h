@@ -36,7 +36,7 @@ typedef struct{
 }slot;
 
 typedef struct{
-    unsigned long num_slots;
+    unsigned long num_rm_modules;
     fpga_type type_of_fpga;
     std::string path_to_input;
 }input_to_flora;
@@ -61,7 +61,7 @@ public:
     param_to_solver param;
     input_to_flora *flora_input;
 
-    unsigned long num_slots = 0;
+    unsigned long num_rm_modules = 0;
     enum fpga_type type = ZYNQ;
     unsigned long connections;
 
@@ -96,14 +96,19 @@ public:
                                                   unsigned long n_min,
                                                   unsigned long n_max);
 
-    param_from_solver from_solver = {&eng_x, &eng_y,
+    param_from_solver from_solver = {0, &eng_x, &eng_y,
                                     &eng_w, &eng_h,
                                     &clb_from_solver,
                                     &bram_from_solver,
                                     &dsp_from_solver};
-
     std::vector<std::string> cell_name = std::vector<std::string>(MAX_SLOTS);
-
+    
+    //Partitioning variables
+    Taskset *task_set;
+    Platform *platform;
+    vector<double> slacks = vector<double>(MAX_SLOTS);
+    vector <double> HW_WCET = vector<double>(MAX_SLOTS);
+   
     void clear_vectors();
     void prep_input();
     void start_optimizer();
@@ -113,7 +118,12 @@ public:
     void init_gui();
     void plot_rects(param_from_solver *);
     bool is_compatible(std::vector<slot> ptr, unsigned long slot_num, int max, unsigned long min, int type);
-
+    vector <double> generate_slacks(Taskset& t, Platform& platform, double alpha);
+    Taskset generate_taskset_one_HW_task_per_SW_task
+            (uint n, Platform& p,
+            const vector<double>& res_usage,
+            double WCET_area_ratio,
+            double max_area_usage);
 };
 
 #endif // FP_H

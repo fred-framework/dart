@@ -2,6 +2,7 @@
 #define ZYNQ_MODEL_H
 #include <vector>
 #include "fpga.h"
+#include "partition.h"
 /*
 typedef struct {
     int x;
@@ -16,7 +17,7 @@ typedef std::vector<Vec> Vec2d;
 typedef std::vector<pos>    Vecpos;
 
 typedef struct {
-    unsigned long num_slots;
+    unsigned long num_rm_modules;
     unsigned long num_forbidden_slots;
     unsigned long num_rows;
     unsigned long width;
@@ -43,8 +44,7 @@ typedef  struct{
     std::vector<int> *h;
     std::vector<int> *clb_from_solver;
     std::vector<int> *bram_from_solver;
-    std::vector<int> *dsp_from_solver;
-    
+    std::vector<int> *dsp_from_solver;    
 }param_from_solver;
 
 int zynq_start_optimizer(param_to_solver *, param_from_solver *);
