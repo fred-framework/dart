@@ -1169,7 +1169,7 @@ int zynq_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
     int temp;
     unsigned long i;
 
-    num_slots = param->num_slots;
+    num_slots = param->num_rm_modules;
     num_forbidden_slots = param->num_forbidden_slots;
     num_rows = param->num_rows;
     H = param->num_clk_regs;

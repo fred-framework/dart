@@ -102,13 +102,15 @@ public:
                                     &bram_from_solver,
                                     &dsp_from_solver};
     std::vector<std::string> cell_name = std::vector<std::string>(MAX_SLOTS);
-    
+
+#ifdef WITH_PARTITIONING
     //Partitioning variables
     Taskset *task_set;
     Platform *platform;
     vector<double> slacks = vector<double>(MAX_SLOTS);
     vector <double> HW_WCET = vector<double>(MAX_SLOTS);
-   
+#endif
+
     void clear_vectors();
     void prep_input();
     void start_optimizer();

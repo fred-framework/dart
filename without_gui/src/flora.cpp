@@ -1,10 +1,13 @@
 #include "flora.h"
-#include "fine_grained.h"
 #include "generate_xdc.h"
 #include "fpga.h"
 #include <iostream>
 #include <string>
 #include <cmath>
+
+#ifdef WITH_PARTITIONING
+#include "fine_grained.h"
+#endif
 
 using namespace std;
 
@@ -16,8 +19,11 @@ flora::flora(input_to_flora *input_fl)
     if(flora_input->num_rm_modules > 0) {
         num_rm_modules = flora_input->num_rm_modules;
         type = flora_input->type_of_fpga; 
+
+#ifdef WITH_PARTITIONING
         platform = new Platform(3);
         task_set = new Taskset(num_rm_modules, num_rm_modules, *platform);
+#endif
 
         cout << "num of slots **** " << num_rm_modules <<endl;
         cout << "type of FPGA **** " << type <<endl;
@@ -75,13 +81,14 @@ void flora::prep_input()
 
         str = csv_data.get_value(i, k++);
         dsp_vector[ptr] = std::stoi(str);
-        
+
+#ifdef WITH_PARTITIONING
         str = csv_data.get_value(i, k++);
         HW_WCET[ptr] = std::stod(str);
 
         str = csv_data.get_value(i, k++);
         slacks[ptr] = std::stod(str);     
-        
+#endif
         cell_name[i] = csv_data.get_value(i, k++);
         k = 0;
 
@@ -100,6 +107,7 @@ void flora::start_optimizer()
     param.num_connected_slots = connections;
     param.conn_vector = &connection_matrix;
 
+#ifdef WITH_PARTITIONING    
     for(i = 0; i < num_rm_modules; i++){
         task_set->HW_Tasks[i].resDemand[CLB]  = clb_vector[i];
         task_set->HW_Tasks[i].resDemand[BRAM] = bram_vector[i];
@@ -119,6 +127,7 @@ void flora::start_optimizer()
     param.task_set = task_set;
     param.platform = platform;
     param.slacks = &slacks;
+#endif
 
     if(type ==ZYNQ){
         zynq = new zynq_7010();
@@ -136,6 +145,7 @@ void flora::start_optimizer()
         param.bram_per_tile = ZYNQ_BRAM_PER_TILE;
         param.dsp_per_tile  = ZYNQ_DSP_PER_TILE;
 
+#ifdef WITH_PARTITIONING
         platform->maxFPGAResources[CLB]  = ZYNQ_CLB_TOT;
         platform->maxFPGAResources[BRAM] = ZYNQ_BRAM_TOT;
         platform->maxFPGAResources[DSP]  = ZYNQ_DSP_TOT;
@@ -143,7 +153,9 @@ void flora::start_optimizer()
         platform->recTimePerUnit[CLB]  = 1.0/4500.0;
         platform->recTimePerUnit[BRAM] = 1.0/4500.0;
         platform->recTimePerUnit[DSP]  = 1.0/4000.0;
+#endif
         zynq_start_optimizer(&param, &from_solver);
+
     }
 }
 
@@ -162,8 +174,7 @@ void flora::generate_xdc()
     }
 }
 
-//call generate xdc
-
+#ifdef WITH_PARTITIONING
 vector<unsigned long> flora::get_units_per_task(unsigned long n, unsigned long n_units, unsigned long n_min, unsigned long n_max)
 {
     vector<unsigned long> ret;
@@ -347,8 +358,4 @@ Taskset flora::generate_taskset_one_HW_task_per_SW_task(uint n, Platform& p,
     cout <<"in generate HW task" <<endl;
     return t;
 }
-
-
-//print outputs
-
-
+#endif
