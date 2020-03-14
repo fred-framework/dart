@@ -77,10 +77,10 @@ public:
 
     vec_2d connection_matrix = std::vector<std::vector<unsigned long>> (MAX_SLOTS, std::vector<unsigned long> (MAX_SLOTS, 0));
 
-    std::vector<int> eng_x =  std::vector<int>(MAX_SLOTS);
+    std::vector<int> eng_x = std::vector<int>(MAX_SLOTS);
     std::vector<int> eng_y = std::vector<int>(MAX_SLOTS);
-    std::vector<int> eng_w =  std::vector<int>(MAX_SLOTS);
-    std::vector<int> eng_h =  std::vector<int>(MAX_SLOTS);
+    std::vector<int> eng_w = std::vector<int>(MAX_SLOTS);
+    std::vector<int> eng_h = std::vector<int>(MAX_SLOTS);
 
     std::vector<int> x_vector =  std::vector<int>(MAX_SLOTS);
     std::vector<int> y_vector =  std::vector<int>(MAX_SLOTS);

@@ -10,16 +10,21 @@ all:
 	@echo "For example without_partitioning ENABLE_GUI=0"
 
 SOURCES_SHARED = src/csv_data_manipulator.cpp src/fpga.cpp src/fine_grained.cpp
-SOURCES_SHARED += without_gui/src/flora.cpp without_gui/src/main.cpp
+SOURCES_SHARED += without_gui/src/main.cpp
 
 with_partitioning: SOURCES = src/partition.cpp src/milp_model_zynq_with_partition.cpp
+with_partitioning: SOURCES += without_gui/src/flora.cpp
 with_partitioning: BIN = run_with_partition
 with_partitioning: CFLAGS += -DWITH_PARTITIONING
 with_partitioning: build
 
-without_partitioning: SOURCES = src/milp_model_zynq.cpp
+without_partitioning: SOURCES = src/milp_model_zynq.cpp without_gui/src/flora.cpp
 without_partitioning: BIN = run_without_partition
 without_partitioning: build
+
+pr_tool_without_part: SOURCES = without_gui/src/pr_tool.cpp
+pr_tool_without_part: BIN = pr_tool_without_part
+pr_tool_without_part: build
 
 build:
 	$(CC) -o $(BIN) $(CFLAGS) $(SOURCES_SHARED) $(SOURCES) $(LDFLAGS)
