@@ -1,9 +1,9 @@
 CC = g++
 CFLAGS = -Iwithout_gui/include/
 CFLAGS += -Iinclude/
-CFLAGS += -std=c++11
+CFLAGS += -std=c++17
 
-LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi81 -lm
+LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi81 -lm -lstdc++fs
 
 all:
 	@echo "please use a target 'with_partioning' or 'without_partitioning'" 
@@ -15,15 +15,16 @@ SOURCES_SHARED += without_gui/src/main.cpp
 with_partitioning: SOURCES = src/partition.cpp src/milp_model_zynq_with_partition.cpp
 with_partitioning: SOURCES += without_gui/src/flora.cpp
 with_partitioning: BIN = run_with_partition
-with_partitioning: CFLAGS += -DWITH_PARTITIONING
+with_partitioning: CFLAGS += -DWITH_PARTITIONING -DRUN_FLORA
 with_partitioning: build
 
 without_partitioning: SOURCES = src/milp_model_zynq.cpp without_gui/src/flora.cpp
 without_partitioning: BIN = run_without_partition
+without_partitioning: CFLAGS += -DRUN_FLORA
 without_partitioning: build
 
 pr_tool_without_part: SOURCES = without_gui/src/pr_tool.cpp
-pr_tool_without_part: BIN = pr_tool_without_part
+pr_tool_without_part: BIN = run_pr_tool_without_part
 pr_tool_without_part: build
 
 build:
@@ -31,4 +32,4 @@ build:
 
 .PHONY: clean
 clean: 
-	rm -f *run	
+	rm -f *run*	

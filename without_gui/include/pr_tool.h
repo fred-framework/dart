@@ -3,6 +3,8 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <experimental/filesystem>
+#include <fstream>
 
 #include "zynq_model.h"
 #include "fpga.h"
@@ -21,11 +23,13 @@ typedef struct{
     unsigned long dsp;
 }slot;
 */
+namespace fs = std::experimental::filesystem;
 using namespace std;
 //using namespace Ui;
 
 //A class to contain info about a reconfigurable module
 typedef struct{
+    std::string rm_tag;
     std::string source_path;
     std::string top_module;
 }reconfigurable_module;
@@ -49,10 +53,11 @@ public:
     fpga_type type;
 
     //variables to manage project directory
-    std::string project_dir = "/home/sholmes/test1";
-    std::string source_path = project_dir + "/Sources/";
-    std::string hdl_copy_path = source_path + "/hdl/";
-    std::string tcl_project = project_dir + "/Tcl/";
+    std::string Project_dir = "/home/holmes/test_pr_dir";
+    std::string Src_path = Project_dir + "/Sources";
+    std::string hdl_copy_path = Src_path + "/hdl";
+    std::string tcl_project = Project_dir + "/Tcl";
+    std::string synthesis_script;
 
 /*
     //variables and methods for process management
@@ -100,6 +105,9 @@ public:
     */
     void prep_input();
     void prep_proj_directory();
+    void generate_synthesis_tcl();
+    void start_synthesis(std::string synth_script);
+    void parse_synthesis_report();
 /*
     //Variables to generate xdc
     string floorplan_addr;

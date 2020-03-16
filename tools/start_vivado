@@ -1,0 +1,4 @@
+#!/bin/bash
+
+source /opt/Xilinx_16/Vivado/2016.4/settings64.sh
+/opt/Xilinx_16/Vivado/2016.4/bin/vivado -mode tcl -source $@
