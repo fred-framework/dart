@@ -64,7 +64,6 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
             delta_size = num_forbidden_slots;
 
         //Variable definition
-
        //Variables for partioning
         // ------------------------------------------------------------
         // Variable defintion: b
@@ -1197,7 +1196,6 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                 model.addConstr(BIG_M * Alpha[i][k] >= x[k][1] - x[i][0] + 1, "66");
                 model.addConstr(BIG_M * Omega[i][k] >= y[i] + h[i] - y[k], "67");
                 model.addConstr(BIG_M * Psi[i][k]   >= y[k] + h[k] - y[i], "68");
-
             }
         }
 
@@ -1227,6 +1225,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
         /*************************************************************************
         Constriant 4.0: Global Resources should not be included inside slots
         *************************************************************************/
+/*
         for(i = 0; i < num_forbidden_slots; i++) {
             for(k = 0; k < num_slots; k++) {
                 model.addConstr(BIG_M * mu[i][k]     >= x[k][0] - fs_zynq[i].x, "74");
@@ -1237,26 +1236,25 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                 model.addConstr(BIG_M * fbdn_4[i][k] >= y[k] * num_rows + h[k] - fs_zynq[i].y + 1, "79");
             }
         }
-
+*/
         /*************************************************************************
         Constraint 4.1:
         **************************************************************************/
+/*
         for(i = 0; i < num_forbidden_slots; i++) {
             //GRBLinExpr exp_delta;
 
             for(k = 0; k < num_slots; k++) {
                 model.addConstr(delta[1][i][k] >= mu[i][k] + nu[i][k] + fbdn_1[i][k] + fbdn_3[i][k] - 3, "80");
-
                 model.addConstr(delta[1][i][k] >= (1- mu[i][k]) + nu[i][k] + fbdn_2[i][k] + fbdn_3[i][k] - 3, "81");
-
                 model.addConstr(delta[1][i][k] >= mu[i][k] + (1 - nu[i][k]) + fbdn_1[i][k] + fbdn_4[i][k] - 3, "82");
-
                 model.addConstr(delta[1][i][k] >= (1 - mu[i][k]) + (1 - nu[i][k]) + fbdn_2[i][k] + fbdn_4[i][k] - 3, "83");
 
                 //exp_delta += delta[1][i][k];
                 model.addConstr(delta[1][i][k] == 0, "84");
             }
         }
+*/
 //#endif
 
 //#ifdef objective
@@ -1546,6 +1544,8 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
 
 int zynq_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
 {
+    
+    cout << "starting gurobi solver " <<endl;
     int m = 0;
     int k = 0;
     int temp;

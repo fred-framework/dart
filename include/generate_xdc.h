@@ -44,7 +44,7 @@ string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
         cout << "x1 " << slices_in_slot[a][3].slice_x1 << " y1 " << slices_in_slot[a][3].slice_y1<<\
                  " x2 " << slices_in_slot[a][3].slice_x2  << " y2 " << slices_in_slot[a][3].slice_y2 << endl;\
     }\
-    write_xdc.open("/home/sholmes/Desktop/pblocks_new.xdc");\
+    write_xdc.open("/home/holmes/Desktop/pblocks_new.xdc");\
     write_xdc<< "# User Generated miscellaneous constraints" << endl <<endl <<endl;\
     for(a = 0; a < num_slots; a++){\
         write_xdc << "set_property HD.RECONFIGURABLE true [get_cells "<<cell_name[a] <<"]" <<endl;\

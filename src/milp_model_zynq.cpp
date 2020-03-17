@@ -656,28 +656,28 @@ int solve_milp(param_from_solver *to_sim)
         for(i = 0; i < num_slots; i++) {
             for(k = 0; k < 2; k++) {
                 l = 0;
-                model.addConstr(clb[i][k] >= x[i][k] - BIG_M * (1 - z[0][i][k][l++]), "8");
+                model.addConstr(clb[i][k] >= x[i][k] - BIG_M * (1 - z[0][i][k][l++]), "8_1");
 
                 model.addConstr(clb[i][k] >= (x[i][k] - 1)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "9");
+                                                           BIG_M * (1 - z[0][i][k][l++]), "9_1");
 
                 model.addConstr(clb[i][k] >= (x[i][k] - 2)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "10");
+                                                           BIG_M * (1 - z[0][i][k][l++]), "10_1");
 
                 model.addConstr(clb[i][k] >= (x[i][k] - 3)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "11");
+                                                           BIG_M * (1 - z[0][i][k][l++]), "11_1");
 
                 model.addConstr(clb[i][k] >= (x[i][k] - 4)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "12");
+                                                           BIG_M * (1 - z[0][i][k][l++]), "12_1");
 
                 model.addConstr(clb[i][k] >= (x[i][k] - 5)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "13");
+                                                           BIG_M * (1 - z[0][i][k][l++]), "13_1");
 
                 model.addConstr(clb[i][k] >= (x[i][k] - 6)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "14");
+                                                           BIG_M * (1 - z[0][i][k][l++]), "14_1");
 
                 model.addConstr(clb[i][k] >= (x[i][k] - 7)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "15");
+                                                           BIG_M * (1 - z[0][i][k][l++]), "15_1");
             }
 
             for( k = 0; k < 2; k++) {
@@ -915,6 +915,7 @@ int solve_milp(param_from_solver *to_sim)
             }
         }
 
+/*
 //#ifdef fbdn
         //Non Interference between global resoureces and slots
         /*************************************************************************
@@ -950,6 +951,7 @@ int solve_milp(param_from_solver *to_sim)
                 model.addConstr(delta[1][i][k] == 0, "84");
             }
         }
+
 //#endif
 
 //#ifdef objective
@@ -1014,9 +1016,9 @@ int solve_milp(param_from_solver *to_sim)
         cout<< "W H and wl max is " << W << " " << H * 20 << " "<< wl_max <<endl;
 }
 
-        model.setObjective((obj_x + obj_y), GRB_MINIMIZE);
+        //model.setObjective((obj_x + obj_y), GRB_MINIMIZE);
         //model.setObjective(1 * obj_wasted_clb,  GRB_MINIMIZE);
-        model.setObjective(0.1 * obj_wasted_bram, GRB_MINIMIZE);
+        //model.setObjective(0.1 * obj_wasted_bram, GRB_MINIMIZE);
        // model.setObjective(obj_wasted_dsp,  GRB_MINIMIZE);
 //#endif
 

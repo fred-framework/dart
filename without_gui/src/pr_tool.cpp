@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <unistd.h>
 #include "pr_tool.h"
+#include <fstream>
 
 using namespace std;
 
@@ -19,7 +20,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         cout << "path for input **** " << pr_input->path_to_input <<endl;
         
         //Instantiate flora
-        flora fl_inst;
+        //flora fl_inst;
  
         prep_input(); 
         //prep_proj_directory();
@@ -40,6 +41,7 @@ pr_tool::~pr_tool()
 
 void pr_tool::prep_input()
 {
+    std::string str;
     unsigned long row, col;
     int i , k;
     unsigned int ptr;
@@ -55,19 +57,16 @@ void pr_tool::prep_input()
 
 #ifdef WITH_PARTITIONING
         str = csv_data.get_value(i, k++);
-        HW_WCET[ptr] = std::stod(str);
-
+        HW_WCET.push_back(std::stod(str));
+cout <<"here"<<endl;
         str = csv_data.get_value(i, k++);
-        slacks[ptr] = std::stod(str);
+        slacks.push_back(std::stod(str));
 #endif
         rm.rm_tag = csv_data.get_value(i, k++);
         rm.source_path = csv_data.get_value(i, k++);
         rm.top_module = csv_data.get_value(i, k++);
         
-        cout << "tag is "<<rm.rm_tag << "source path " << rm.source_path << " top module is " <<rm.top_module <<endl;
         rm_list.push_back(rm);
-//        cout << "tag is "<<rm_list[i].tag << " source path " << rm_list[i].source_path << " top module is " <<rm_list[i].top_module <<endl;
-
         k = 0;
     }
 }
@@ -210,16 +209,18 @@ void pr_tool::parse_synthesis_report()
     unsigned long i, k = 0;
     string lut = "Slice LUTs*";
     string dsp = "DSPs";
-    string bram = "Block RAM Tile |";
-
+    string bram = "Block RAM Tile    |";
+    vector<slot> extracted_res = vector<slot>(num_rm_modules);
+   
+    cout << "Parsing Synth utilization report "  <<endl;
     for(i = 0; i < num_rm_modules; i++) {
         string line, word;
         ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
                       rm_list[i].top_module + "_utilization_synth.rpt");
 
-        cout <<"filename is" << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                      rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
-/*
+        //cout <<"filename is" << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+        //              rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
+
         while (getline(file, line)) {
             if(line.find(lut) != string::npos) {
                 stringstream iss(line);
@@ -227,10 +228,8 @@ void pr_tool::parse_synthesis_report()
                 while(iss >> word) {
                     k++;
                     if(k == 5){
-                    task_set->HW_Tasks[i].resDemand[CLB]  = std::stoul(word);
-                    qDebug() << "clb " <<  task_set->HW_Tasks[i].resDemand[CLB] <<endl;
-                    qDebug() << "clb " <<  QString::fromStdString(word) <<endl;
-                    //to_solver[i].clb = std::stoul(word);
+                        extracted_res[i].clb= (unsigned long)((std::stoul(word) / 8));
+                        cout << " clb " <<  extracted_res[i].clb <<endl;
                     }
                 }
                 k = 0;
@@ -243,10 +242,8 @@ void pr_tool::parse_synthesis_report()
                     k++;
 
                     if(k == 6) {
-                       task_set->HW_Tasks[i].resDemand[BRAM] = std::stoul(word);
-                       qDebug() << " bram " <<  task_set->HW_Tasks[i].resDemand[BRAM] <<endl;
-                        //to_solver[i].bram = std::stoul(word);
-                       qDebug() << " bram " <<  QString::fromStdString(word) <<endl;
+                        extracted_res[i].bram = std::stoul(word); 
+                        cout <<" bram " <<  extracted_res[i].bram <<endl;
                     }
                 }
                 k = 0;
@@ -259,21 +256,32 @@ void pr_tool::parse_synthesis_report()
                     k++;
 
                     if(k == 4){
-                        task_set->HW_Tasks[i].resDemand[DSP]  = std::stoul(word);
-                        qDebug() << " DSP " <<  task_set->HW_Tasks[i].resDemand[DSP] <<endl;
-                        //to_solver[i].dsp= std::stoul(word);
-                        qDebug() << " dsp " <<  QString::fromStdString(word) <<endl;
+                        extracted_res[i].dsp = std::stoul(word);
+                        cout << " dsp " <<  extracted_res[i].dsp <<endl;
                     }
                 }
                 k = 0;
             }
         }
+    }
+        ofstream write_flora_input;
+        write_flora_input.open(Project_dir +"/flora_input.csv");
+        
+        for(i = 0; i < num_rm_modules; i++){
+            write_flora_input <<extracted_res[i].clb <<","  << extracted_res[i].bram 
+                              << "," <<extracted_res[i].dsp <<"," <<
+#ifdef WITH_PARTITIONING
+                                HW_WCET[i] << "," <<slacks[i] <<"," <<
+#endif
+                                rm_list[i].rm_tag <<endl;
+        }
+        
+        write_flora_input.close();        
+        input_to_flora in_flora = {num_rm_modules, type, Project_dir +"/flora_input.csv"};
 
-        to_solver.module_name[i] = import_sources::module_name[i];
-        to_solver.num_rm_modules = import_sources::module_name.size();
-        task_set->HW_Tasks[i].WCET = HW_WCET[i];
-        task_set->SW_Tasks[i].H.push_back(i);
-        task_set->HW_Tasks[i].SW_Task_ID = i;
-
-*/    }
+        fl_inst = new flora(&in_flora);
+        fl_inst->clear_vectors();
+        fl_inst->prep_input();
+        fl_inst->start_optimizer();
+        fl_inst->generate_xdc();
 }
