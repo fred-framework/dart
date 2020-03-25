@@ -14,7 +14,7 @@ typedef struct {
 typedef std::vector<unsigned long>    Vec;
 typedef std::vector<Vec> Vec2d;
 
-typedef std::vector<pos>    Vecpos;
+typedef std::vector<pos> Vecpos;
 
 typedef struct {
     unsigned long num_rm_modules;
