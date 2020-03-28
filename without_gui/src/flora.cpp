@@ -85,7 +85,7 @@ void flora::prep_input()
         str = csv_data.get_value(i, k++);
         slacks[ptr] = std::stod(str);     
 #endif
-        cell_name[i] = csv_data.get_value(i, k++);
+//        cell_name[i] = csv_data.get_value(i, k++);
         k = 0;
 
         cout << "\t " << clb_vector[ptr] << "\t " << bram_vector[ptr] << "\t " 
@@ -184,16 +184,26 @@ void flora::start_optimizer()
 #endif  
 }
 
+
+void flora::generate_cell_name(unsigned long num_part, vector<std::string> *cell)
+{
+    int i;
+    for(i = 0; i < num_part; i++)
+        (*cell)[i] = "design_1_i/hw_task_0_" + to_string(i) + "/inst";
+}
+
 void flora::generate_xdc(std::string fplan_xdc_file)
 {
     param_from_solver *from_sol_ptr = &from_solver;
 
 #ifdef FPGA_ZYNQ
     zynq_fine_grained *fg_zynq_instance = new zynq_fine_grained();
+    generate_cell_name(from_solver.num_partition, &cell_name);
     generate_xdc_file(fg_zynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
     
 #elif FPGA_PYNQ
     pynq_fine_grained *fg_pynq_instance = new pynq_fine_grained();
+    generate_cell_name(from_solver.num_partition, &cell_name);
     generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
 #endif
 }

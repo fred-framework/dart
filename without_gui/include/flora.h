@@ -120,12 +120,13 @@ public:
     void clear_vectors();
     void prep_input();
     void start_optimizer();
+void generate_cell_name(unsigned long num_part, vector<std::string> *cell);
     void generate_xdc(std::string fplan_file_name);
 
-    void init_fpga(enum fpga_type);
-    void init_gui();
-    void plot_rects(param_from_solver *);
-    bool is_compatible(std::vector<slot> ptr, unsigned long slot_num, int max, unsigned long min, int type);
+//    void init_fpga(enum fpga_type);
+//    void init_gui();
+//    void plot_rects(param_from_solver *);
+//    bool is_compatible(std::vector<slot> ptr, unsigned long slot_num, int max, unsigned long min, int type);
     vector <double> generate_slacks(Taskset& t, Platform& platform, double alpha);
     Taskset generate_taskset_one_HW_task_per_SW_task
             (uint n, Platform& p,

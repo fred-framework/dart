@@ -94,21 +94,6 @@ cout <<"here"<<endl;
 void pr_tool::prep_proj_directory()
 {
     int status, i;
-/*
-    //TODO: check if directory exists
-    status = mkdir(project_dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir(source_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir((source_path + "/project").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir((source_path + "/constraints").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir((source_path + "/cores").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir((source_path + "/netlist").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir((project_dir + "/Synth").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir((project_dir + "/Implement").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir((project_dir + "/Checkpoint").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir((project_dir + "/Bitstreams").c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir(hdl_copy_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    status = mkdir(tcl_project.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-*/
 
     //TODO: check if directory exists
     fs::create_directories(Project_dir);
@@ -324,6 +309,69 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 
     write_impl_tcl.open(impl_script);
 
+     write_impl_tcl << "set tclParams [list hd.visual 1]" <<endl;
+     write_impl_tcl << "set tclHome " << "\"" << tcl_project << "\"" <<endl;
+     write_impl_tcl << "set tclDir $tclHome" <<endl;
+     write_impl_tcl << "set projDir " <<"\"" << Project_dir << "\"" <<endl;
+     write_impl_tcl <<" source $tclDir/design_utils.tcl" <<endl;
+     write_impl_tcl <<" source $tclDir/log_utils.tcl" <<endl;
+     write_impl_tcl <<" source $tclDir/synth_utils.tcl" <<endl;
+     write_impl_tcl <<" source $tclDir/impl_utils.tcl" <<endl;
+     write_impl_tcl <<" source $tclDir/pr_utils.tcl" <<endl;
+     write_impl_tcl <<" source $tclDir/log_utils.tcl" <<endl;
+     write_impl_tcl <<" source $tclDir/hd_floorplan_utils.tcl" <<endl;
+
+     write_impl_tcl << "############################################################### \n" <<
+                        "### Define Part, Package, Speedgrade \n" <<
+                        "###############################################################"<<endl;
+
+    //TODO:automate FPGA type here
+#ifdef FPGA_PYNQ
+     write_impl_tcl << "set part xc7z020clg400-1" <<endl;
+#elif FPGA_ZYNQ
+     write_impl_tcl << "set part xc7z010clg400-1" <<endl;
+#else
+     write_impl_tcl << "set part xc7z010clg400-1" <<endl;
+#endif
+
+    write_impl_tcl << "check_part $part" <<endl;
+
+     write_impl_tcl << "####flow control" <<endl;
+     write_impl_tcl << "set run.topSynth       0" <<endl;
+     write_impl_tcl << "set run.rmSynth        0" <<endl;
+     write_impl_tcl << "set run.prImpl         1" <<endl;
+     write_impl_tcl << "set run.prVerify       1" <<endl;
+     write_impl_tcl << "set run.writeBitstream 1" <<endl;
+
+     write_impl_tcl << "####Report and DCP controls - values: 0-required min; 1-few extra; 2-all" <<endl;
+     write_impl_tcl << "set verbose      1" <<endl;
+     write_impl_tcl << "set dcpLevel     1" <<endl;
+
+     write_impl_tcl<<" ####Output Directories" <<endl;
+     write_impl_tcl<<" set synthDir  $projDir/Synth" <<endl;
+     write_impl_tcl<<" set implDir   $projDir/Implement" <<endl;
+     write_impl_tcl<<" set dcpDir    $projDir/Checkpoint" <<endl;
+     write_impl_tcl<<" set bitDir    $projDir/Bitstreams" <<endl;
+
+     write_impl_tcl<<" ####Input Directories "<<endl;
+     write_impl_tcl<<" set srcDir     $projDir/Sources" <<endl;
+     write_impl_tcl<<" set rtlDir     $srcDir/hdl" <<endl;
+     write_impl_tcl<<" set prjDir     $srcDir/project" <<endl;
+     write_impl_tcl<<" set xdcDir     $srcDir/xdc" <<endl;
+     write_impl_tcl<<" set coreDir    $srcDir/cores" <<endl;
+     write_impl_tcl<<" set netlistDir $srcDir/netlist" <<endl;
+
+     write_impl_tcl<<"####################################################################" <<endl;
+     write_impl_tcl<<"### RP Module Definitions" <<endl;
+     write_impl_tcl<<" ####################################################################" <<endl;
+
+     for(i = 0; i < num_rm_modules; i++) {
+         write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
+         write_impl_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
+         write_impl_tcl <<endl;
+     }
+
+
     for(i = 0, k = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++, k++) {
         write_impl_tcl << "############################################################### \n" <<
                            "###Implemenetation configuration " << i <<endl <<
@@ -342,7 +390,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         for(conf_ptr = 0; conf_ptr <  fl_ptr->from_solver.num_partition; conf_ptr++){
             if(fl_ptr->alloc[conf_ptr].num_tasks_in_part > 0) {
                 fl_ptr->alloc[conf_ptr].num_tasks_in_part--;
-                write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[conf_ptr].task_id[temp_index]].rm_tag <<"\t reg_"<<conf_ptr <<" implement] \\" <<endl;
+                write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[conf_ptr].task_id[temp_index]].rm_tag <<"\t " << fl_ptr->cell_name[conf_ptr]  <<" implement] \\" <<endl;
                 write_impl_tcl <<"\t \t \t \t \t \t \t \t \t \t";
             }
         }
