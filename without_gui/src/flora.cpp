@@ -5,10 +5,6 @@
 #include <string>
 #include <cmath>
 
-#ifdef WITH_PARTITIONING
-#include "fine_grained.h"
-#endif
-
 using namespace std;
 
 flora::flora(input_to_flora *input_fl)
@@ -18,7 +14,7 @@ flora::flora(input_to_flora *input_fl)
     
     if(flora_input->num_rm_modules > 0) {
         num_rm_modules = flora_input->num_rm_modules;
-        type = flora_input->type_of_fpga; 
+//        type = flora_input->type_of_fpga; 
 
 #ifdef WITH_PARTITIONING
         platform = new Platform(3);
@@ -129,49 +125,77 @@ void flora::start_optimizer()
     param.slacks = &slacks;
 #endif
 
-    if(type ==ZYNQ){
-        zynq = new zynq_7010();
-        for(i = 0; i < zynq->num_forbidden_slots; i++) {
-            forbidden_region[i] = zynq->forbidden_pos[i];
-        //cout<< " fbdn" << forbidden_region[i].x << endl;
-        }
+//if(type == TYPE_ZYNQ){
+#ifdef FPGA_ZYNQ
+    zynq = new zynq_7010();
+    for(i = 0; i < zynq->num_forbidden_slots; i++) {
+        forbidden_region[i] = zynq->forbidden_pos[i];
+    //cout<< " fbdn" << forbidden_region[i].x << endl;
+    }
 
-        param.num_forbidden_slots = zynq->num_forbidden_slots;
-        param.num_rows = zynq->num_rows;
-        param.width = zynq->width;
-        param.fbdn_slot = &forbidden_region;
-        param.num_clk_regs  = zynq->num_clk_reg /2;
-        param.clb_per_tile  = ZYNQ_CLB_PER_TILE;
-        param.bram_per_tile = ZYNQ_BRAM_PER_TILE;
-        param.dsp_per_tile  = ZYNQ_DSP_PER_TILE;
+    param.num_forbidden_slots = zynq->num_forbidden_slots;
+    param.num_rows = zynq->num_rows;
+    param.width = zynq->width;
+    param.fbdn_slot = &forbidden_region;
+    param.num_clk_regs  = zynq->num_clk_reg /2;
+    param.clb_per_tile  = ZYNQ_CLB_PER_TILE;
+    param.bram_per_tile = ZYNQ_BRAM_PER_TILE;
+    param.dsp_per_tile  = ZYNQ_DSP_PER_TILE;
 
 #ifdef WITH_PARTITIONING
-        platform->maxFPGAResources[CLB]  = ZYNQ_CLB_TOT;
-        platform->maxFPGAResources[BRAM] = ZYNQ_BRAM_TOT;
-        platform->maxFPGAResources[DSP]  = ZYNQ_DSP_TOT;
+    platform->maxFPGAResources[CLB]  = ZYNQ_CLB_TOT;
+    platform->maxFPGAResources[BRAM] = ZYNQ_BRAM_TOT;
+    platform->maxFPGAResources[DSP]  = ZYNQ_DSP_TOT;
 
-        platform->recTimePerUnit[CLB]  = 1.0/4500.0;
-        platform->recTimePerUnit[BRAM] = 1.0/4500.0;
-        platform->recTimePerUnit[DSP]  = 1.0/4000.0;
+    platform->recTimePerUnit[CLB]  = 1.0/4500.0;
+    platform->recTimePerUnit[BRAM] = 1.0/4500.0;
+    platform->recTimePerUnit[DSP]  = 1.0/4000.0;
 #endif
-        zynq_start_optimizer(&param, &from_solver);
+    zynq_start_optimizer(&param, &from_solver);
 
-    }
+//    }
+
+#elif FPGA_PYNQ
+    pynq_inst = new pynq();
+    for(i = 0; i < pynq_inst->num_forbidden_slots; i++) {
+        forbidden_region[i] = pynq_inst->forbidden_pos[i];
+    //cout<< " fbdn" << forbidden_region[i].x << endl;
+    }   
+
+    param.num_forbidden_slots = pynq_inst->num_forbidden_slots;
+    param.num_rows = pynq_inst->num_rows;
+    param.width = pynq_inst->width;
+    param.fbdn_slot = &forbidden_region;
+    param.num_clk_regs  = pynq_inst->num_clk_reg /2; 
+    param.clb_per_tile  = PYNQ_CLB_PER_TILE;
+    param.bram_per_tile = PYNQ_BRAM_PER_TILE;
+    param.dsp_per_tile  = PYNQ_DSP_PER_TILE;
+
+#ifdef WITH_PARTITIONING
+    platform->maxFPGAResources[CLB]  = PYNQ_CLB_TOT;
+    platform->maxFPGAResources[BRAM] = PYNQ_BRAM_TOT;
+    platform->maxFPGAResources[DSP]  = PYNQ_DSP_TOT;
+
+    platform->recTimePerUnit[CLB]  = 1.0/4500.0;
+    platform->recTimePerUnit[BRAM] = 1.0/4500.0;
+    platform->recTimePerUnit[DSP]  = 1.0/4000.0;
+#endif
+    pynq_start_optimizer(&param, &from_solver);
+#endif  
 }
 
-void flora::generate_xdc()
+void flora::generate_xdc(std::string fplan_xdc_file)
 {
     param_from_solver *from_sol_ptr = &from_solver;
 
-    if(type == ZYNQ) {
-        zynq_fine_grained *fg_zynq_instance = new zynq_fine_grained();
-        generate_xdc_file(fg_zynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name);
-    }
-
-    else if(type ==PYNQ) {
-        pynq_fine_grained *fg_pynq_instance = new pynq_fine_grained();
-        generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name);
-    }
+#ifdef FPGA_ZYNQ
+    zynq_fine_grained *fg_zynq_instance = new zynq_fine_grained();
+    generate_xdc_file(fg_zynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
+    
+#elif FPGA_PYNQ
+    pynq_fine_grained *fg_pynq_instance = new pynq_fine_grained();
+    generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
+#endif
 }
 
 #ifdef WITH_PARTITIONING

@@ -13,7 +13,16 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
     if(input_pr->num_rm_modules > 0){
         num_rm_modules = pr_input->num_rm_modules;
-        type = pr_input->type_of_fpga;
+        
+//        type = pr_input->type_of_fpga;
+
+#ifdef FPGA_ZYNQ
+    type = TYPE_ZYNQ;
+#elif FPGA_PYNQ 
+    type = TYPE_PYNQ;
+#else
+    type = TYPE_ZYNQ;
+#endif
 
         cout << "num of slots **** " << num_rm_modules <<endl;
         cout << "type of FPGA **** " << type <<endl;
@@ -27,6 +36,14 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         //generate_synthesis_tcl();
         //start_synthesis(synthesis_script);
         parse_synthesis_report();
+
+        fl_inst = new flora(&in_flora);
+        fl_inst->clear_vectors();
+        fl_inst->prep_input();
+        fl_inst->start_optimizer();
+        fl_inst->generate_xdc(fplan_xdc_file);
+        
+        generate_impl_tcl(fl_inst);
     }
     else {
         cout <<"The number of Reconfigurable modules > 0";
@@ -148,8 +165,15 @@ void pr_tool::generate_synthesis_tcl()
                         "###############################################################"<<endl;
 
     //TODO:automate FPGA type here
+#ifdef FPGA_PYNQ
+     write_synth_tcl << "set part xc7z020clg400-1" <<endl;
+#elif FPGA_ZYNQ
      write_synth_tcl << "set part xc7z010clg400-1" <<endl;
-     write_synth_tcl << "check_part $part" <<endl;
+#else
+     write_synth_tcl << "set part xc7z010clg400-1" <<endl;
+#endif
+
+    write_synth_tcl << "check_part $part" <<endl;
 
      write_synth_tcl << "####flow control" <<endl;
      write_synth_tcl << "set run.topSynth       1" <<endl;
@@ -189,19 +213,26 @@ void pr_tool::generate_synthesis_tcl()
      }
 
      write_synth_tcl << "source $tclDir/run.tcl" <<endl;
+     write_synth_tcl << "exit" <<endl;
      write_synth_tcl.close(); 
 }
 
 void pr_tool::start_synthesis(std::string synth_script)
-{   
+{ 
     chdir(("cd " + Project_dir).c_str());
-    cout << "Current path is " << fs::current_path() <<endl;
     fs::current_path(Src_path);
-    cout << "Changed path is " << fs::current_path() <<endl;
     std::system(("python3.6  load_prj.py"));
     fs::current_path(Project_dir);
     std::string vivado_path = "start_vivado";
     std::system(("./"+ vivado_path + " " + synth_script).c_str());
+}
+
+void pr_tool::start_implementation(std::string impl_script)
+{
+//    chdir(("cd " + Project_dir).c_str());
+    fs::current_path(Project_dir);
+    std::string vivado_path = "start_vivado";
+    std::system(("./"+ vivado_path + " " + impl_script).c_str());
 }
 
 void pr_tool::parse_synthesis_report()
@@ -277,11 +308,50 @@ void pr_tool::parse_synthesis_report()
         }
         
         write_flora_input.close();        
-        input_to_flora in_flora = {num_rm_modules, type, Project_dir +"/flora_input.csv"};
+        in_flora = {num_rm_modules, Project_dir +"/flora_input.csv"};
 
-        fl_inst = new flora(&in_flora);
-        fl_inst->clear_vectors();
-        fl_inst->prep_input();
-        fl_inst->start_optimizer();
-        fl_inst->generate_xdc();
+}
+
+void pr_tool::generate_impl_tcl(flora *fl_ptr)
+{ 
+    unsigned long i, k, conf_ptr, temp_index = 0;
+    ofstream write_impl_tcl;
+    string config_name;
+    impl_script = Project_dir + "/impl.tcl";
+
+    write_impl_tcl.open(impl_script);
+
+    for(i = 0, k = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++, k++) {
+        write_impl_tcl << "############################################################### \n" <<
+                           "###Implemenetation configuration " << i <<endl <<
+                           "###############################################################"<<endl;
+
+        config_name = "config_" + to_string(i);
+        write_impl_tcl <<"add_implementation "<<config_name <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" top \t   $top" <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" pr.impl \t 1" <<endl;
+
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" implXDC \t [list " << fplan_xdc_file << "]" <<endl;
+
+        /*TODO: add the implementation of the static part */
+        
+        write_impl_tcl <<"set_attribute impl "<<config_name << " partitions \t";
+        for(conf_ptr = 0; conf_ptr <  fl_ptr->from_solver.num_partition; conf_ptr++){
+            if(fl_ptr->alloc[conf_ptr].num_tasks_in_part > 0) {
+                fl_ptr->alloc[conf_ptr].num_tasks_in_part--;
+                write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[conf_ptr].task_id[temp_index]].rm_tag <<"\t reg_"<<conf_ptr <<" implement] \\" <<endl;
+                write_impl_tcl <<"\t \t \t \t \t \t \t \t \t \t";
+            }
+        }
+
+        write_impl_tcl <<endl;
+        write_impl_tcl <<"set_atrtribute impl "<<config_name <<" impl \t    ${run.prImpl} " <<endl;
+        write_impl_tcl <<"set_atrtribute impl "<<config_name <<" verify \t   ${run.prVerify} " <<endl;
+        write_impl_tcl <<"set_atrtribute impl "<<config_name <<" bitstream \t ${run.writeBitstream} " <<endl;
+        temp_index += 1;
+    }
+
+    write_impl_tcl << "source $tclDir/run.tcl" <<endl;
+    write_impl_tcl << "exit"<<endl;
+    write_impl_tcl.close();
 }

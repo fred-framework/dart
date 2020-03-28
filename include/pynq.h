@@ -8,6 +8,9 @@
 #define PYNQ_CLB_PER_TILE 50
 #define PYNQ_BRAM_PER_TILE 10
 #define PYNQ_DSP_PER_TILE 20
+#define PYNQ_CLB_TOT  6650 
+#define PYNQ_BRAM_TOT 140
+#define PYNQ_DSP_TOT  220
 
 
 class pynq

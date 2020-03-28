@@ -3,18 +3,16 @@
 #include <vector>
 #include "fpga.h"
 #include "partition.h"
-/*
-typedef struct {
-    int x;
-    int y;
-    int w;
-    int h;
-}pos;
-*/
-typedef std::vector<unsigned long>    Vec;
+
+typedef std::vector<unsigned long> Vec;
 typedef std::vector<Vec> Vec2d;
 
 typedef std::vector<pos> Vecpos;
+
+typedef struct {
+    unsigned int num_tasks_in_part;
+    std::vector<unsigned int> task_id;                                  
+}hw_task_allocation;
 
 typedef struct {
     unsigned long num_rm_modules;
@@ -29,7 +27,7 @@ typedef struct {
     Vec *clb;
     Vec *bram;
     Vec *dsp;
-    Vec2d* conn_vector;
+    Vec2d  *conn_vector;
     Vecpos *fbdn_slot;
     Taskset *task_set;
     Platform *platform;
@@ -38,6 +36,7 @@ typedef struct {
 
 typedef  struct{
     unsigned long num_partition;
+    unsigned long max_modules_per_partition;
     std::vector<int> *x;
     std::vector<int> *y;
     std::vector<int> *w;
@@ -45,6 +44,7 @@ typedef  struct{
     std::vector<int> *clb_from_solver;
     std::vector<int> *bram_from_solver;
     std::vector<int> *dsp_from_solver;    
+    std::vector<hw_task_allocation> *task_alloc;
 }param_from_solver;
 
 int zynq_start_optimizer(param_to_solver *, param_from_solver *);

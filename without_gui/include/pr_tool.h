@@ -6,7 +6,7 @@
 #include <experimental/filesystem>
 #include <fstream>
 
-#include "zynq_model.h"
+#include "milp_solver_interface.h"
 #include "fpga.h"
 #include "flora.h"
 #include "fine_grained.h"
@@ -27,7 +27,6 @@ typedef struct{
 
 typedef struct{
     unsigned long num_rm_modules;
-    fpga_type type_of_fpga;
     std::string path_to_input;
 }input_to_pr;
 
@@ -47,11 +46,13 @@ public:
     std::string Project_dir = "/home/holmes/test_pr_dir";
     std::string Src_path = Project_dir + "/Sources";
     std::string hdl_copy_path = Src_path + "/hdl";
+    std::string fplan_xdc_file = Src_path + "/constraints/pblocks.xdc";
     std::string tcl_project = Project_dir + "/Tcl";
     std::string synthesis_script;
-
+    std::string impl_script;
     //pointer to an instance of flora
     flora *fl_inst;
+    input_to_flora in_flora;
 
 #ifdef WITH_PARTITIONING
     vector<double> slacks ;
@@ -64,7 +65,9 @@ public:
     void generate_synthesis_tcl();
     void start_synthesis(std::string synth_script);
     void parse_synthesis_report();
-
+    void generate_impl_tcl(flora *fl);
+    void start_implementation(std::string impl_script); 
+    
     explicit pr_tool(input_to_pr *);
 
     ~pr_tool();

@@ -16,4 +16,3 @@ void zynq_7010::initialize_clk_reg()
                 bram_pos[i], dsp_pos[i]);
     }
 }
-

@@ -1,4 +1,4 @@
-#include "fpga.h"
+/*#include "fpga.h"
 
 zynq_7010::zynq_7010()
 {
@@ -67,3 +67,5 @@ void pynq::initialize_clk_reg()
                 bram_pos[i], dsp_pos[i]);
     }
 }
+
+*/

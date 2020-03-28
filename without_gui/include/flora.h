@@ -1,30 +1,36 @@
 #ifndef FP_H
 #define FP_H
 
-/*
-#include <QDialog>
-#include <QtCore>
-#include <QtGui>
-#include <QGraphicsScene>
-#include <QTableWidget>
-#include <QString>
-*/
-
 #include "gurobi_c++.h"
-#include "zynq_model.h"
-#include "fpga.h"
+#include "milp_solver_interface.h"
 #include "csv_data_manipulator.hpp"
 #include <string>
+
+                                                                         
+#ifdef WITH_PARTITIONING                                                 
+    #include "fine_grained.h"                                            
+    #ifdef FPGA_ZYNQ                                                     
+        #include "zynq_fine_grained.h"                                   
+    #elif FPGA_PYNQ                                                      
+        #include "pynq_fine_grained.h"                                   
+    #endif                                                               
+#else                                                                    
+    #ifdef FPGA_ZYNQ                                                     
+        #include "zynq.h"                                                
+    #elif FPGA_PYNQ                                                      
+        #include "pynq.h"                                                
+    #endif                                                               
+#endif 
 
 namespace Ui {
 class fp;
 }
 
 enum fpga_type {
-    ZYNQ = 0,
-    VIRTEX,
-    VIRTEX_5,
-    PYNQ
+    TYPE_ZYNQ = 0,
+    TYPE_VIRTEX,
+    TYPE_VIRTEX_5,
+    TYPE_PYNQ
 };
 
 typedef std::vector<pos> position_vec;
@@ -37,33 +43,29 @@ typedef struct{
 
 typedef struct{
     unsigned long num_rm_modules;
-    fpga_type type_of_fpga;
+//    fpga_type type_of_fpga;
     std::string path_to_input;
 }input_to_flora;
 
 #define MY_RAND() ((double)((double)rand()/(double)RAND_MAX))
 
-class flora //: public QDialog
+class flora 
 {
-    //Q_OBJECT
 
 public:
     explicit flora(input_to_flora*);
     ~flora();
 
+#ifdef FPGA_ZYNQ
     zynq_7010 *zynq;
-
-/*
- *  virtex *virt;
-    virtex_5 *virt_5;
+#elif FPGA_PYNQ
     pynq *pynq_inst;
- */ 
-    param_to_solver param;
-    input_to_flora *flora_input;
+#endif
 
     unsigned long num_rm_modules = 0;
-    enum fpga_type type = ZYNQ;
-    unsigned long connections;
+    //enum fpga_type type = ZYNQ;
+    enum fpga_type type;
+    unsigned long connections = 0;
 
     std::vector<unsigned long> clb_vector =  std::vector<unsigned long>(MAX_SLOTS);
     std::vector<unsigned long> bram_vector = std::vector<unsigned long>(MAX_SLOTS);
@@ -87,6 +89,8 @@ public:
     std::vector<int> w_vector =  std::vector<int>(MAX_SLOTS);
     std::vector<int> h_vector =  std::vector<int>(MAX_SLOTS);
 
+    std::vector<hw_task_allocation> alloc =  std::vector<hw_task_allocation>(MAX_SLOTS);
+
     position_vec forbidden_region = position_vec(MAX_SLOTS);
 //    position_vec forbidden_region_pynq = position_vec(MAX_SLOTS);
 //    position_vec forbidden_region_virtex = position_vec(MAX_SLOTS);
@@ -95,12 +99,14 @@ public:
                                                   unsigned long n_units,
                                                   unsigned long n_min,
                                                   unsigned long n_max);
-
-    param_from_solver from_solver = {0, &eng_x, &eng_y,
+    input_to_flora *flora_input;
+    param_to_solver param;
+    param_from_solver from_solver = {0, 0, &eng_x, &eng_y,
                                     &eng_w, &eng_h,
                                     &clb_from_solver,
                                     &bram_from_solver,
-                                    &dsp_from_solver};
+                                    &dsp_from_solver,
+                                    &alloc};
     std::vector<std::string> cell_name = std::vector<std::string>(MAX_SLOTS);
 
 #ifdef WITH_PARTITIONING
@@ -114,7 +120,7 @@ public:
     void clear_vectors();
     void prep_input();
     void start_optimizer();
-    void generate_xdc();
+    void generate_xdc(std::string fplan_file_name);
 
     void init_fpga(enum fpga_type);
     void init_gui();

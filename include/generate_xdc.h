@@ -2,7 +2,6 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include "zynq_model.h"
 #include "fine_grained.h"
 
 using namespace std;
@@ -16,7 +15,7 @@ using namespace std;
 string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
                        "slot_4", "slot_5"};
 
-#define generate_xdc_file(fpga_type, from_fp_solver, to_solver,  num_slots, cell_name)\
+#define generate_xdc_file(fpga_type, from_fp_solver, to_solver,  num_slots, cell_name, fplan_xdc_file)\
 {\
     unsigned long a;\
     int status;\
@@ -44,7 +43,7 @@ string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
         cout << "x1 " << slices_in_slot[a][3].slice_x1 << " y1 " << slices_in_slot[a][3].slice_y1<<\
                  " x2 " << slices_in_slot[a][3].slice_x2  << " y2 " << slices_in_slot[a][3].slice_y2 << endl;\
     }\
-    write_xdc.open("/home/holmes/Desktop/pblocks_new.xdc");\
+    write_xdc.open(fplan_xdc_file);\
     write_xdc<< "# User Generated miscellaneous constraints" << endl <<endl <<endl;\
     for(a = 0; a < num_slots; a++){\
         write_xdc << "set_property HD.RECONFIGURABLE true [get_cells "<<cell_name[a] <<"]" <<endl;\

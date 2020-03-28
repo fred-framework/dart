@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "gurobi_c++.h"
-#include "zynq_model.h"
+#include "milp_solver_interface.h"
 
 using namespace std;
 //Gurobi data types

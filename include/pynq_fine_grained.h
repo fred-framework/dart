@@ -1,4 +1,4 @@
-#include "find_grained.h"
+#include "fine_grained.h"
 #include "pynq.h"
 
 class pynq_fine_grained {
