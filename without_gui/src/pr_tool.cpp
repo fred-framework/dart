@@ -30,11 +30,12 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         
         //Instantiate flora
         //flora fl_inst;
- 
+
+/* 
         prep_input(); 
-        //prep_proj_directory();
-        //generate_synthesis_tcl();
-        //start_synthesis(synthesis_script);
+        prep_proj_directory();
+        generate_synthesis_tcl();
+        start_synthesis(synthesis_script);
         parse_synthesis_report();
 
         fl_inst = new flora(&in_flora);
@@ -44,7 +45,9 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         fl_inst->generate_xdc(fplan_xdc_file);
         
         generate_impl_tcl(fl_inst);
-    }
+*/
+	start_implementation(impl_script);	  
+  }
     else {
         cout <<"The number of Reconfigurable modules > 0";
         exit(-1);
@@ -345,9 +348,9 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         }
 
         write_impl_tcl <<endl;
-        write_impl_tcl <<"set_atrtribute impl "<<config_name <<" impl \t    ${run.prImpl} " <<endl;
-        write_impl_tcl <<"set_atrtribute impl "<<config_name <<" verify \t   ${run.prVerify} " <<endl;
-        write_impl_tcl <<"set_atrtribute impl "<<config_name <<" bitstream \t ${run.writeBitstream} " <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" impl \t    ${run.prImpl} " <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" verify \t   ${run.prVerify} " <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" bitstream \t ${run.writeBitstream} " <<endl;
         temp_index += 1;
     }
 
