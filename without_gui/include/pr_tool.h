@@ -14,6 +14,11 @@
 #define MAX_RECONF_MODULES 1
 #define MAX_MODULES 100
 
+//TODO:This should be done in a better way
+#define CLB_MARGIN 30
+#define BRAM_MARGIN 10
+#define DSP_MARGIN 0
+
 namespace fs = std::experimental::filesystem;
 using namespace std;
 //using namespace Ui;
@@ -43,13 +48,13 @@ public:
     fpga_type type;
 
     //variables to manage project directory
-    std::string Project_dir = "/home/holmes/test_pr_dir";
+    std::string Project_dir = "/home/biruk/test_pr_dir";
     std::string Src_path = Project_dir + "/Sources";
     std::string hdl_copy_path = Src_path + "/hdl";
     std::string fplan_xdc_file = Src_path + "/constraints/pblocks.xdc";
     std::string tcl_project = Project_dir + "/Tcl";
-    std::string synthesis_script;
-    std::string impl_script;
+    std::string synthesis_script = Project_dir + "/ooc_synth.tcl" ;
+    std::string impl_script = Project_dir + "/impl.tcl";;
     //pointer to an instance of flora
     flora *fl_inst;
     input_to_flora in_flora;

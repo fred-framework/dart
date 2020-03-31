@@ -91,6 +91,7 @@ void flora::prep_input()
         cout << "\t " << clb_vector[ptr] << "\t " << bram_vector[ptr] << "\t " 
              << dsp_vector[ptr] << endl;
     }
+	cout <<"here " <<endl;
 }
 
 void flora::start_optimizer()

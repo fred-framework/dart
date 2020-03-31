@@ -24,7 +24,7 @@ endif
 
 ifeq ($(FPGA),PYNQ)
 SOURCES_MILP = src/milp_model_pynq_with_partition.cpp
-else ifeq($(FPGA),ZYNQ)
+else ifeq ($(FPGA),ZYNQ)
 SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
 else
 SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
