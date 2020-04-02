@@ -9,7 +9,7 @@ using namespace std;
 pr_tool::pr_tool(input_to_pr *pr_input) 
 {
     input_pr = pr_input; 
-    cout << " Begin PR_tool " <<endl;
+    cout << "PR_TOOL: Begin PR_tool " <<endl;
 
     if(input_pr->num_rm_modules > 0){
         num_rm_modules = pr_input->num_rm_modules;
@@ -24,9 +24,9 @@ pr_tool::pr_tool(input_to_pr *pr_input)
     type = TYPE_ZYNQ;
 #endif
 
-        cout << "num of slots pr_tool **** " << num_rm_modules <<endl;
-        cout << "type of FPGA pr_tool **** " << type <<endl;
-        cout << "path for input pr_tool **** " << pr_input->path_to_input <<endl;
+        cout << "PR_TOOL: num of slots pr_tool **** " << num_rm_modules <<endl;
+        cout << "PR_TOOL: type of FPGA pr_tool **** " << type <<endl;
+        cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
         
         //Instantiate flora
         //flora fl_inst;
@@ -39,26 +39,26 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         generate_synthesis_tcl();
         start_synthesis(synthesis_script);
 */
-	parse_synthesis_report();
+        parse_synthesis_report();
  
         fl_inst = new flora(&in_flora);
         fl_inst->clear_vectors();       
-	fl_inst->prep_input();
+        fl_inst->prep_input();
         fl_inst->start_optimizer();
         fl_inst->generate_xdc(fplan_xdc_file);
 
         generate_impl_tcl(fl_inst);
-	start_implementation(impl_script);	  
+//        start_implementation(impl_script);    
   }
     else {
-        cout <<"The number of Reconfigurable modules > 0";
+        cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
         exit(-1);
     }    
 }
 
 pr_tool::~pr_tool()
 {
-    cout << " destruction of PR_tool" <<endl;
+    cout << "PR_TOOL: destruction of PR_tool" <<endl;
 }
 
 void pr_tool::prep_input()
@@ -74,7 +74,7 @@ void pr_tool::prep_input()
     row = csv_data.rows();
     col = csv_data.columns();
 
-    cout << endl << "reading inputs " << row << " " << col <<endl;
+    cout << endl << "PR_TOOL: reading inputs " << row << " " << col <<endl;
     for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
 
 #ifdef WITH_PARTITIONING
@@ -125,8 +125,8 @@ void pr_tool::prep_proj_directory()
     fs::copy("tools/load_prj.py", Src_path, fs::copy_options::recursive); 
     fs::copy("tools/start_vivado", Project_dir, fs::copy_options::recursive); 
     fs::copy("/home/biruk/pr_flow/PR_cnvW1A1/Synth/Static", 
-	    Project_dir + "/Synth/Static", 
-	    fs::copy_options::recursive);
+        Project_dir + "/Synth/Static", 
+        fs::copy_options::recursive);
     //create the .prj file using the python script
 }
 
@@ -236,10 +236,10 @@ void pr_tool::parse_synthesis_report()
     string bram = "Block RAM Tile    |";
     vector<slot> extracted_res = vector<slot>(num_rm_modules);
    
-    cout << "Parsing Synth utilization report "  <<endl;
+    cout << "PR_TOOL: Parsing Synth utilization report "  <<endl;
     for(i = 0; i < num_rm_modules; i++) {
         string line, word;
-        cout <<"filename is" << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+        cout <<"PR_TOOL:filename is" << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
                       rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
 
         ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
@@ -293,7 +293,7 @@ void pr_tool::parse_synthesis_report()
         
         for(i = 0; i < num_rm_modules; i++){
             write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<","  
-			      << extracted_res[i].bram + BRAM_MARGIN
+                  << extracted_res[i].bram + BRAM_MARGIN
                               << "," <<extracted_res[i].dsp + DSP_MARGIN <<"," <<
 #ifdef WITH_PARTITIONING
                                 HW_WCET[i] << "," <<slacks[i] <<"," <<
@@ -405,19 +405,19 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         /*TODO: add the implementation of the static part */
         
         write_impl_tcl <<"set_attribute impl "<<config_name << " partitions \t";
-	if(i == 0 )
-	    write_impl_tcl <<"[list [list $static           $top \t" + implement + "   ] \\" <<endl;
+        if(i == 0 )
+            write_impl_tcl <<"[list [list $static           $top \t" + implement + "   ] \\" <<endl;
         else
-	    write_impl_tcl <<"[list [list $static           $top \t" + import   + "   ] \\" <<endl;
-	for(conf_ptr = 0; conf_ptr <  fl_ptr->from_solver.num_partition; conf_ptr++) {
+            write_impl_tcl <<"[list [list $static           $top \t" + import   + "   ] \\" <<endl;
+        for(conf_ptr = 0; conf_ptr <  fl_ptr->from_solver.num_partition; conf_ptr++) {
             if(fl_ptr->alloc[conf_ptr].num_tasks_in_part > 0) {
                 fl_ptr->alloc[conf_ptr].num_tasks_in_part--;
                 write_impl_tcl <<"\t \t \t \t \t";
                 write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[conf_ptr].task_id[temp_index]].rm_tag 
-			       <<"\t " << fl_ptr->cell_name[conf_ptr]  <<" implement] \\" <<endl;
+                   <<"\t " << fl_ptr->cell_name[conf_ptr]  <<" implement] \\" <<endl;
             }
         }
-	write_impl_tcl <<"]"<<endl;
+        write_impl_tcl <<"]"<<endl;
         write_impl_tcl <<endl;
         write_impl_tcl <<"set_attribute impl "<<config_name <<" impl \t    ${run.prImpl} " <<endl;
         write_impl_tcl <<"set_attribute impl "<<config_name <<" verify \t   ${run.prVerify} " <<endl;

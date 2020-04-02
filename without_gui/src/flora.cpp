@@ -21,19 +21,19 @@ flora::flora(input_to_flora *input_fl)
         task_set = new Taskset(num_rm_modules, num_rm_modules, *platform);
 #endif
 
-        cout << "num of slots **** " << num_rm_modules <<endl;
-        cout << "type of FPGA **** " << type <<endl;
-        cout << "path for input **** " << flora_input->path_to_input <<endl;
+        cout << "FLORA: num of slots **** " << num_rm_modules <<endl;
+//        cout << "FLORA: type of FPGA **** " << type <<endl;
+        cout << "FLORA: path for input **** " << flora_input->path_to_input <<endl;
     } 
     else {
-        cout <<"The number of Reconfigurable modules > 0";
+        cout <<"FLORA: The number of Reconfigurable modules > 0";
         exit(-1);
     }
 }
 
 flora::~flora()
 {
-    cout << "destruction " << endl;
+    cout << "FLORA: destruction " << endl;
 }
 
 //Prepare the input
@@ -65,7 +65,7 @@ void flora::prep_input()
     row = csv_data.rows();
     col = csv_data.columns();
 
-    cout << endl << "resource requirement of the input slots " <<endl;
+    cout << endl << "FLORA: resource requirement of the input slots " <<endl;
     cout << "\t clb " << " \t bram " << "\t dsp " <<endl;
     for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
        cout << "slot " << i;  
@@ -91,7 +91,6 @@ void flora::prep_input()
         cout << "\t " << clb_vector[ptr] << "\t " << bram_vector[ptr] << "\t " 
              << dsp_vector[ptr] << endl;
     }
-	cout <<"here " <<endl;
 }
 
 void flora::start_optimizer()
@@ -152,7 +151,9 @@ void flora::start_optimizer()
     platform->recTimePerUnit[BRAM] = 1.0/4500.0;
     platform->recTimePerUnit[DSP]  = 1.0/4000.0;
 #endif
+    cout <<"FLORA: starting ZYNQ MILP optimizer " <<endl;
     zynq_start_optimizer(&param, &from_solver);
+    cout <<"FLORA: finished MILP optimizer " <<endl;
 
 //    }
 
@@ -181,7 +182,9 @@ void flora::start_optimizer()
     platform->recTimePerUnit[BRAM] = 1.0/4500.0;
     platform->recTimePerUnit[DSP]  = 1.0/4000.0;
 #endif
+    cout <<"FLORA: starting PYNQ MILP optimizer " <<endl;
     pynq_start_optimizer(&param, &from_solver);
+    cout <<"FLORA: finished MILP optimizer " <<endl;
 #endif  
 }
 

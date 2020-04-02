@@ -46,7 +46,7 @@ public:
 
     unsigned long num_forbidden_slots = PYNQ_FORBIDDEN;
     pos forbidden_pos[PYNQ_FORBIDDEN] = {{0, 10, 17, 20},
-                                        {42, 10, 7,  20},
+                                        {42, 10, 6,  20},
                                         {47, 0,  2,  10}};
 
     void initialize_clk_reg();

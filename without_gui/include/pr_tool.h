@@ -48,7 +48,7 @@ public:
     fpga_type type;
 
     //variables to manage project directory
-    std::string Project_dir = "/home/biruk/test_pr_dir";
+    std::string Project_dir = "/home/holmes/test_pr_dir";
     std::string Src_path = Project_dir + "/Sources";
     std::string hdl_copy_path = Src_path + "/hdl";
     std::string fplan_xdc_file = Src_path + "/constraints/pblocks.xdc";
