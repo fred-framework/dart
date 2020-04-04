@@ -23,25 +23,25 @@ string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
     vector<slice> slices_in_slot = vector<slice> (MAX_SLOTS);\
     ofstream write_xdc;\
     sort_output(fpga_type, from_fp_solver, to_solver, slices_in_slot, num_slots)\
-    cout << "inside sort output clb " << endl;\
+    cout << "GENERATE_XDC: Started xdc generation " << endl;\
     for (a = 0; a < num_slots; a++){\
-        cout << "x1 " << slices_in_slot[a][0].slice_x1  <<" y1 " << slices_in_slot[a][0].slice_y1\
-                 << " x2 " << slices_in_slot[a][0].slice_x2 << " y2 " << slices_in_slot[a][0].slice_y2 << endl;\
+    /*    cout << "x1 " << slices_in_slot[a][0].slice_x1  <<" y1 " << slices_in_slot[a][0].slice_y1*/\
+    /*             << " x2 " << slices_in_slot[a][0].slice_x2 << " y2 " << slices_in_slot[a][0].slice_y2 << endl;*/\
     }\
-    cout << "inside sort output bram 18" << endl;\
+    /*cout << "inside sort output bram 18" << endl;*/\
     for (a = 0; a < num_slots; a++){\
-        cout << "x1 " << slices_in_slot[a][1].slice_x1 << " y1 " << slices_in_slot[a][1].slice_y1 <<\
-                 " x2 " << slices_in_slot[a][1].slice_x2 << " y2 " << slices_in_slot[a][1].slice_y2 << endl;\
+    /*    cout << "x1 " << slices_in_slot[a][1].slice_x1 << " y1 " << slices_in_slot[a][1].slice_y1 << */\
+    /*             " x2 " << slices_in_slot[a][1].slice_x2 << " y2 " << slices_in_slot[a][1].slice_y2 << endl;*/\
     }\
-    cout << "inside sort output bram 36" << endl;\
+    /*cout << "inside sort output bram 36" << endl;*/\
     for (a = 0; a < num_slots; a++){\
-        cout << "x1 " << slices_in_slot[a][2].slice_x1 << " y1 " << slices_in_slot[a][2].slice_y1 \
-                <<" x2 " << slices_in_slot[a][2].slice_x2 << " y2 " << slices_in_slot[a][2].slice_y2 << endl;\
+    /*    cout << "x1 " << slices_in_slot[a][2].slice_x1 << " y1 " << slices_in_slot[a][2].slice_y1 */\
+    /*            <<" x2 " << slices_in_slot[a][2].slice_x2 << " y2 " << slices_in_slot[a][2].slice_y2 << endl;*/\
     }\
-    cout << "inside sort output dsp " << endl;\
+    /*cout << "inside sort output dsp " << endl;*/\
     for (a = 0; a < num_slots; a++){\
-        cout << "x1 " << slices_in_slot[a][3].slice_x1 << " y1 " << slices_in_slot[a][3].slice_y1<<\
-                 " x2 " << slices_in_slot[a][3].slice_x2  << " y2 " << slices_in_slot[a][3].slice_y2 << endl;\
+    /*    cout << "x1 " << slices_in_slot[a][3].slice_x1 << " y1 " << slices_in_slot[a][3].slice_y1<< */\
+    /*             " x2 " << slices_in_slot[a][3].slice_x2  << " y2 " << slices_in_slot[a][3].slice_y2 << endl;*/\
     }\
     write_xdc.open(fplan_xdc_file);\
     write_xdc<< "# User Generated miscellaneous constraints" << endl <<endl <<endl;\
@@ -70,6 +70,7 @@ string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
     write_xdc << "set_property SEVERITY {Warning} [get_drc_checks NSTD-1]" <<endl;\
     write_xdc << "set_property SEVERITY {Warning} [get_drc_checks UCIO-1]" <<endl;\
     write_xdc.close();\
+    cout << "GENERATE_XDC: Finsihded xdc generation " << endl;\
 }
 
 #define sort_output(fpga_type, from_fp_solver, to_solver, output_vec, num_slots) {\
@@ -86,7 +87,7 @@ string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
         h = (*from_fp_solver->h)[i];\
     is_bram_18 = false;\
     bram_type = 0;\
-    cout<< "starting " << x << " " << y <<endl;\
+    /*cout<< "starting " << x << " " << y <<endl;*/\
     for(m = 0, index = 0; m < 3; m++, index++) {\
             k = x;\
             flag = 0;\
@@ -94,7 +95,7 @@ string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
                 if(k < x + w){\
                     if((fpga_type->fg[k].type_of_res) == m) {\
                         output_vec[i][index].slice_x1 = fpga_type->fg[k].slice_1;\
-                        cout << "left m " << m << " k " << k << " res " <<fpga_type->fg[k].slice_2 <<endl;\
+                        /*cout << "left m " << m << " k " << k << " res " <<fpga_type->fg[k].slice_2 <<endl;*/\
                         flag = 1;\
                     }\
                     else\
@@ -109,7 +110,7 @@ string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
                 if (k >= x) {\
                     if((fpga_type->fg[k].type_of_res) == m){\
                         output_vec[i][index].slice_x2 = fpga_type->fg[k].slice_2;\
-                        cout << " right m " << m << " k " << k << " res " <<fpga_type->fg[k].slice_2 <<endl;\
+                        /*cout << " right m " << m << " k " << k << " res " <<fpga_type->fg[k].slice_2 <<endl;*/\
                         flag = 1;\
                     }\
                     else\

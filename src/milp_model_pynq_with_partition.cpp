@@ -1817,7 +1817,8 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
             for(uint k=0; k < t.maxPartitions; k++)
                 num_active_partitions += active_partitions[k];
 
-            cout<< "num partitions " <<num_active_partitions <<endl;
+            cout <<endl;
+            cout<< "num partitions = " <<num_active_partitions <<endl;
             
             // ------------------------------------------------------------
             // packing allocation to struct
@@ -1851,15 +1852,27 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
             
             to_sim->max_modules_per_partition = max_modules_per_partition;
 
+            cout << endl;
+            cout << "--------------------------------------------------------------------" << endl;
+            cout << " RESOURCE REQUIREMENT OF RMs" << endl;
+            cout << "--------------------------------------------------------------------" << endl;
+            cout << endl;
+
+            for(i = 0; i < num_slots; i++) {
+                cout << "RM_" << i <<"\t" <<"CLB = " << clb_req_pynq[i] << endl;
+                cout << "\t" << "BRAM = " << bram_req_pynq[i] << endl;
+                cout << "\t" << "DSP  = " << dsp_req_pynq[i] << endl; 
+                
+                cout <<endl; 
+            }
+
             cout << "---------------------------------------------------------------------\
-----------------------------------------------------------------------------------------------------\
-------------------------  "<< endl;
-            cout<< "slot \t" << "x_0 \t" << "x_1 \t" << "y \t" << "w \t" << "h \t" << "clb_0 \t"
+-------------------------------------------------------------------------------------------"<< endl;
+            cout<< "RR \t" << "x_0 \t" << "x_1 \t" << "y \t" << "w \t" << "h \t" << "clb_0 \t"
                     << "clb_1 \t" << "clb \t" << "req\t" << "bram_0 \t" << "bram_1 \t" << "bram \t"
                     << "req\t" << "dsp_0 \t" << "dsp_1 \t" << "dsp\t" << "req" <<endl;
             cout << "----------------------------------------------------------------------\
---------------------------------------------------------------------------------------------\
--------------------------------" << endl;
+-------------------------------------------------------------------------------------------" << endl;
             for(i = 0, m = 0; i < num_slots; i++) {
 
                 if(active_partitions[i]){
@@ -1879,9 +1892,8 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                                                      dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - 
                                                      dsp_fbdn_tot[i].get(GRB_DoubleAttr_X)) * dsp_per_tile);
                     m += 1;
-                }
+ //               }
 
-                cout <<endl;
 
                 cout << i << "\t" << x[i][0].get(GRB_DoubleAttr_X) <<"\t"
                     << x[i][1].get(GRB_DoubleAttr_X) << "\t" << y[i].get(GRB_DoubleAttr_X)
@@ -1899,11 +1911,12 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
 
                     << "\t" << dsp[i][0].get(GRB_DoubleAttr_X) << "\t" <<
                     dsp[i][1].get(GRB_DoubleAttr_X) << "\t" << ((dsp[i][1].get(GRB_DoubleAttr_X) -
-                            dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - clb_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
+                            dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - dsp_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
                              dsp_per_tile << "\t" << task_set->HW_Tasks[i].resDemand[DSP] <<endl;
+                }
 
-                cout <<endl;
-
+//                cout <<endl;
+/*
                 cout << "num clbs in forbidden slot is " << clb_fbdn_tot[i].get(GRB_DoubleAttr_X) * clb_per_tile <<endl;
                 cout << "num clb 0 in forbidden slot "<< 0 <<" is " << clb_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl;
                 cout << "num clbs 1 in forbidden slot " <<0 << "is " << clb_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
@@ -1921,6 +1934,8 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                 cout << "total dsp in forbidden slot is " << dsp_fbdn_tot[i].get(GRB_DoubleAttr_X) * dsp_per_tile <<endl;
                 cout << "num dsp 0 in forbidden slot " << i << " is " << dsp_fbdn[1][i][0].get(GRB_DoubleAttr_X) <<endl;
                 cout << "num dsp 1 in forbidden slot " << i << " is " << dsp_fbdn[1][i][1].get(GRB_DoubleAttr_X) <<endl;
+
+*/
 
 /*
                 for(k=0; k < 2; k++) {
@@ -1941,10 +1956,11 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                         cout<<endl;
                 }
 */
-                    cout <<  endl;
+
             }
 
             to_sim->num_partition = num_active_partitions;
+            cout <<endl;
 /*
             for (i = 0; i < num_slots; i++) {
                 wasted_clb_zynq  +=  wasted[i][0].get(GRB_DoubleAttr_X);
