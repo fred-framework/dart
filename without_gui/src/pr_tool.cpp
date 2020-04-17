@@ -33,12 +33,12 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
 
         prep_input(); 
-/*
+
         prep_proj_directory();
 
         generate_synthesis_tcl();
         start_synthesis(synthesis_script);
-*/
+
         parse_synthesis_report();
  
         fl_inst = new flora(&in_flora);
@@ -124,7 +124,7 @@ void pr_tool::prep_proj_directory()
     fs::copy("tools/Tcl", tcl_project, fs::copy_options::recursive); 
     fs::copy("tools/load_prj.py", Src_path, fs::copy_options::recursive); 
     fs::copy("tools/start_vivado", Project_dir, fs::copy_options::recursive); 
-    fs::copy("/home/biruk/pr_flow/PR_cnvW1A1/Synth/Static", 
+    fs::copy("tools/synth_static/", 
         Project_dir + "/Synth/Static", 
         fs::copy_options::recursive);
     //create the .prj file using the python script
