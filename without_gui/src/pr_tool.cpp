@@ -32,9 +32,9 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         //flora fl_inst;
 
 
-      prep_input(); 
-/*
-      prep_proj_directory();
+        prep_input(); 
+
+        prep_proj_directory();
 
         generate_synthesis_tcl();
         start_synthesis(synthesis_script);
@@ -48,8 +48,8 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         fl_inst->generate_xdc(fplan_xdc_file);
 
         generate_impl_tcl(fl_inst);
-*/
-        start_implementation(impl_script);    
+
+//        start_implementation(impl_script);    
   }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
@@ -125,7 +125,7 @@ void pr_tool::prep_proj_directory()
     fs::copy("tools/Tcl", tcl_project, fs::copy_options::recursive); 
     fs::copy("tools/load_prj.py", Src_path, fs::copy_options::recursive); 
     fs::copy("tools/start_vivado", Project_dir, fs::copy_options::recursive); 
-    fs::copy("/home/biruk/pr_flow/PR_cnvW1A1/Synth/Static", 
+    fs::copy("tools/synth_static/", 
         Project_dir + "/Synth/Static", 
         fs::copy_options::recursive);
     //create the .prj file using the python script

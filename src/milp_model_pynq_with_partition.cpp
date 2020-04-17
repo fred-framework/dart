@@ -2079,5 +2079,5 @@ int pynq_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
 
     cout << "PYNQ_OPT: starting PYNQ optimizer" << endl;
     status = solve_milp(*task_set, *platform, slacks, false, to_sim); 
-return 0;
+    return 0;
 }
