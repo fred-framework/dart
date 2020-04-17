@@ -32,13 +32,13 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         //flora fl_inst;
 
 
-        prep_input(); 
+      prep_input(); 
 /*
-        prep_proj_directory();
+      prep_proj_directory();
 
         generate_synthesis_tcl();
         start_synthesis(synthesis_script);
-*/
+
         parse_synthesis_report();
  
         fl_inst = new flora(&in_flora);
@@ -48,7 +48,8 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         fl_inst->generate_xdc(fplan_xdc_file);
 
         generate_impl_tcl(fl_inst);
-//        start_implementation(impl_script);    
+*/
+        start_implementation(impl_script);    
   }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";

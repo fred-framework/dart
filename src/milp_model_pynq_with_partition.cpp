@@ -1895,7 +1895,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
  //               }
 
 
-                cout << i << "\t" << x[i][0].get(GRB_DoubleAttr_X) <<"\t"
+                cout << m << "\t" << x[i][0].get(GRB_DoubleAttr_X) <<"\t"
                     << x[i][1].get(GRB_DoubleAttr_X) << "\t" << y[i].get(GRB_DoubleAttr_X)
                     <<" \t" <<  w[i].get(GRB_DoubleAttr_X) << "\t" << h[i].get(GRB_DoubleAttr_X)
 
