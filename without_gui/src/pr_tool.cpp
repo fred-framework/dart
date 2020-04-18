@@ -49,7 +49,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         generate_impl_tcl(fl_inst);
 
-//        start_implementation(impl_script);    
+        start_implementation(impl_script);    
   }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
