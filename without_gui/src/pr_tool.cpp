@@ -49,7 +49,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         generate_impl_tcl(fl_inst);
 
-        start_implementation(impl_script);    
+//        start_implementation(impl_script);    
   }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
@@ -81,7 +81,6 @@ void pr_tool::prep_input()
 #ifdef WITH_PARTITIONING
         str = csv_data.get_value(i, k++);
         HW_WCET.push_back(std::stod(str));
-cout <<"here"<<endl;
         str = csv_data.get_value(i, k++);
         slacks.push_back(std::stod(str));
 #endif
@@ -98,6 +97,7 @@ void pr_tool::prep_proj_directory()
 {
     int status, i;
 
+    init_dir_struct();
     //TODO: check if directory exists
     fs::create_directories(Project_dir);
     fs::create_directories(Src_path);
@@ -431,3 +431,18 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
     write_impl_tcl << "exit"<<endl;
     write_impl_tcl.close();
 }
+
+void pr_tool::init_dir_struct()
+{
+    Project_dir = getenv("HOME");
+
+    Project_dir += "/pr_tool_proj"; 
+    Src_path = Project_dir + "/Sources";
+    hdl_copy_path = Src_path + "/hdl";
+    fplan_xdc_file = Src_path + "/constraints/pblocks.xdc";
+    tcl_project = Project_dir + "/Tcl";
+    synthesis_script = Project_dir + "/ooc_synth.tcl" ;
+    impl_script = Project_dir + "/impl.tcl";;
+
+}
+
