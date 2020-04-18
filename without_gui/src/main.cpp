@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 #ifdef RUN_FLORA
     input_to_flora in_flora;
     in_flora.num_rm_modules = atol(argv[1]);
-//    in_flora.type_of_fpga = (fpga_type) atol(argv[2]);
+    //in_flora.type_of_fpga = (fpga_type) atol(argv[2]);
     in_flora.path_to_input = argv[2];
 
     flora fl(&in_flora);
@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 #else
     input_to_pr pr_input;
     pr_input.num_rm_modules = atol(argv[1]); 
-//    pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
+    //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
     pr_input.path_to_input = argv[2];
 
     pr_tool tool(&pr_input);
