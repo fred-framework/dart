@@ -15,7 +15,11 @@ typedef struct {
 }hw_task_allocation;
 
 typedef struct {
+#ifdef WITH_PARTITIONING    
     unsigned long num_rm_modules;
+#else 
+    unsigned long num_rm_partitions;
+#endif
     unsigned long num_forbidden_slots;
     unsigned long num_rows;
     unsigned long width;

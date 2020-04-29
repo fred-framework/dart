@@ -6,8 +6,20 @@ CFLAGS += -std=c++17
 LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi81 -lm -lstdc++fs
 
 all:
-	@echo "please use a target 'pr_tool_with_part' or 'pr_tool_without_partitioning'" 
-	@echo "For example make pr_tool_with_part ENABLE_GUI=0 FPGA=PYNQ"
+	@echo "Please run the make file using the follwoing format"
+	@echo ""
+	@echo "make target FPGA=type_of_FPGA"
+	@echo ""
+	@echo "please use a specific target "
+	@echo "'flora_with_partitioning'  ---> floorplanner with partitioning"
+	@echo "'flora_without_partitioning' ---> only floorplanner without partitioning"
+	@echo "'pr_tool_with_part' ---> run the PR flow with including floorplanning and partitoning'" 
+	@echo "'pr_tool_without_part' ---> run the PR flow including only the floorplanning "
+	@echo " "	
+	@echo "for type of FPGA please use ZYNQ or PYNQ"
+	@echo " "
+	@echo "For example make pr_tool_with_part FPGA=PYNQ"
+
 
 SOURCES_SHARED = src/csv_data_manipulator.cpp include/fpga.h without_gui/src/main.cpp
 
@@ -22,28 +34,33 @@ SOURCES_SHARED += include/zynq.h src/zynq.cpp include/zynq_fine_grained.h src/zy
 CFLAGS += -DFPGA_ZYNQ
 endif
 
+
 ifeq ($(FPGA),PYNQ)
-SOURCES_MILP = src/milp_model_pynq_with_partition.cpp
+flora_with_partitioning: SOURCES_MILP = src/milp_model_pynq_with_partition.cpp
+flora_without_partitioning: SOURCES_MILP = src/milp_model_pynq.cpp
+pr_tool_without_part: SOURCES_MILP = src/milp_model_pynq.cpp
+pr_tool_with_part: SOURCES_MILP = src/milp_model_pynq_with_partition.cpp
 else ifeq ($(FPGA),ZYNQ)
-SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
-else
-SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
+flora_with_partitioning: SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
+flora_without_partitioning: SOURCES_MILP = src/milp_model_zynq.cpp
+pr_tool_without_part: SOURCES_MILP = src/milp_model_zynq.cpp
+pr_tool_with_part: SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
 endif
 
-with_partitioning: SOURCES += src/partition.cpp  
-with_partitioning: SOURCES += without_gui/src/flora.cpp
-with_partitioning: BIN = run_with_partition
-with_partitioning: CFLAGS += -DWITH_PARTITIONING -DRUN_FLORA
-with_partitioning: build
+flora_with_partitioning: SOURCES += src/partition.cpp
+flora_with_partitioning: SOURCES += without_gui/src/flora.cpp
+flora_with_partitioning: BIN = run_with_partition
+flora_with_partitioning: CFLAGS += -DWITH_PARTITIONING -DRUN_FLORA
+flora_with_partitioning: build
 
-without_partitioning: SOURCES += src/milp_model_zynq.cpp 
-without_partitioning: SOURCES += without_gui/src/flora.cpp
-without_partitioning: BIN = run_without_partition
-without_partitioning: CFLAGS += -DRUN_FLORA
-without_partitioning: build
+
+flora_without_partitioning: SOURCES += without_gui/src/flora.cpp
+flora_without_partitioning: BIN = run_without_partition
+flora_without_partitioning: CFLAGS += -DRUN_FLORA
+flora_without_partitioning: build
+
 
 pr_tool_without_part: SOURCES = without_gui/src/pr_tool.cpp
-pr_tool_without_part: SOURCES += src/partition.cpp
 pr_tool_without_part: SOURCES += without_gui/src/flora.cpp
 pr_tool_without_part: BIN = run_pr_tool_without_part
 pr_tool_without_part: build

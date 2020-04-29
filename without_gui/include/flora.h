@@ -6,7 +6,7 @@
 #include "csv_data_manipulator.hpp"
 #include <string>
 
-                                                                         
+/*                                                                         
 #ifdef WITH_PARTITIONING                                                 
     #include "fine_grained.h"                                            
     #ifdef FPGA_ZYNQ                                                     
@@ -21,6 +21,16 @@
         #include "pynq.h"                                                
     #endif                                                               
 #endif 
+*/
+
+#include "fine_grained.h"
+#ifdef FPGA_ZYNQ
+    #include "zynq_fine_grained.h"
+//    #include "zynq.h"
+#elif FPGA_PYNQ
+    #include "pynq_fine_grained.h"
+//    #include "pynq.h"
+#endif
 
 namespace Ui {
 class fp;
@@ -42,9 +52,14 @@ typedef struct{
 }slot;
 
 typedef struct{
+#ifdef WITH_PARTITIONING
     unsigned long num_rm_modules;
+#else
+    unsigned long num_rm_partitions;
+#endif
 //    fpga_type type_of_fpga;
     std::string path_to_input;
+
 }input_to_flora;
 
 #define MY_RAND() ((double)((double)rand()/(double)RAND_MAX))
@@ -62,7 +77,11 @@ public:
     pynq *pynq_inst;
 #endif
 
+#ifdef WITH_PARTITIONING
     unsigned long num_rm_modules = 0;
+#else
+    unsigned long num_rm_partitions = 0;
+#endif
     //enum fpga_type type = ZYNQ;
     enum fpga_type type;
     unsigned long connections = 0;

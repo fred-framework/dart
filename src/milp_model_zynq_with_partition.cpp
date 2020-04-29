@@ -1,5 +1,3 @@
-#include <iostream>
-#include <vector>
 #include "gurobi_c++.h"
 #include "milp_solver_interface.h"
 #include "fpga.h"
@@ -35,6 +33,10 @@ static vector<unsigned long> clb_req_zynq (MAX_SLOTS);
 static vector<unsigned long> bram_req_zynq(MAX_SLOTS);
 static vector<unsigned long> dsp_req_zynq (MAX_SLOTS);
 
+static vector<double> clb_in_partition(MAX_SLOTS);
+static vector<double> bram_in_partition(MAX_SLOTS);
+static vector<double> dsp_in_partition(MAX_SLOTS);
+
 Taskset *task_set;
 Platform *platform;
 vector <double> slacks = vector<double>(MAX_SLOTS);
@@ -42,8 +44,11 @@ vector <double> slacks = vector<double>(MAX_SLOTS);
 static vector <vector <unsigned long>> conn_matrix_zynq = vector <vector<unsigned long>> (MAX_SLOTS, vector<unsigned long> (MAX_SLOTS, 0));;
 static unsigned long num_conn_slots_zynq;
 
+const unsigned long num_fbdn_edge = 7;
 static Vecpos fs_zynq(MAX_SLOTS);
 unsigned int beta_fbdn[3] = {1, 1};
+unsigned forbidden_boundaries_right[num_fbdn_edge] = {4, 7, 10, 15, 18, 22, 25};
+unsigned forbidden_boundaries_left[num_fbdn_edge] =  {3, 6, 9, 12, 17, 21, 24};
 
 //int solve_milp(param_from_solver *to_sim)
 int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool preemptive_FRI, param_from_solver *to_sim)
@@ -702,21 +707,26 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
         }
 //#endif
         /**********************************************************************
-         name: kappa
-         type: binary
-         func: this variable is used to formulate the constraint on wasted resources
-                kappa[i][k] is a variable to constrain wasted resource type i in slot k
-        ***********************************************************************/
-  /*      GRBVar2DArray kappa(2);
-        for(i = 0; i < 2; i++) {
-            GRBVarArray each_slot(num_slots);
+           name: kappa
+           type: binary
+           func: this variable is used to formulate the constraint on wasted resources
+                  kappa[i][k] is a variable to constrain wasted resource type i in slot k
+          ***********************************************************************/
+          GRBVar3DArray kappa(num_slots);
+          for(i = 0; i < num_slots; i++) {
+              GRBVar2DArray each_slot(num_fbdn_edge);
 
-            kappa[i] = each_slot;
+              kappa[i] = each_slot;
+              for(k = 0; k < num_fbdn_edge; k++){
+                  GRBVarArray each_slot_1 (2);
+                    kappa[i][k] = each_slot_1;
 
-            for(k = 0; k < num_slots; k++)
-                kappa[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-        }
-*/
+                  for(j = 0; j < 2; j++)
+                    kappa[i][k][j] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
+                }
+            }
+
+
         /**********************************************************************
          name: constr_res
          type: binary
@@ -793,6 +803,23 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                   wasted[i][k] = model.addVar(0.0,  GRB_INFINITY, 0.0, GRB_INTEGER);
           }
 
+         /**********************************************************************
+           name: max
+           type: binary
+           func: 
+           ***********************************************************************/
+
+        GRBVar2DArray max(t.maxPartitions);
+        for(uint a=0; a < t.maxPartitions; a++)
+        {
+            GRBVarArray per_partition(t.maxHW_Tasks);
+            max[a] = per_partition;
+
+            for(uint k=0; k < t.maxHW_Tasks; k++)
+                max[a][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
+        }
+
+
         model.update();
 
 
@@ -845,11 +872,14 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
 
         for(uint x=0; x < platform.N_FPGA_RESOURCES; x++){
             for(uint k=0; k < t.maxPartitions; k++) {
-                GRBLinExpr exp;
+                GRBLinExpr exp, exp_max;
                 for(uint a=0; a < t.maxHW_Tasks; a++){
                     model.addConstr(b[x][k] >= (double)t.HW_Tasks[a].resDemand[x]*A[a][k], "con 4");
+                    //model.addConstr(b[x][k] <= (double)t.HW_Tasks[a].resDemand[x]*A[a][k] + (1 - max[a][k]) * BIG_M, "con 4_1");
                     exp += A[a][k];
+                    exp_max += max[a][k]; 
                 }
+                //model.addConstr(exp_max == 1, "con 11.0");
                 model.addConstr(b[x][k] <= (double)BIG_M * exp, "con 11");
             }
         }
@@ -1289,7 +1319,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
       /*********************************************************************
         Constr 2.3: There must be enough clb, bram and dsp inside the slot
       **********************************************************************/
-        for(i = 0; i < num_slots; i++) {
+        for(i = 0; i <  t.maxPartitions /* num_slots */; i++) {
             GRBLinExpr exp_tau, exp_clb, exp_bram, exp_dsp, exp_hw_task;
             GRBLinExpr exp_clb_fbdn;
             for(j = 0; j < num_clk_regs; j++) {
@@ -1299,7 +1329,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                 model.addConstr(tau[0][i][j] >= 0, "15");
                
                 //CLB_FBDN 0
-                model.addConstr(tau_fbdn[0][0][i][j] <= 10000 * beta_fbdn[j], "58");
+                model.addConstr(tau_fbdn[0][0][i][j] <= 10000 * (beta_fbdn[j] + beta[i][j] - 1), "58");
                 model.addConstr(tau_fbdn[0][0][i][j] <= clb_fbdn[0][i][1] - clb_fbdn[0][i][0], "59");
                 model.addConstr(tau_fbdn[0][0][i][j] >= (clb_fbdn[0][i][1] - clb_fbdn[0][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * clb_max, "60");
                 model.addConstr(tau_fbdn[0][0][i][j] >= 0, "15");
@@ -1436,6 +1466,21 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
 */
 //#endif
 
+        /*************************************************************************
+        Constraint 4.2:
+        **************************************************************************/
+
+        for(i = 0; i < num_slots; i++) {
+            for (j = 0; j <  num_fbdn_edge; j++) {
+                l = 0;
+                model.addConstr(x[i][0] - forbidden_boundaries_left[j] <= -0.01 + kappa[i][j][l] * BIG_M, "edge_con");
+                model.addConstr(x[i][0] - forbidden_boundaries_left[j] >= 0.01 - (1 - kappa[i][j][l]) * BIG_M, "edge_con_1");
+                l++;
+                model.addConstr(x[i][1] - forbidden_boundaries_right[j] <= -0.01 + kappa[i][j][l] * BIG_M, "edge_con_2");
+                model.addConstr(x[i][1] - forbidden_boundaries_right[j] >= 0.01 - (1 - kappa[i][j][l]) * BIG_M, "edge_con_3");
+            }
+        }
+
 //#ifdef objective
         //Objective function parameters definition
         /*************************************************************************
@@ -1500,8 +1545,8 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
 
         //model.setObjective((obj_x + obj_y), GRB_MINIMIZE);
         //model.setObjective(1 * obj_wasted_clb,  GRB_MINIMIZE);
-        model.setObjective(obj_wasted_clb + obj_wasted_bram, GRB_MINIMIZE);
-       // model.setObjective(obj_wasted_dsp,  GRB_MINIMIZE);
+        ////model.setObjective(obj_wasted_bram, GRB_MINIMIZE);
+        model.setObjective(obj_wasted_clb,  GRB_MINIMIZE);
 //#endif
 
         //Optimize
@@ -1526,7 +1571,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
             cout << "-) HW-TASK ALLOCATION" << endl;
             cout << "--------------------------------------------------------------------" << endl;
             cout << endl;
-            cout << "Partition: \t\t";
+            cout << "Partition: \t";
                 for(uint k=0; k < t.maxPartitions; k++)
                     cout << k << "\t";
                 cout << endl;
@@ -1631,6 +1676,27 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                 cout <<endl;
             }
 
+ 
+            to_sim->num_partition = num_active_partitions;
+            cout <<endl;
+
+            for(uint k = 0, m = 0; k < t.maxPartitions; k++) {
+                if(active_partitions[k] == 1) { 
+                    for (uint a = 0; a < num_slots; a++) { 
+                        if(A[a][k].get(GRB_DoubleAttr_X) == 1) {
+                            if(task_set->HW_Tasks[a].resDemand[CLB] > clb_in_partition[m]) 
+                               clb_in_partition[m] = task_set->HW_Tasks[a].resDemand[CLB];
+
+                             if(task_set->HW_Tasks[a].resDemand[BRAM] > bram_in_partition[m])
+                                    bram_in_partition[m] = task_set->HW_Tasks[a].resDemand[BRAM];
+                              
+                              if(task_set->HW_Tasks[a].resDemand[DSP] > dsp_in_partition[m])
+                                    dsp_in_partition[m] = task_set->HW_Tasks[a].resDemand[DSP];            
+                        }
+                    }
+                    m += 1;
+                }
+            }
 
             cout << "---------------------------------------------------------------------\
 ----------------------------------------------------------------------------------------------------\
@@ -1641,12 +1707,12 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
             cout << "----------------------------------------------------------------------\
 --------------------------------------------------------------------------------------------\
 -------------------------------" << endl;
+    
             for(i = 0, m = 0; i < num_slots; i++) {
-
-                if(active_partitions[i]){
+                if(active_partitions[i]) {
                     (*to_sim->x)[m] = (int) x[i][0].get(GRB_DoubleAttr_X);
-                    (*to_sim->y)[m] = (int) y[i].get(GRB_DoubleAttr_X) * 10;
-                    (*to_sim->w)[m] = (int) w[i].get(GRB_DoubleAttr_X);
+		            (*to_sim->y)[m] = (int) y[i].get(GRB_DoubleAttr_X) * 10;
+		            (*to_sim->w)[m] = (int) w[i].get(GRB_DoubleAttr_X);
                     (*to_sim->h)[m] = (int) h[i].get(GRB_DoubleAttr_X) * 10;
                     (*to_sim->clb_from_solver)[m] =  (int) (((clb[i][1].get(GRB_DoubleAttr_X) - 
                                                      clb[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) -
@@ -1659,31 +1725,32 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                     (*to_sim->dsp_from_solver)[m] =  (int) (((dsp[i][1].get(GRB_DoubleAttr_X) - 
                                                      dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) -
                                                      dsp_fbdn_tot[i].get(GRB_DoubleAttr_X)) * dsp_per_tile);
-                    m += 1;
  //               }
 
 
-                cout << i << "\t" << x[i][0].get(GRB_DoubleAttr_X) <<"\t"
+                    cout << m << "\t" << x[i][0].get(GRB_DoubleAttr_X) <<"\t"
                     << x[i][1].get(GRB_DoubleAttr_X) << "\t" << y[i].get(GRB_DoubleAttr_X)
                     <<" \t" <<  w[i].get(GRB_DoubleAttr_X) << "\t" << h[i].get(GRB_DoubleAttr_X)
 
                     <<"\t" << clb[i][0].get(GRB_DoubleAttr_X) <<"\t" <<
                     clb[i][1].get(GRB_DoubleAttr_X) << "\t" << ((clb[i][1].get(GRB_DoubleAttr_X) -
                      clb[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - clb_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
-                     clb_per_tile << "\t" << task_set->HW_Tasks[i].resDemand[CLB]
+                     clb_per_tile << "\t" << clb_in_partition[m]
 
                     <<"\t" << bram[i][0].get(GRB_DoubleAttr_X) <<"\t" <<
                     bram[i][1].get(GRB_DoubleAttr_X) << "\t" << ((bram[i][1].get(GRB_DoubleAttr_X) -
                     bram[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - bram_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
-                    bram_per_tile << "\t" << task_set->HW_Tasks[i].resDemand[BRAM]
+                    bram_per_tile << "\t" << bram_in_partition[m]
 
                     << "\t" << dsp[i][0].get(GRB_DoubleAttr_X) << "\t" <<
                     dsp[i][1].get(GRB_DoubleAttr_X) << "\t" << ((dsp[i][1].get(GRB_DoubleAttr_X) -
                             dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - dsp_fbdn_tot[i].get(GRB_DoubleAttr_X)) *
-                             dsp_per_tile << "\t" << task_set->HW_Tasks[i].resDemand[DSP] <<endl;
+                             dsp_per_tile << "\t" << dsp_in_partition[m] <<endl;
+                    
+                    m += 1;
                 }
-
-//                cout <<endl;
+            }
+//              cout <<endl;
 /*
                 cout << "num clbs in forbidden slot is " << clb_fbdn_tot[i].get(GRB_DoubleAttr_X) * clb_per_tile <<endl;
                 cout << "num clb 0 in forbidden slot "<< 0 <<" is " << clb_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl;
@@ -1725,21 +1792,33 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                 }
 */
 
-            }
-
             
-            to_sim->num_partition = num_active_partitions;
-            cout <<endl;
 
+
+            for(uint k = 0; k < t.maxPartitions; k++) {
+                if(active_partitions[k] == 1) {
 /*
             for (i = 0; i < num_slots; i++) {
                 wasted_clb_zynq  +=  wasted[i][0].get(GRB_DoubleAttr_X);
                 wasted_bram_zynq +=  wasted[i][1].get(GRB_DoubleAttr_X);
                 wasted_dsp_zynq  +=  wasted[i][2].get(GRB_DoubleAttr_X);
+*/
+                cout << "clb req is " << b[0][k].get(GRB_DoubleAttr_X) 
+                     << " bram is " << b[1][k].get(GRB_DoubleAttr_X) 
+                     << " dsp is " << b[2][k].get(GRB_DoubleAttr_X) <<endl;
 
-                cout << "wasted clb " << wasted[i][0].get(GRB_DoubleAttr_X) << " wasted bram " << wasted[i][1].get(GRB_DoubleAttr_X) <<
-                       " wasted dsp " << wasted[i][2].get(GRB_DoubleAttr_X) <<endl;
+                cout << "wasted clb " << wasted[k][0].get(GRB_DoubleAttr_X) << " wasted bram " << wasted[k][1].get(GRB_DoubleAttr_X) <<
+                       " wasted dsp " << wasted[k][2].get(GRB_DoubleAttr_X) <<endl;
+                
+                cout << "max " << k;
+                for (i = 0; i < t.maxHW_Tasks; i++)
+                    cout << " " << max[i][k].get(GRB_DoubleAttr_X); 
+                
+                cout <<endl;
+                }
+            }
 
+/*
                 cout<< "centroid " << i << centroid[i][0].get(GRB_DoubleAttr_X) << " " <<centroid[i][1].get(GRB_DoubleAttr_X) <<endl;
                 for(j = 0; j < num_slots; j++) {
                     if(i >= j)
@@ -1832,6 +1911,12 @@ int zynq_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
         //bram_req_zynq[i] << "dsp " << dsp_req_zynq[i] << endl;
     }
 
+    for(i = 0; i < task_set->maxPartitions; i++) {
+        clb_in_partition[i] = 0;
+        bram_in_partition[i] = 0;
+        dsp_in_partition[i] = 0;
+    }
+
     for(i = 0; i < num_conn_slots_zynq; i++) {
         for(k = 0; k < 3; k++)
             conn_matrix_zynq[i][k] = (*(param->conn_vector)) [i][k];
@@ -1853,7 +1938,7 @@ int zynq_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
         //cout <<"forbidden " << num_forbidden_slots << " " << fs_zynq[i].x << " " << fs_zynq[i].y << " " << fs_zynq[i].h << " " << fs_zynq[i].w <<endl;
     }
 
-    cout << "ZYNQ_OPT: starting PYNQ optimizer" << endl;
+    cout << "ZYNQ_OPT: starting ZYNQ optimizer" << endl;
     status = solve_milp(*task_set, *platform, slacks, false, to_sim); 
     return 0;
 }

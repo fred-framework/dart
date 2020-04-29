@@ -2,6 +2,7 @@
 #include <vector>
 #include "gurobi_c++.h"
 #include "milp_solver_interface.h"
+#include "fpga.h"
 
 //Gurobi data types
 using namespace std;
@@ -11,22 +12,18 @@ typedef vector<GRBVarArray>     GRBVar2DArray;
 typedef vector<GRBVar2DArray>   GRBVar3DArray;
 typedef vector<GRBVar3DArray>   GRBVar4DArray;
 
-
-
-#define MAX_SLOTS 100
-
 static unsigned long H, W;
 static unsigned long num_slots;
 static unsigned long num_rows;
 static unsigned long num_forbidden_slots;
-static unsigned long BIG_M = 100000;
+static unsigned long BIG_M = 100000000;
 static unsigned long num_clk_regs;
 
 static unsigned long wasted_clb_pynq, wasted_bram_pynq, wasted_dsp_pynq;
 
 static int status;
 static unsigned long delta_size;
-static unsigned long clb_max  = 30000;
+static unsigned long clb_max  = 300000;
 static unsigned long bram_max = 1000;
 static unsigned long dsp_max  = 1000;
 static unsigned long clb_per_tile;
@@ -40,6 +37,10 @@ static vector<unsigned long> dsp_req_pynq(MAX_SLOTS);
 static vector <vector <unsigned long>> conn_matrix_pynq = vector <vector<unsigned long>> (MAX_SLOTS, vector<unsigned long> (MAX_SLOTS, 0));;
 static unsigned long num_conn_slots_pynq;
 
+const unsigned long num_fbdn_edge = 11;
+unsigned int beta_fbdn[3] = {0, 1, 1};
+unsigned forbidden_boundaries_right[num_fbdn_edge] = {8, 13, 23, 58, 63, 5, 16, 21, 35, 55, 66};
+unsigned forbidden_boundaries_left[num_fbdn_edge] =  {7, 12, 22, 57, 62, 4, 15, 20, 34, 54, 65};
 static Vecpos fs_pynq(MAX_SLOTS);
 
 int solve_milp_pynq(param_from_solver *to_sim)
@@ -120,8 +121,8 @@ int solve_milp_pynq(param_from_solver *to_sim)
                z[2][i][x_1/2][] == for dsp
         ***********************************************************************/
 
-        GRBVar4DArray z(3);
-        for(i = 0; i < 3; i++) {
+        GRBVar4DArray z(6);
+        for(i = 0; i < 6; i++) {
             GRBVar3DArray each_slot(num_slots);
             z[i] = each_slot;
 
@@ -139,27 +140,7 @@ int solve_milp_pynq(param_from_solver *to_sim)
             }
         }
 
-        GRBVar4DArray seg(3);
-        for(i = 0; i < 3; i++) {
-            GRBVar3DArray each_slot(num_slots);
-            seg[i] = each_slot;
-
-            for(k = 0; k < num_slots; k++)  {
-                GRBVar2DArray x_coord(2);
-                seg[i][k] = x_coord;
-
-                for(j = 0; j < 2; j++) {
-                    GRBVarArray constrs(8);
-                    seg[i][k][j] = constrs;
-
-                    for(l = 0; l < 8; l++)
-                        seg[i][k][j][l] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-                }
-            }
-        }
-
-
-       /**********************************************************************
+        /**********************************************************************
          name: clb
          type: integer
          func: clb[i][k] represents the number of clbs in (0, x_1) & (0, x_2)
@@ -221,6 +202,103 @@ int solve_milp_pynq(param_from_solver *to_sim)
             for(k = 0; k < 2; k++)
                 dsp[i][k] = model.addVar(0.0, dsp_max, 0.0, GRB_INTEGER);
         }
+
+        /**********************************************************************
+         name: clb-fbdn
+         type: integer
+         func: clb_fbdn[i][k] represents the number of clbs in (0, x_1) & (0, x_2)
+               in a single row.
+               'k' = 0 -> x_1
+               'k' = 1 -> x_2
+
+               the total number of clb in forbidden region 'i' is then calculated by
+                clb_fbdn in 'i' = clb_fbdn[i][1] - clb_fbdn[i][0]
+        ***********************************************************************/
+        GRBVar3DArray clb_fbdn (2); //TODO: This should be modified to num_forbidden_slots
+        for(i= 0; i < 2; i++) {
+            GRBVar2DArray each_slot(num_slots);
+            clb_fbdn[i] = each_slot;
+
+            for(j = 0; j < num_slots; j++) {
+                GRBVarArray each_slot_fbdn(2);
+
+                clb_fbdn[i][j] = each_slot_fbdn;
+                for(k = 0; k < 2; k++)
+                    clb_fbdn[i][j][k] = model.addVar(0.0, clb_max, 0.0, GRB_INTEGER);
+            }
+        }
+
+        /**********************************************************************
+        The following 3 variables record the total number of CLB, BRAM and DSP 
+        in forbidden regions.
+        ***********************************************************************/
+
+        GRBVarArray clb_fbdn_tot (num_slots);
+        for(i = 0; i < num_slots; i++) {
+            clb_fbdn_tot[i] = model.addVar(0, clb_max, 0.0, GRB_INTEGER);
+        }
+
+        GRBVarArray bram_fbdn_tot (num_slots);
+        for(i = 0; i < num_slots; i++) {
+            bram_fbdn_tot[i] = model.addVar(0, bram_max, 0.0, GRB_INTEGER);
+        }
+
+        GRBVarArray dsp_fbdn_tot (num_slots);
+        for(i = 0; i < num_slots; i++) {
+            dsp_fbdn_tot[i] = model.addVar(0, dsp_max, 0.0, GRB_INTEGER);
+        }
+
+
+       /**********************************************************************
+         name: bram_fbdn
+         type: integer
+         func: bram[i][k] represents the number of brams in (0, x_1) & (0, x_2)
+               in a single row.
+               'k' = 0 -> x_1
+               'k' = 1 -> x_2
+
+               the total number of brams in the forbidden region 'i' is then calculated by
+                bram in 'i' = bram_fbdn[i][1] - bram_fbdn[i][0]
+        ***********************************************************************/
+        GRBVar3DArray bram_fbdn (2);
+        for(j = 0; j < 2; j++) {
+            GRBVar2DArray each_slot (num_slots);
+            bram_fbdn[j] = each_slot;
+
+            for(i = 0; i < num_slots; i++) {
+                GRBVarArray each_slot_fbdn(2);
+                bram_fbdn[j][i] = each_slot_fbdn;
+
+                for(k = 0; k < 2; k++)
+                    bram_fbdn[j][i][k] = model.addVar(0.0, bram_max, 0.0, GRB_INTEGER);
+            }
+    }
+        /**********************************************************************
+         name: dsp_fbdn
+         type: integer
+         func: dsp_fbdn[i][k] represents the number of dsp in (0, x_1) & (0, x_2)
+               in a single row.
+               'k' = 0 -> x_1
+               'k' = 1 -> x_2
+
+               the total numbe dsps in forbidden region 'i' is then calculated by
+                dsp in 'i' = dsp_fbdn[i][1] - dsp_fbdn[i][0]
+        ***********************************************************************/
+        GRBVar3DArray dsp_fbdn (2);
+        for(j = 0; j < 2; j++) {
+            GRBVar2DArray each_fbdn_slot (num_slots);
+            dsp_fbdn[j] = each_fbdn_slot;
+
+            for(i = 0; i < num_slots; i++) {
+                GRBVarArray each_slot(2);
+                dsp_fbdn[j][i] = each_slot;
+
+                for(k = 0; k < 2; k++)
+                    dsp_fbdn[j][i][k] = model.addVar(0.0, dsp_max, 0.0, GRB_INTEGER);
+            }
+        }
+
+
 //#endif
         /**********************************************************************
          name: beta
@@ -261,7 +339,36 @@ int solve_milp_pynq(param_from_solver *to_sim)
             }
         }
 
-       /**********************************************************************
+
+        /**********************************************************************
+         name: tau_fbdn
+         type: integer
+         func: tau_fbdn[i][k] is used to linearize the function which is used to compute
+               the number of available resources. The first index is used to
+               denote the type of resource and the second is used to denote
+               the slot
+        ***********************************************************************/
+        GRBVar4DArray tau_fbdn (2); //for forbidden clb, bram, dsp
+        for(j = 0; j < 2; j++) {
+            GRBVar3DArray each_slot_fbdn(3);
+            tau_fbdn[j] = each_slot_fbdn;
+
+            for(i=0; i < 3; i++) {
+                GRBVar2DArray each_slot(num_slots);
+                tau_fbdn[j][i] = each_slot;
+
+                for(l = 0; l < num_slots; l++) {
+                    GRBVarArray for_each_clk_reg(num_clk_regs);
+
+                    tau_fbdn[j][i][l] = for_each_clk_reg;
+                    for(k = 0; k < num_clk_regs; k++) {
+                        tau_fbdn[j][i][l][k] = model.addVar(0.0, GRB_INFINITY, 0.0, GRB_INTEGER);
+                    }
+                }
+            }
+        }
+
+        /**********************************************************************
          name: gamma
          type: binary
          func: gamma[i][k] = 1 iff bottom left x coordinate of slot 'i' is found
@@ -539,15 +646,19 @@ int solve_milp_pynq(param_from_solver *to_sim)
            func: this variable is used to formulate the constraint on wasted resources
                   kappa[i][k] is a variable to constrain wasted resource type i in slot k
           ***********************************************************************/
-          GRBVar2DArray kappa(num_slots);
+          GRBVar3DArray kappa(num_slots);
           for(i = 0; i < num_slots; i++) {
-              GRBVarArray each_slot(13);
+              GRBVar2DArray each_slot(num_fbdn_edge);
 
               kappa[i] = each_slot;
+              for(k = 0; k < num_fbdn_edge; k++){
+                  GRBVarArray each_slot_1 (2);
+                    kappa[i][k] = each_slot_1;
 
-              for(k = 0; k < 13; k++)
-                  kappa[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-          }
+                  for(j = 0; j < 2; j++)
+                    kappa[i][k][j] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
+                }
+            }
 
         //add variables
         model.update();
@@ -727,6 +838,114 @@ int solve_milp_pynq(param_from_solver *to_sim)
             }
         }
 
+        //forbidden clb constraints Constraints
+        /******************************************************************
+        Constr 2.0.1: The clb on the FPGA is described using the following
+                    piecewise function.
+                    x       0  <= x < 5
+                    x-1     4  <= x < 8
+                    x-2     7  <= x < 13
+                    x-3     10 <= x < 16
+                    x-4     15 <= x < W+1
+                   The piecewise function is then transformed into a set
+                    of MILP constraints using the intermediate variable z
+        ******************************************************************/
+        for(i =0; i < num_slots; i++) {
+            for(k = 0; k < 2; k++) {
+                l = 0;
+                //FBDN region one
+                GRBLinExpr exp;
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= 5 - x[i][k], "1");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 4, "2");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= 8 - x[i][k], "3");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 7, "4");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= 13 - x[i][k], "5");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 12,  "6");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= 16 - x[i][k], "7");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 15, "8");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= W + 1 - x[i][k], "9");
+                for(m = 0; m < l; m++)
+                    exp += z[3][i][k][m];
+
+                model.addConstr(exp <= (l + 1) /2);
+//            }
+                //FBDN region 2
+                GRBLinExpr exp_2;
+                m = l - 1;
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= 43 - x[i][k], "7");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 42, "14");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= 50 - x[i][k], "14");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 49, "14");
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= W + 1 - x[i][k],  "15");
+
+                for(; m < l; m++)
+                    exp_2 += z[0][i][k][m];
+
+                model.addConstr(exp_2 <= 3);
+            }
+        }
+        //constr for clbs
+        for(i = 0; i < num_slots; i++) {
+            for(k = 0; k < 2; k++) {
+                l = 0;
+
+                //FBDN region one
+                model.addConstr(clb_fbdn[0][i][k] >= x[i][k] - BIG_M * (1 - z[3][i][k][l++]), "8");
+
+                model.addConstr(clb_fbdn[0][i][k] >= (x[i][k] - 1)  - BIG_M * (1 - z[3][i][k][l++]) -
+                                                           BIG_M * (1 - z[3][i][k][l++]), "9");
+
+                model.addConstr(clb_fbdn[0][i][k] >= (x[i][k] - 2)  - BIG_M * (1 - z[3][i][k][l++]) -
+                                                           BIG_M * (1 - z[3][i][k][l++]), "10");
+
+                model.addConstr(clb_fbdn[0][i][k] >= (x[i][k] - 3)  - BIG_M * (1 - z[3][i][k][l++]) -
+                                                           BIG_M * (1 - z[3][i][k][l++]), "11");
+
+                model.addConstr(clb_fbdn[0][i][k] >= 13 -   BIG_M * (1 - z[3][i][k][l++]) -
+                                                            BIG_M * (1 - z[3][i][k][l++]), "12");
+
+                //FBDN region two
+                model.addConstr(clb_fbdn[1][i][k] >= 35 - BIG_M * (1 - z[3][i][k][l++]), "8"); //fs_pynq[1].x - 7
+
+                model.addConstr(clb_fbdn[1][i][k] >= (x[i][k] - 7)  - BIG_M * (1 - z[3][i][k][l++]) -
+                                                           BIG_M * (1 - z[3][i][k][l++]), "9");
+
+                model.addConstr(clb_fbdn[1][i][k] >= 41  - BIG_M * (1 - z[3][i][k][l++]) -     //fs_pynq[1].x + fs_pynq[1]. w - 7
+                                                           BIG_M * (1 - z[3][i][k][l++]), "10");
+
+            }
+
+
+            for( k = 0; k < 2; k++) {
+                l = 0;
+
+                //FBDN region one 
+                model.addConstr(x[i][k] >= clb_fbdn[0][i][k] - BIG_M * (1 - z[3][i][k][l++]), "16");
+
+                model.addConstr(x[i][k] - 1 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
+                                                       BIG_M * (1 - z[3][i][k][l++]), "17");
+
+                model.addConstr(x[i][k] - 2 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
+                                                       BIG_M * (1 - z[3][i][k][l++]), "18");
+
+                model.addConstr(x[i][k] - 3 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
+                                                       BIG_M * (1 - z[3][i][k][l++]), "19");
+
+                model.addConstr(13 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
+                                                       BIG_M * (1 - z[3][i][k][l++]), "20");
+
+                //FBDN region two
+                model.addConstr(35 >= clb_fbdn[1][i][k] - BIG_M * (1 - z[3][i][k][l++]), "8"); //fs_pynq[1].x - 7
+
+                model.addConstr((x[i][k] - 7) >= clb_fbdn[1][i][k] - BIG_M * (1 - z[3][i][k][l++]) -
+                                                           BIG_M * (1 - z[3][i][k][l++]), "9");
+
+                model.addConstr(41 >= clb_fbdn[1][i][k]  - BIG_M * (1 - z[3][i][k][l++]) -     //fs_pynq[1].x + fs_pynq[1]. w - 7
+                                                           BIG_M * (1 - z[3][i][k][l++]), "10");
+
+            }
+        }
+
         /******************************************************************
         Constr 2.1: The same thing as constr 1.0.0 is done for the bram
                       which has the following piecewise distribution on
@@ -815,6 +1034,56 @@ int solve_milp_pynq(param_from_solver *to_sim)
         }
 
         /******************************************************************
+        Constr 2.1.1: The same thing as constr 2.0.1 is done for the bram
+                      which has the following piecewise distribution on
+                      the fpga fabric
+                    0     0  <=  x  < 5
+                    1     5  <=  x  < 16
+                    2     16  <=  x  < 17
+        ******************************************************************/
+        for(i =0; i < num_slots; i++) {
+            for(k = 0; k < 2; k++) {
+                l = 0;
+                GRBLinExpr exp;
+                model.addConstr(BIG_M * z[4][i][k][l++]  >= 5 - x[i][k], "32");
+                model.addConstr(BIG_M * z[4][i][k][l++]  >= x[i][k] - 4, "33");
+                model.addConstr(BIG_M * z[4][i][k][l++]  >= 16 - x[i][k], "34");
+                model.addConstr(BIG_M * z[4][i][k][l++]  >= x[i][k] - 15, "35");
+                model.addConstr(BIG_M * z[4][i][k][l++]  >= W + 1 - x[i][k], "36");
+
+                for(m = 0; m < l; m++)
+                    exp += z[4][i][k][m];
+
+                model.addConstr(exp <= (l + 1) /2);
+            }
+        }
+
+        for(i = 0; i < num_slots; i++) {
+            for(k = 0; k < 2; k++) {
+                l = 0;
+                model.addConstr(bram_fbdn[0][i][k] >= 0 - BIG_M * (1 - z[4][i][k][l++]), "39");
+
+                model.addConstr(bram_fbdn[0][i][k] >= 1  - BIG_M * (1 - z[4][i][k][l++]) -
+                                                           BIG_M * (1 - z[4][i][k][l++]), "40");
+
+                model.addConstr(bram_fbdn[0][i][k] >= 2  - BIG_M * (1 - z[4][i][k][l++]) -
+                                                           BIG_M * (1 - z[4][i][k][l++]), "41");
+
+            }
+
+            for( k = 0; k < 2; k++) {
+                l = 0;
+                model.addConstr(0 >= bram_fbdn[0][i][k] - BIG_M * (1 - z[4][i][k][l++]), "43");
+
+                model.addConstr(1 >= (bram_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
+                                                       BIG_M * (1 - z[4][i][k][l++]), "44");
+
+                model.addConstr(2 >= (bram_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
+                                                       BIG_M * (1 - z[4][i][k][l++]), "45");
+            }
+        }
+
+        /******************************************************************
         Constr 2.2: Same thing is done for the dsp on the FPGA
                     0     0  <=  x  < 8
                     1     7  <=  x  < 13
@@ -886,18 +1155,79 @@ int solve_milp_pynq(param_from_solver *to_sim)
             }
        }
 
+        /******************************************************************
+        Constr 2.2.1: Same thing is done for the dsp on the FPGA
+                    0     0  <=  x  < 8
+                    1     7  <=  x  < 13
+                    2     13  <=  x  < 17
+        ******************************************************************/
+        for(i =0; i < num_slots; i++) {
+            for(k = 0; k < 2; k++) {
+                l = 0;
+                GRBLinExpr exp;
+                model.addConstr(BIG_M * z[5][i][k][l++]  >= 8 - x[i][k], "47");
+                model.addConstr(BIG_M * z[5][i][k][l++]  >= x[i][k] - 7, "48");
+                model.addConstr(BIG_M * z[5][i][k][l++]  >= 13 - x[i][k], "49");
+                model.addConstr(BIG_M * z[5][i][k][l++]  >= x[i][k] - 12, "50");
+                model.addConstr(BIG_M * z[5][i][k][l++]  >= W + 1 - x[i][k], "49");
+
+                for(m = 0; m < l; m++)
+                    exp += z[5][i][k][m];
+
+                model.addConstr(exp <= (l + 1) /2);
+            }
+        }
+
+        for(i = 0; i < num_slots; i++) {
+            for(k = 0; k < 2; k++) {
+                l = 0;
+                model.addConstr(dsp_fbdn[0][i][k] >= (0 - BIG_M * (1 - z[5][i][k][l++])), "52");
+
+                model.addConstr(dsp_fbdn[0][i][k] >= (1  - BIG_M * (1 - z[5][i][k][l++]) -
+                                                  BIG_M * (1 - z[5][i][k][l++])), "53");
+
+                model.addConstr(dsp_fbdn[0][i][k] >= (2  - BIG_M * (1 - z[5][i][k][l++]) -
+                                                  BIG_M * (1 - z[5][i][k][l++])), "54");
+            }
+
+            for( k = 0; k < 2; k++) {
+                l = 0;
+                model.addConstr(0 >= dsp_fbdn[0][i][k] - BIG_M * (1 - z[5][i][k][l++]), "55");
+
+                model.addConstr(1 >= (dsp_fbdn[0][i][k])  - BIG_M * (1 - z[5][i][k][l++]) -
+                                                    BIG_M * (1 - z[5][i][k][l++]), "56");
+
+                model.addConstr(2 >= (dsp_fbdn[0][i][k])  - BIG_M * (1 - z[5][i][k][l++]) -
+                                                    BIG_M * (1 - z[5][i][k][l++]), "57");
+            }
+       }
+
+
       //constr for res
       /*********************************************************************
         Constr 2.3: There must be enough clb, bram and dsp inside the slot
       **********************************************************************/
         for(i = 0; i < num_slots; i++) {
-            GRBLinExpr exp_tau, exp_res, exp_bram, exp_dsp;
+            GRBLinExpr exp_tau, exp_clb, exp_bram, exp_dsp;
+            GRBLinExpr exp_clb_fbdn, exp_bram_fbdn, exp_dsp_fbdn;
             for(j = 0; j < num_clk_regs; j++) {
                 //CLB constraints
-                model.addConstr(tau[0][i][j] <= 1000 * beta[i][j], "58");
+                model.addConstr(tau[0][i][j] <= 10000 * beta[i][j], "58");
                 model.addConstr(tau[0][i][j] <= clb[i][1] - clb[i][0], "59");
                 model.addConstr(tau[0][i][j] >= (clb[i][1] - clb[i][0]) - (1 - beta[i][j]) * clb_max, "60");
                 model.addConstr(tau[0][i][j] >= 0, "15");
+
+                //CLB_FBDN 0
+                model.addConstr(tau_fbdn[0][0][i][j] <= 100000 * (beta_fbdn[j] + beta[i][j] - 1), "58");
+                model.addConstr(tau_fbdn[0][0][i][j] <= clb_fbdn[0][i][1] - clb_fbdn[0][i][0], "59");
+                model.addConstr(tau_fbdn[0][0][i][j] >= (clb_fbdn[0][i][1] - clb_fbdn[0][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * clb_max, "60");
+                model.addConstr(tau_fbdn[0][0][i][j] >= 0, "15");
+
+                //CLB_FBDN 1
+                model.addConstr(tau_fbdn[1][0][i][j] <= 10000 * (beta_fbdn[j] + beta[i][j] - 1),  "58");
+                model.addConstr(tau_fbdn[1][0][i][j] <= clb_fbdn[1][i][1] - clb_fbdn[1][i][0], "59");
+                model.addConstr(tau_fbdn[1][0][i][j] >= (clb_fbdn[1][i][1] - clb_fbdn[1][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * clb_max, "60");
+                model.addConstr(tau_fbdn[1][0][i][j] >= 0, "15");
 
                 //BRAM constraints
                 model.addConstr(tau[1][i][j] <= 1000 * beta[i][j], "61");
@@ -905,24 +1235,48 @@ int solve_milp_pynq(param_from_solver *to_sim)
                 model.addConstr(tau[1][i][j] >= (bram[i][1] - bram[i][0]) - (1 - beta[i][j]) * bram_max, "63");
                 model.addConstr(tau[1][i][j] >= 0, "53");
 
+                //BRAM_fbdn constraints
+                model.addConstr(tau_fbdn[0][1][i][j] <= 10000 * (beta_fbdn[j] + beta[i][j] - 1), "61");
+                model.addConstr(tau_fbdn[0][1][i][j] <= bram_fbdn[0][i][1] - bram_fbdn[0][i][0], "62");
+                model.addConstr(tau_fbdn[0][1][i][j] >= (bram_fbdn[0][i][1] - bram_fbdn[0][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * bram_max, "63");
+                model.addConstr(tau_fbdn[0][1][i][j] >= 0, "53");
+
                 //DSP constraints
                 model.addConstr(tau[2][i][j] <= 1000 * beta[i][j], "64");
                 model.addConstr(tau[2][i][j] <= dsp[i][1] - dsp[i][0], "65");
                 model.addConstr(tau[2][i][j] >= (dsp[i][1] - dsp[i][0]) - (1 - beta[i][j]) * dsp_max, "66");
                 model.addConstr(tau[2][i][j] >= 0, "67");
 
-                exp_dsp  += tau[2][i][j];
-                exp_res += tau[0][i][j];
+                //DSP_fbdn constraints
+                model.addConstr(tau_fbdn[0][2][i][j] <= 10000 * (beta_fbdn[j] + beta[i][j] - 1), "64");
+                model.addConstr(tau_fbdn[0][2][i][j] <= dsp_fbdn[0][i][1] - dsp_fbdn[0][i][0], "65");
+                model.addConstr(tau_fbdn[0][2][i][j] >= (dsp_fbdn[0][i][1] - dsp_fbdn[0][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * dsp_max, "66");
+                model.addConstr(tau_fbdn[0][2][i][j] >= 0, "67");
+
+                exp_clb += tau[0][i][j];
+                exp_clb_fbdn  += tau_fbdn[0][0][i][j] + tau_fbdn[1][0][i][j];
+
                 exp_bram += tau[1][i][j];
+                exp_bram_fbdn += tau_fbdn[0][1][i][j];
+
+                exp_dsp  += tau[2][i][j];
+                exp_dsp_fbdn  += tau_fbdn[0][2][i][j];
             }
-            model.addConstr(clb_per_tile * exp_res >= clb_req_pynq[i],"68");
-            model.addConstr(wasted[i][0] == (clb_per_tile * exp_res) - clb_req_pynq[i],"168"); //wasted clbs
 
-            model.addConstr(bram_per_tile * exp_bram >= bram_req_pynq[i],"69");
-            model.addConstr(wasted[i][1] == (bram_per_tile * exp_res) - bram_req_pynq[i],"169"); //wasted brams
+            model.addConstr(clb_per_tile * (exp_clb - exp_clb_fbdn) >= clb_req_pynq[i],"68");
+            model.addConstr(wasted[i][0] == clb_per_tile * (exp_clb - exp_clb_fbdn) - clb_req_pynq[i],"168"); //wasted clbs
 
-            model.addConstr(dsp_per_tile * exp_dsp >= dsp_req_pynq[i],"70");
-            model.addConstr(wasted[i][2] == (dsp_per_tile * exp_dsp) - dsp_req_pynq[i], "170");
+            model.addConstr(clb_fbdn_tot[i] == exp_clb_fbdn, "169");
+
+            model.addConstr(bram_per_tile * (exp_bram - exp_bram_fbdn) >= bram_req_pynq[i],"69");
+            model.addConstr(wasted[i][1] == bram_per_tile * (exp_bram - exp_bram_fbdn) - bram_req_pynq[i],"169"); //wasted brams
+
+            model.addConstr(bram_fbdn_tot[i] == exp_bram_fbdn, "169");
+
+            model.addConstr(dsp_per_tile * (exp_dsp - exp_dsp_fbdn) >= dsp_req_pynq[i],"70");
+            model.addConstr(wasted[i][2] == dsp_per_tile * (exp_dsp - exp_dsp_fbdn) - dsp_req_pynq[i], "170");
+            
+            model.addConstr(dsp_fbdn_tot[i] == exp_dsp_fbdn, "169");
         }
 
         //Interference constraints
@@ -987,6 +1341,7 @@ int solve_milp_pynq(param_from_solver *to_sim)
         /*************************************************************************
         Constriant 4.0: Global Resources should not be included inside slots
         *************************************************************************/
+/*
         for(i = 0; i < num_forbidden_slots; i++) {
             for(j = 0; j < num_slots; j++)
                 model.addConstr(mu[i][j] >= 0);
@@ -1011,11 +1366,12 @@ int solve_milp_pynq(param_from_solver *to_sim)
                 //model.addConstr(BIG_M * fbdn_4[i][k] >= (y[k] + h[k]) * num_rows - fs_pynq[i].y + 1, "79");
             }
         }
-
+*/
         /*************************************************************************
         Constraint 4.1:
         **************************************************************************/
-       for(i = 0; i < num_forbidden_slots; i++) {
+/*
+        for(i = 0; i < num_forbidden_slots; i++) {
             //GRBLinExpr exp_delta;
 
             for(k = 0; k < num_slots; k++) {
@@ -1036,7 +1392,22 @@ int solve_milp_pynq(param_from_solver *to_sim)
   //              }
           }
         }
+*/
+        /*************************************************************************
+        Constraint 4.2:
+        **************************************************************************/
 
+        for(i = 0; i < num_slots; i++) {
+            for (j = 0; j <  num_fbdn_edge; j++) {
+                l = 0;
+                model.addConstr(x[i][0] - forbidden_boundaries_left[j] <= -0.01 + kappa[i][j][l] * BIG_M, "edge_con");
+                model.addConstr(x[i][0] - forbidden_boundaries_left[j] >= 0.01 - (1 - kappa[i][j][l]) * BIG_M, "edge_con_1");
+                l++;
+                model.addConstr(x[i][1] - forbidden_boundaries_right[j] <= -0.01 + kappa[i][j][l] * BIG_M, "edge_con_2");
+                model.addConstr(x[i][1] - forbidden_boundaries_right[j] >= 0.01 - (1 - kappa[i][j][l]) * BIG_M, "edge_con_3");
+            }
+        }
+        
         //Objective function parameters definition
         /*************************************************************************
         Constriant 5.0: The centroids of each slot and the distance between each
@@ -1098,9 +1469,9 @@ int solve_milp_pynq(param_from_solver *to_sim)
         cout<< "W H and wl max is " << W << " " << H * 20 << " "<< wl_max <<endl;
         }
         // model.setObjective((obj_x + obj_y ) / wl_max, GRB_MINIMIZE);
-         //model.setObjective(obj_wasted_clb,  GRB_MINIMIZE);
+         model.setObjective(obj_wasted_clb,  GRB_MINIMIZE);
         //model.setObjective(obj_wasted_bram, GRB_MINIMIZE);
-         model.setObjective(obj_wasted_dsp,  GRB_MINIMIZE);
+        // model.setObjective(obj_wasted_dsp,  GRB_MINIMIZE);
 
         //Optimize
         /****************************************************************************
@@ -1108,6 +1479,7 @@ int solve_milp_pynq(param_from_solver *to_sim)
         *****************************************************************************/
         model.set(GRB_IntParam_Threads, 8);
         model.set(GRB_DoubleParam_TimeLimit, 1800);
+        model.set(GRB_DoubleParam_IntFeasTol, 1e-9);
         model.optimize();
         wasted_clb_pynq = 0;
         wasted_bram_pynq = 0;
@@ -1118,34 +1490,31 @@ int solve_milp_pynq(param_from_solver *to_sim)
 
         if(status == GRB_OPTIMAL || status == GRB_TIME_LIMIT) {
             cout << "---------------------------------------------------------------------\
--------------------------------------------------------------------- "<< endl;
+--------------------------------------------------------------------------- "<< endl;
             cout<< "slot \t" << "x_0 \t" << "x_1 \t" << "y \t" << "w \t" << "h \t" << "clb_0 \t"
                     << "clb_1 \t" << "clb \t" << "req\t" << "bram_0 \t" << "bram_1 \t" << "bram \t"
                     << "req\t" << "dsp_0 \t" << "dsp_1 \t" << "dsp\t" << "req" <<endl;
             cout << "----------------------------------------------------------------------\
----------------------------------------------------------------------------------------------\
------------------------------------------------------------------" << endl;
+------------------------------------------------------------------------" << endl;
 
                 for(i = 0; i < num_slots; i++) {
-                    cout <<endl;
-
                     cout << i << "\t" << x[i][0].get(GRB_DoubleAttr_X) <<"\t"
                         << x[i][1].get(GRB_DoubleAttr_X) << "\t" << y[i].get(GRB_DoubleAttr_X)
                         <<" \t" <<  w[i].get(GRB_DoubleAttr_X) << "\t" << h[i].get(GRB_DoubleAttr_X)
 
                         <<"\t" << clb[i][0].get(GRB_DoubleAttr_X) <<"\t" <<
-                        clb[i][1].get(GRB_DoubleAttr_X) << "\t" << (clb[i][1].get(GRB_DoubleAttr_X) -
-                         clb[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * clb_per_tile<< "\t" << clb_req_pynq[i]
+                        clb[i][1].get(GRB_DoubleAttr_X) << "\t" << ((clb[i][1].get(GRB_DoubleAttr_X) -
+                         clb[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - clb_fbdn_tot[i].get(GRB_DoubleAttr_X)) * clb_per_tile<< "\t" << clb_req_pynq[i]
 
                         <<"\t" << bram[i][0].get(GRB_DoubleAttr_X) <<"\t" <<
-                        bram[i][1].get(GRB_DoubleAttr_X) << "\t" << (bram[i][1].get(GRB_DoubleAttr_X) -
-                        bram[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * bram_per_tile<< "\t" << bram_req_pynq[i]
+                        bram[i][1].get(GRB_DoubleAttr_X) << "\t" << ((bram[i][1].get(GRB_DoubleAttr_X) -
+                        bram[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - bram_fbdn_tot[i].get(GRB_DoubleAttr_X)) * bram_per_tile<< "\t" << bram_req_pynq[i]
 
                         << "\t" << dsp[i][0].get(GRB_DoubleAttr_X) << "\t" <<
-                        dsp[i][1].get(GRB_DoubleAttr_X) << "\t" << (dsp[i][1].get(GRB_DoubleAttr_X) -
-                                dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * dsp_per_tile << "\t" << dsp_req_pynq[i] <<endl;
+                        dsp[i][1].get(GRB_DoubleAttr_X) << "\t" << ((dsp[i][1].get(GRB_DoubleAttr_X) -
+                                dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) - dsp_fbdn_tot[i].get(GRB_DoubleAttr_X)) * dsp_per_tile << "\t" << dsp_req_pynq[i] <<endl;
 
-                        cout <<endl;
+//                        cout <<endl;
 
                         (*to_sim->x)[i] = (int) x[i][0].get(GRB_DoubleAttr_X);
                         (*to_sim->y)[i] = (int) y[i].get(GRB_DoubleAttr_X) * 10;
@@ -1154,29 +1523,27 @@ int solve_milp_pynq(param_from_solver *to_sim)
                         (*to_sim->clb_from_solver)[i] = (int) ((clb[i][1].get(GRB_DoubleAttr_X) - clb[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * clb_per_tile);
                         (*to_sim->bram_from_solver)[i] = (int) ((bram[i][1].get(GRB_DoubleAttr_X) - bram[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * bram_per_tile);
                         (*to_sim->dsp_from_solver)[i] = (int) ((dsp[i][1].get(GRB_DoubleAttr_X) - dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * dsp_per_tile);
-
+/*
                         for(k=0; k < 2; k++) {
                             for(l = 0; l < 16; l++)
-                             cout <<"z" << l << " " << z[0][i][k][l].get(GRB_DoubleAttr_X) << "\t";
-                             cout <<endl;
+                                cout <<"z" << l << " " << z[0][i][k][l].get(GRB_DoubleAttr_X) << "\t";
+                                cout <<endl;
                         }
 
                         for(k=0; k < num_clk_regs; k++) {
                                 cout <<"b" << k << " " << beta[i][k].get(GRB_DoubleAttr_X) << "\t";
                                 cout<<endl;
                         }
-
-                        cout << endl;
-                        cout <<endl;
+*/
 
                 }
-
+/*
             for(k=0; k < num_forbidden_slots; k++) {
                 for(j = 0; j < num_slots; j++)
                     cout <<"mu" << k << j<< " " << mu[k][j].get(GRB_DoubleAttr_X) << "\t";
                 cout<<endl;
             }
-
+*/
             cout <<endl;
 
             for (i = 0; i < num_slots; i++) {
@@ -1187,10 +1554,10 @@ int solve_milp_pynq(param_from_solver *to_sim)
                 cout << "wasted clb " << wasted[i][0].get(GRB_DoubleAttr_X) <<
                         " wasted bram " << wasted[i][1].get(GRB_DoubleAttr_X) <<
                         " wasted dsp " << wasted[i][2].get(GRB_DoubleAttr_X) <<endl;
-
+/*
                 cout<< "centroid " << i << " " << centroid[i][0].get(GRB_DoubleAttr_X) << " " <<
                        centroid[i][1].get(GRB_DoubleAttr_X) <<endl;
-
+*/
                 for(j = 0; j < num_slots; j++) {
                     if(i >= j)
                         continue;
@@ -1200,12 +1567,49 @@ int solve_milp_pynq(param_from_solver *to_sim)
                 }
             }
 
+            cout <<endl;
             cout << "total wasted clb " <<wasted_clb_pynq <<
                     " total wasted bram " <<wasted_bram_pynq <<
                     " total wastd dsp " << wasted_dsp_pynq <<endl;
 
-            cout << " total wire length " << w_x << "  " << w_y << "  " <<  w_y + w_x << endl;
+            cout <<endl;
+//           cout << " total wire length " << w_x << "  " << w_y << "  " <<  w_y + w_x << endl;
+
+/*
+            for(i = 0; i < num_slots; i++) {
+                cout << "num clbs in forbidden slot is " << clb_fbdn_tot[i].get(GRB_DoubleAttr_X) * clb_per_tile <<endl;
+                cout << "num clb 0 in forbidden slot "<< 0 <<" is " << clb_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl;
+                cout << "num clbs 1 in forbidden slot " <<0 << "is " << clb_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
+
+                //cout << "num clbs in forbidden slot is " << clb_fbdn_tot[i].get(GRB_DoubleAttr_X) * clb_per_tile <<endl;
+                cout << "num clb 0 in forbidden slot "<< 0 <<" is " << clb_fbdn[1][i][0].get(GRB_DoubleAttr_X) <<endl;
+                cout << "num clbs 1 in forbidden slot " <<0 << "is " << clb_fbdn[1][i][1].get(GRB_DoubleAttr_X) <<endl;
+
+                for(k=0; k < 2; k++) {
+                    for(l = 0; l < 16; l++)
+                         cout <<"z" << l << " " << z[3][i][k][l].get(GRB_DoubleAttr_X) << "\t";
+                         cout <<endl;
+                }
+        
+                
+       //         cout <<endl; 
+       //         cout << "num clb 0 in forbidden slot " << 1 << " is " << clb_fbdn[1][i][0].get(GRB_DoubleAttr_X) <<endl;
+       //         cout << "num clbs 1 in forbidden slot " << 1 << " is " << clb_fbdn[1][i][1].get(GRB_DoubleAttr_X) <<endl;
+                
+                cout << endl;
+                cout << "num bram in forbidden slot is " << bram_fbdn_tot[i].get(GRB_DoubleAttr_X) * bram_per_tile <<endl;
+                cout << "num bram 0 in forbidden slot "<< i <<" is " << bram_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl;
+                cout << "num bram 1 in forbidden slot " <<i << "is " << bram_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
+                
+                cout <<endl;
+                cout << "total dsp in forbidden slot is " << dsp_fbdn_tot[i].get(GRB_DoubleAttr_X) * dsp_per_tile <<endl;
+                cout << "num dsp 0 in forbidden slot " << i << " is " << dsp_fbdn[0][i][0].get(GRB_DoubleAttr_X) <<endl;
+                cout << "num dsp 1 in forbidden slot " << i << " is " << dsp_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
+                cout <<endl;
+
         }
+*/
+    }
 
     else {
 
@@ -1244,8 +1648,8 @@ int pynq_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
     int temp;
     unsigned long i;
 
-    num_slots = param->num_slots;
-    num_forbidden_slots = param->forbidden_slots;
+    num_slots = param->num_rm_partitions;
+    num_forbidden_slots = param->num_forbidden_slots;
     num_rows = param->num_rows;
     H =  param->num_clk_regs;
     W =  param->width;

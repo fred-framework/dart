@@ -11,9 +11,14 @@ flora::flora(input_to_flora *input_fl)
 {
 
     flora_input = input_fl;
-    
+
+#ifdef WITH_PARTITIONING
     if(flora_input->num_rm_modules > 0) {
         num_rm_modules = flora_input->num_rm_modules;
+#else
+    if(flora_input->num_rm_partitions > 0) {
+        num_rm_partitions = flora_input->num_rm_partitions;
+#endif
 //        type = flora_input->type_of_fpga; 
 
 #ifdef WITH_PARTITIONING
@@ -21,7 +26,11 @@ flora::flora(input_to_flora *input_fl)
         task_set = new Taskset(num_rm_modules, num_rm_modules, *platform);
 #endif
 
+#ifdef WITH_PARTITIONING 
         cout << "FLORA: num of slots **** " << num_rm_modules <<endl;
+#else        
+        cout << "FLORA: num of partitions **** " << num_rm_partitions <<endl;
+#endif
 //        cout << "FLORA: type of FPGA **** " << type <<endl;
         cout << "FLORA: path for input **** " << flora_input->path_to_input <<endl;
     } 
@@ -67,16 +76,20 @@ void flora::prep_input()
 
     cout << endl << "FLORA: resource requirement of the input slots " <<endl;
     cout << "\t clb " << " \t bram " << "\t dsp " <<endl;
+#ifdef WITH_PARTITIONING 
     for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
-       cout << "slot " << i;  
+#else    
+    for(i = 0, ptr = 0, k = 0; i < num_rm_partitions; i++, ptr++) {
+#endif
+        cout << "slot " << i;  
         str = csv_data.get_value(i, k++);
-        clb_vector[ptr] = std::stoi(str);
+        clb_vector[ptr] = std::stoul(str);
 
         str = csv_data.get_value(i, k++);
-        bram_vector[ptr] = std::stoi(str);
+        bram_vector[ptr] = std::stoul(str);
 
         str = csv_data.get_value(i, k++);
-        dsp_vector[ptr] = std::stoi(str);
+        dsp_vector[ptr] = std::stoul(str);
 
 #ifdef WITH_PARTITIONING
         str = csv_data.get_value(i, k++);
@@ -99,7 +112,12 @@ void flora::start_optimizer()
     param.bram = &bram_vector;
     param.clb  = &clb_vector;
     param.dsp  = &dsp_vector;
+#ifdef WITH_PARTITIONING
     param.num_rm_modules = num_rm_modules;
+#else
+    param.num_rm_partitions = num_rm_partitions;
+#endif
+
     param.num_connected_slots = connections;
     param.conn_vector = &connection_matrix;
 
@@ -147,9 +165,9 @@ void flora::start_optimizer()
     platform->maxFPGAResources[BRAM] = ZYNQ_BRAM_TOT;
     platform->maxFPGAResources[DSP]  = ZYNQ_DSP_TOT;
 
-    platform->recTimePerUnit[CLB]  = 1.0/4500.0;
-    platform->recTimePerUnit[BRAM] = 1.0/4500.0;
-    platform->recTimePerUnit[DSP]  = 1.0/4000.0;
+    platform->recTimePerUnit[CLB]  = 1.0/1500.0;
+    platform->recTimePerUnit[BRAM] = 1.0/1500.0;
+    platform->recTimePerUnit[DSP]  = 1.0/1000.0;
 #endif
     cout <<"FLORA: starting ZYNQ MILP optimizer " <<endl;
     zynq_start_optimizer(&param, &from_solver);
@@ -193,7 +211,9 @@ void flora::generate_cell_name(unsigned long num_part, vector<std::string> *cell
 {
     int i;
     for(i = 0; i < num_part; i++)
-        (*cell)[i] = "design_1_i/hw_task_0_" + to_string(i) + "/inst";
+//        (*cell)[i] = "design_1_i/hw_task_0_" + to_string(i) + "/inst";
+//        (*cell)[i] = "hdmi_out_i/slot_" + to_string(i) + "_0";
+        (*cell)[i] = "system_i/slot_p0_s" + to_string(i);
 }
 
 void flora::generate_xdc(std::string fplan_xdc_file)
@@ -202,13 +222,23 @@ void flora::generate_xdc(std::string fplan_xdc_file)
 
 #ifdef FPGA_ZYNQ
     zynq_fine_grained *fg_zynq_instance = new zynq_fine_grained();
+#ifdef WITH_PARTITIONING
     generate_cell_name(from_solver.num_partition, &cell_name);
     generate_xdc_file(fg_zynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
+#else
+    generate_cell_name(num_rm_partitions, &cell_name);
+    generate_xdc_file(fg_zynq_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
+#endif
     
 #elif FPGA_PYNQ
     pynq_fine_grained *fg_pynq_instance = new pynq_fine_grained();
+#ifdef WITH_PARTITIONING
     generate_cell_name(from_solver.num_partition, &cell_name);
     generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
+#else
+    generate_cell_name(num_rm_partitions, &cell_name);
+    generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
+#endif
 #endif
 }
 

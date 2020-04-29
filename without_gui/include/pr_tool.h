@@ -15,9 +15,19 @@
 #define MAX_MODULES 100
 
 //TODO:This should be done in a better way
-#define CLB_MARGIN 30
+#ifdef FPGA_PYNQ
+#define CLB_MARGIN  150
 #define BRAM_MARGIN 10
-#define DSP_MARGIN 0
+#define DSP_MARGIN  10
+#elif FPGA_ZYNQ
+#define CLB_MARGIN 30
+#define BRAM_MARGIN 0
+#define DSP_MARGIN  0
+#else
+#define CLB_MARGIN  30
+#define BRAM_MARGIN  0
+#define DSP_MARGIN   0
+#endif
 
 namespace fs = std::experimental::filesystem;
 using namespace std;
@@ -25,15 +35,27 @@ using namespace std;
 
 //A class to contain info about a reconfigurable module
 typedef struct{
+#ifndef WITH_PARTITIONING
+    unsigned int partition_id;
+#endif
     std::string rm_tag;
     std::string source_path;
     std::string top_module;
 }reconfigurable_module;
 
 typedef struct{
+#ifdef WITH_PARTITIONING
     unsigned long num_rm_modules;
+#else
+    unsigned long num_rm_partitions;
+#endif
     std::string path_to_input;
 }input_to_pr;
+
+typedef struct {
+    unsigned int num_modules_in_partition = 0;
+    std::vector<unsigned int> rm_id;
+}partition_allocation;
 
 //The main class to process everything
 class pr_tool
@@ -43,7 +65,12 @@ public:
 
     //Reconfigurable module instance
     vector<reconfigurable_module> rm_list;
+#ifdef WITH_PARTITIONING
     unsigned long num_rm_modules;
+#else
+    unsigned long num_rm_partitions;
+    unsigned long num_rm_modules = 0;
+#endif 
     input_to_pr *input_pr;
     fpga_type type;
 
@@ -62,6 +89,9 @@ public:
 #ifdef WITH_PARTITIONING
     vector<double> slacks ;
     vector <double> HW_WCET;
+#else
+    std::vector<partition_allocation> alloc =  std::vector<partition_allocation>(MAX_SLOTS);
+    unsigned int max_modules_in_partition = 0;
 #endif
 
 

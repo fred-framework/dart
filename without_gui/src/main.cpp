@@ -17,7 +17,11 @@ int main(int argc, char* argv[])
 //    fl.generate_xdc();
 #else
     input_to_pr pr_input;
+#ifdef WITH_PARTITIONING    
     pr_input.num_rm_modules = atol(argv[1]); 
+#else
+    pr_input.num_rm_partitions = atol(argv[1]); 
+#endif
     //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
     pr_input.path_to_input = argv[2];
 

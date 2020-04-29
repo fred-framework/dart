@@ -12,12 +12,11 @@ typedef vector<GRBVarArray>     GRBVar2DArray;
 typedef vector<GRBVar2DArray>   GRBVar3DArray;
 typedef vector<GRBVar3DArray>   GRBVar4DArray;
 
-
 static unsigned long H, W;
 static unsigned long num_slots;
 static unsigned long num_rows;
 static unsigned long num_forbidden_slots;
-static unsigned long BIG_M = 100000;
+static unsigned long BIG_M = 100000000;
 static unsigned long num_clk_regs;
 
 static unsigned long wasted_clb_pynq, wasted_bram_pynq, wasted_dsp_pynq;
@@ -42,9 +41,11 @@ vector <double> slacks = vector<double>(MAX_SLOTS);
 static vector <vector <unsigned long>> conn_matrix_pynq = vector <vector<unsigned long>> (MAX_SLOTS, vector<unsigned long> (MAX_SLOTS, 0));;
 static unsigned long num_conn_slots_pynq;
 
+const unsigned long num_fbdn_edge = 11;
 static Vecpos fs_pynq(MAX_SLOTS);
 unsigned int beta_fbdn[3] = {0, 1, 1};
-
+unsigned forbidden_boundaries_right[num_fbdn_edge] = {8, 13, 23, 58, 63, 5, 16, 21, 35, 55, 66};
+unsigned forbidden_boundaries_left[num_fbdn_edge] =  {7, 12, 22, 57, 62, 4, 15, 20, 34, 54, 65};
 //int solve_milp_pynq(param_from_solver *to_sim)
 int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool preemptive_FRI, param_from_solver *to_sim)
 {
@@ -754,15 +755,19 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
            func: this variable is used to formulate the constraint on wasted resources
                   kappa[i][k] is a variable to constrain wasted resource type i in slot k
           ***********************************************************************/
-          GRBVar2DArray kappa(num_slots);
+          GRBVar3DArray kappa(num_slots);
           for(i = 0; i < num_slots; i++) {
-              GRBVarArray each_slot(13);
+              GRBVar2DArray each_slot(num_fbdn_edge);
 
               kappa[i] = each_slot;
+              for(k = 0; k < num_fbdn_edge; k++){
+                  GRBVarArray each_slot_1 (2);
+                    kappa[i][k] = each_slot_1;
 
-              for(k = 0; k < 13; k++)
-                  kappa[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-          }
+                  for(j = 0; j < 2; j++)
+                    kappa[i][k][j] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
+                }
+            }
 
         //add variables
         model.update();
@@ -1487,13 +1492,13 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                 model.addConstr(tau[0][i][j] >= 0, "15");
 
                 //CLB_FBDN 0
-                model.addConstr(tau_fbdn[0][0][i][j] <= 10000 * beta_fbdn[j], "58");
+                model.addConstr(tau_fbdn[0][0][i][j] <= 10000 * (beta_fbdn[j] + beta[i][j] - 1), "58");
                 model.addConstr(tau_fbdn[0][0][i][j] <= clb_fbdn[0][i][1] - clb_fbdn[0][i][0], "59");
                 model.addConstr(tau_fbdn[0][0][i][j] >= (clb_fbdn[0][i][1] - clb_fbdn[0][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * clb_max, "60");
                 model.addConstr(tau_fbdn[0][0][i][j] >= 0, "15");
 
                 //CLB_FBDN 1
-                model.addConstr(tau_fbdn[1][0][i][j] <= 10000 * beta_fbdn[j], "58");
+                model.addConstr(tau_fbdn[1][0][i][j] <= 10000 * (beta_fbdn[j] + beta[i][j] - 1), "58");
                 model.addConstr(tau_fbdn[1][0][i][j] <= clb_fbdn[1][i][1] - clb_fbdn[1][i][0], "59");
                 model.addConstr(tau_fbdn[1][0][i][j] >= (clb_fbdn[1][i][1] - clb_fbdn[1][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * clb_max, "60");
                 model.addConstr(tau_fbdn[1][0][i][j] >= 0, "15");
@@ -1506,7 +1511,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                 model.addConstr(tau[1][i][j] >= 0, "53");
 
                 //BRAM_fbdn constraints
-                model.addConstr(tau_fbdn[0][1][i][j] <= 1000 * beta_fbdn[j], "61");
+                model.addConstr(tau_fbdn[0][1][i][j] <= 10000 * (beta_fbdn[j] + beta[i][j] - 1), "61");
                 model.addConstr(tau_fbdn[0][1][i][j] <= bram_fbdn[0][i][1] - bram_fbdn[0][i][0], "62");
                 model.addConstr(tau_fbdn[0][1][i][j] >= (bram_fbdn[0][i][1] - bram_fbdn[0][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * bram_max, "63");
                 model.addConstr(tau_fbdn[0][1][i][j] >= 0, "53");
@@ -1520,7 +1525,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
 
 
                 //DSP_fbdn constraints
-                model.addConstr(tau_fbdn[0][2][i][j] <= 1000 * beta_fbdn[j], "64");
+                model.addConstr(tau_fbdn[0][2][i][j] <= 10000 * (beta_fbdn[j] + beta[i][j] - 1), "64");
                 model.addConstr(tau_fbdn[0][2][i][j] <= dsp_fbdn[0][i][1] - dsp_fbdn[0][i][0], "65");
                 model.addConstr(tau_fbdn[0][2][i][j] >= (dsp_fbdn[0][i][1] - dsp_fbdn[0][i][0]) - (2 - beta[i][j] - beta_fbdn[j]) * dsp_max, "66");
                 model.addConstr(tau_fbdn[0][2][i][j] >= 0, "67");
@@ -1673,6 +1678,22 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
           }
         }
 */
+        
+        /*************************************************************************
+        Constraint 4.2:
+        **************************************************************************/
+
+        for(i = 0; i < num_slots; i++) {
+            for (j = 0; j <  num_fbdn_edge; j++) {
+                l = 0;
+                model.addConstr(x[i][0] - forbidden_boundaries_left[j] <= -0.01 + kappa[i][j][l] * BIG_M, "edge_con");
+                model.addConstr(x[i][0] - forbidden_boundaries_left[j] >= 0.01 - (1 - kappa[i][j][l]) * BIG_M, "edge_con_1");
+                l++;
+                model.addConstr(x[i][1] - forbidden_boundaries_right[j] <= -0.01 + kappa[i][j][l] * BIG_M, "edge_con_2");
+                model.addConstr(x[i][1] - forbidden_boundaries_right[j] >= 0.01 - (1 - kappa[i][j][l]) * BIG_M, "edge_con_3");
+            }
+        }
+        
         //Objective function parameters definition
         /*************************************************************************
         Constriant 5.0: The centroids of each slot and the distance between each
@@ -1744,6 +1765,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
         *****************************************************************************/
         model.set(GRB_IntParam_Threads, 8);
         model.set(GRB_DoubleParam_TimeLimit, 1800);
+        model.set(GRB_DoubleParam_IntFeasTol, 1e-9);
         model.optimize();
         wasted_clb_pynq = 0;
         wasted_bram_pynq = 0;

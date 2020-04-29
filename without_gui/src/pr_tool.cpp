@@ -9,12 +9,15 @@ using namespace std;
 pr_tool::pr_tool(input_to_pr *pr_input) 
 {
     input_pr = pr_input; 
-    cout << "PR_TOOL: Begin PR_tool " <<endl;
+    cout << "PR_TOOL: Starting PR_tool " <<endl;
 
+#ifdef WITH_PARTITIONING
     if(input_pr->num_rm_modules > 0){
         num_rm_modules = pr_input->num_rm_modules;
-        
-//        type = pr_input->type_of_fpga;
+#else
+    if(input_pr->num_rm_partitions > 0){
+        num_rm_partitions = pr_input->num_rm_partitions;
+#endif
 
 #ifdef FPGA_ZYNQ
     type = TYPE_ZYNQ;
@@ -24,21 +27,25 @@ pr_tool::pr_tool(input_to_pr *pr_input)
     type = TYPE_ZYNQ;
 #endif
 
-        cout << "PR_TOOL: num of slots pr_tool **** " << num_rm_modules <<endl;
+#ifdef WITH_PARTITIONING
+        cout << "PR_TOOL: num of slots  **** " << num_rm_modules <<endl;
+#else
+        cout << "PR_TOOL: num of partitions **** " << num_rm_partitions <<endl;
+#endif        
         cout << "PR_TOOL: type of FPGA pr_tool **** " << type <<endl;
         cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
         
         //Instantiate flora
         //flora fl_inst;
 
-
         prep_input(); 
-
+    	init_dir_struct();
+/*
         prep_proj_directory();
-
         generate_synthesis_tcl();
-        start_synthesis(synthesis_script);
 
+        start_synthesis(synthesis_script);
+*/
         parse_synthesis_report();
  
         fl_inst = new flora(&in_flora);
@@ -49,7 +56,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         generate_impl_tcl(fl_inst);
 
-//        start_implementation(impl_script);    
+        start_implementation(impl_script);    
   }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
@@ -76,6 +83,7 @@ void pr_tool::prep_input()
     col = csv_data.columns();
 
     cout << endl << "PR_TOOL: reading inputs " << row << " " << col <<endl;
+    num_rm_modules = row;
     for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
 
 #ifdef WITH_PARTITIONING
@@ -83,6 +91,9 @@ void pr_tool::prep_input()
         HW_WCET.push_back(std::stod(str));
         str = csv_data.get_value(i, k++);
         slacks.push_back(std::stod(str));
+#else
+        str = csv_data.get_value(i, k++);
+        rm.partition_id = std::stoul(str);
 #endif
         rm.rm_tag = csv_data.get_value(i, k++);
         rm.source_path = csv_data.get_value(i, k++);
@@ -91,13 +102,28 @@ void pr_tool::prep_input()
         rm_list.push_back(rm);
         k = 0;
     }
+
+#ifndef WITH_PARTITIONING 
+    for(k = 0; k < num_rm_partitions; k++) {
+        for(i = 0; i < num_rm_modules; i++) {
+            if(rm_list[i].partition_id  == k){
+                alloc[k].num_modules_in_partition += 1;
+                alloc[k].rm_id.push_back(i);
+            }
+        }
+        if(max_modules_in_partition < alloc[k].num_modules_in_partition)
+            max_modules_in_partition = alloc[k].num_modules_in_partition;
+    }
+
+#endif
 }
+
 
 void pr_tool::prep_proj_directory()
 {
     int status, i;
-
-    init_dir_struct();
+    
+    cout << "PR_TOOL: creating project directory "<<endl;
     //TODO: check if directory exists
     fs::create_directories(Project_dir);
     fs::create_directories(Src_path);
@@ -130,6 +156,7 @@ void pr_tool::prep_proj_directory()
         fs::copy_options::recursive);
     //create the .prj file using the python script
 }
+
 
 
 void pr_tool::generate_synthesis_tcl()
@@ -210,6 +237,7 @@ void pr_tool::generate_synthesis_tcl()
      write_synth_tcl.close(); 
 }
 
+
 void pr_tool::start_synthesis(std::string synth_script)
 { 
     chdir(("cd " + Project_dir).c_str());
@@ -219,6 +247,7 @@ void pr_tool::start_synthesis(std::string synth_script)
     std::string vivado_path = "start_vivado";
     std::system(("./"+ vivado_path + " " + synth_script).c_str());
 }
+
 
 void pr_tool::start_implementation(std::string impl_script)
 {
@@ -231,13 +260,15 @@ void pr_tool::start_implementation(std::string impl_script)
 
 void pr_tool::parse_synthesis_report()
 {
-    unsigned long i, k = 0;
+    unsigned long i, k, j = 0;
     string lut = "Slice LUTs*";
     string dsp = "DSPs";
     string bram = "Block RAM Tile    |";
     vector<slot> extracted_res = vector<slot>(num_rm_modules);
    
     cout << "PR_TOOL: Parsing Synth utilization report "  <<endl;
+    
+#ifdef WITH_PARTITIONING
     for(i = 0; i < num_rm_modules; i++) {
         string line, word;
         cout <<"PR_TOOL:filename is" << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
@@ -289,22 +320,117 @@ void pr_tool::parse_synthesis_report()
             }
         }
     }
-        ofstream write_flora_input;
-        write_flora_input.open(Project_dir +"/flora_input.csv");
+
+#else
+    unsigned long max_clb, max_bram, max_dsp;    
+    for(j = 0; j < num_rm_partitions; j++) {
+        max_clb = 0;
+        max_bram = 0;
+        max_dsp = 0;
+        for(i = 0; i < num_rm_modules; i++) {
+            string line, word;
+
+            if(rm_list[i].partition_id == j) {
+                k = 0;
+
+                cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+                              rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
+
+                ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+                              rm_list[i].top_module + "_utilization_synth.rpt");
+
+                while (getline(file, line)) {
+                    if(line.find(lut) != string::npos) {
+                        stringstream iss(line);
+                        
+                        while(iss >> word) {
+                            k++;
+                            if(k == 5){
+                                if(max_clb < (std::stoul(word) / 8))
+                                    max_clb = ((std::stoul(word) / 8));
+
+                                 cout << " LUTs " <<  word <<endl; 
+                            }
+                        }
+                        k = 0;
+                    }
+
+                    if(line.find(bram) != string::npos) {
+                        stringstream iss(line);
+
+                        while(iss >> word) {
+                            k++;
+
+                            if(k == 6) {
+                                if(stod(word) > 0.0 && max_bram <  (std::stoul(word) + 1))
+                                    //if(max_bram <  (std::stoul(word) + 1))
+                                        max_bram = std::stoul(word) + 1;
+                                 else if (max_bram <  (std::stoul(word)))
+                                    max_bram = std::stoul(word);
+                                
+                                cout <<" BRAM " <<  word <<endl;
+                            }
+                        }
+                        k = 0;
+                    }
+
+                    if(line.find(dsp) != string::npos){
+                        stringstream iss(line);
+
+                        while(iss >> word) {
+                            k++;
+
+                            if(k == 4){
+                                if(max_dsp < std::stoul(word))
+                                    max_dsp = std::stoul(word);
+                                    
+                                cout << " DSP " <<  word <<endl;
+                            }
+                        }
+                        k = 0;
+                    }
+                }
+            }
+        }
         
+        extracted_res[j].clb = max_clb;
+        extracted_res[j].bram = max_bram;
+        extracted_res[j].dsp = max_dsp;
+    
+    }
+
+#endif    
+    ofstream write_flora_input;
+        write_flora_input.open(Project_dir +"/flora_input.csv");
+#ifdef WITH_PARTITIONING         
         for(i = 0; i < num_rm_modules; i++){
-            write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<","  
-                  << extracted_res[i].bram + BRAM_MARGIN
-                              << "," <<extracted_res[i].dsp + DSP_MARGIN <<"," <<
-#ifdef WITH_PARTITIONING
-                                HW_WCET[i] << "," <<slacks[i] <<"," <<
+#else
+        for(i = 0; i < num_rm_partitions; i++){
 #endif
-                                rm_list[i].rm_tag <<endl;
+            write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<"," ; 
+        
+            if(extracted_res[i].bram > 0)
+                write_flora_input << extracted_res[i].bram + BRAM_MARGIN <<",";
+            else
+                write_flora_input << extracted_res[i].bram << "," ;
+
+            if(extracted_res[i].dsp > 0)
+                write_flora_input << extracted_res[i].dsp + DSP_MARGIN <<"," ;
+            else
+                write_flora_input << extracted_res[i].dsp <<"," ;
+
+#ifdef WITH_PARTITIONING
+            write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
+#endif
+            write_flora_input << rm_list[i].rm_tag <<endl;
         }
         
         write_flora_input.close();        
+#ifdef WITH_PARTITIONING 
         in_flora = {num_rm_modules, Project_dir +"/flora_input.csv"};
-
+#else
+        in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv"};
+#endif
 }
 
 void pr_tool::generate_impl_tcl(flora *fl_ptr)
@@ -373,7 +499,9 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<"### Top Module Definitions" <<endl;
      write_impl_tcl<<" ####################################################################" <<endl;
 
-     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
+//     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
+//     write_impl_tcl<< "set top \"hdmi_out_wrapper\"" <<endl; 
+     write_impl_tcl<< "set top \"system_wrapper\"" <<endl; 
      write_impl_tcl<< "set static \"Static\" "<<endl;
      write_impl_tcl<< "add_module $static" <<endl;
      write_impl_tcl<< "set_attribute module $static moduleName    $top" <<endl;
@@ -384,13 +512,14 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<"### RP Module Definitions" <<endl;
      write_impl_tcl<<" ####################################################################" <<endl;
 
-     for(i = 0; i < num_rm_modules; i++) {
-         write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
-         write_impl_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
-         write_impl_tcl <<endl;
+
+    for(i = 0; i < num_rm_modules; i++) {
+        write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
+        write_impl_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
+        write_impl_tcl <<endl;
      }
 
-
+#ifdef WITH_PARTITIONING
     for(i = 0, k = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++, k++) {
         write_impl_tcl << "############################################################### \n" <<
                            "###Implemenetation configuration " << i <<endl <<
@@ -427,6 +556,44 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         temp_index += 1;
     }
 
+#else    
+    for(i = 0, k = 0; i < max_modules_in_partition; i++, k++) {
+        write_impl_tcl << "############################################################### \n" <<
+                           "###Implemenetation configuration " << i <<endl <<
+                           "###############################################################"<<endl;
+
+        config_name = "config_" + to_string(i);
+        write_impl_tcl <<"add_implementation "<<config_name <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" top \t   $top" <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" pr.impl \t 1" <<endl;
+
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" implXDC \t [list " << fplan_xdc_file << "]" <<endl;
+
+        /*TODO: add the implementation of the static part */
+        
+        write_impl_tcl <<"set_attribute impl "<<config_name << " partitions \t";
+        if(i == 0 )
+            write_impl_tcl <<"[list [list $static           $top \t" + implement + "   ] \\" <<endl;
+        else
+            write_impl_tcl <<"[list [list $static           $top \t" + import   + "   ] \\" <<endl;
+        for(conf_ptr = 0; conf_ptr <  num_rm_partitions; conf_ptr++) {
+            if(alloc[conf_ptr].num_modules_in_partition > 0) {
+                alloc[conf_ptr].num_modules_in_partition--;
+                write_impl_tcl <<"\t \t \t \t \t";
+                write_impl_tcl <<"[list " << rm_list[alloc[conf_ptr].rm_id[temp_index]].rm_tag 
+                   <<"\t " << fl_ptr->cell_name[conf_ptr]  <<" implement] \\" <<endl;
+            }
+        }
+        write_impl_tcl <<"]"<<endl;
+        write_impl_tcl <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" impl \t    ${run.prImpl} " <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" verify \t   ${run.prVerify} " <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" bitstream \t ${run.writeBitstream} " <<endl;
+        write_impl_tcl <<"set_attribute impl "<<config_name <<" bitstream_options    \"-bin_file\"" <<endl;
+        temp_index += 1;
+    }
+#endif
+
     write_impl_tcl << "source $tclDir/run.tcl" <<endl;
     write_impl_tcl << "exit"<<endl;
     write_impl_tcl.close();
@@ -436,6 +603,9 @@ void pr_tool::init_dir_struct()
 {
     Project_dir = getenv("HOME");
 
+    cout << "PR_TOOL: Project directory is " << Project_dir <<endl;
+
+    //creating project sub-directories
     Project_dir += "/pr_tool_proj"; 
     Src_path = Project_dir + "/Sources";
     hdl_copy_path = Src_path + "/hdl";
