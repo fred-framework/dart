@@ -1,4 +1,5 @@
 set modules             [list ]
+set ooc_implementations [list ]
 set implementations     [list ]
 
 set opt_directives   [list Explore                \
@@ -6,12 +7,9 @@ set opt_directives   [list Explore                \
                            AddRemap               \
                            ExploreSequentialArea  \
                            RuntimeOptimized       \
-                           NoBramPowerOpt         \
-                           Default                \
                      ]
 set place_directives [list Explore                \
                            WLDrivenBlockPlacement \
-                           AltWLDrivenPlacement   \
                            LateBlockPlacement     \
                            ExtraNetDelay_high     \
                            ExtraNetDelay_medium   \
@@ -24,7 +22,7 @@ set place_directives [list Explore                \
                            SSI_SpreadSLLs         \
                            SSI_BalanceSLLs        \
                            SSI_BalanceSLRs        \
-                           SSI_HighUtilSLRs       \
+                           SSI_HighSLRs           \
                            RuntimeOptimized       \
                            Quick                  \
                            Default                \
@@ -36,7 +34,6 @@ set phys_directives  [list Explore                \
                            AggressiveFanoutOpt    \
                            AlternateDelayModeling \
                            AddRetime              \
-                           AlternateFlowWithRetiming \
                            Default                \
                      ]
 set route_directives [list Explore                \
@@ -73,7 +70,6 @@ array set module_attributes [list "moduleName"           [list string   null]  \
                             ]
 
 array set impl_attributes   [list "top"                  [list string   null]  \
-                                  "name"                 [list string   null]  \
                                   "implXDC"              [list string   null]  \
                                   "linkXDC"              [list string   null]  \
                                   "cores"                [list string   null]  \
@@ -84,18 +80,11 @@ array set impl_attributes   [list "top"                  [list string   null]  \
                                   "td.impl"              [list boolean {0 1}]  \
                                   "pr.impl"              [list boolean {0 1}]  \
                                   "ic.impl"              [list boolean {0 1}]  \
-                                  "incr.impl"            [list boolean {0 1}]  \
-                                  "ooc.impl"             [list boolean {0 1}]  \
-                                  "iso.impl"             [list boolean {0 1}]  \
-                                  "pr.budget"            [list boolean {0 1}]  \
-                                  "pr.budget_exclude"    [list string   null]  \
-                                  "partitions"           [list string   null   \
-                                                               string   null   \
-                                                               enum    {implement import greybox}  \
-                                                               string   null   \
-                                                               enum    {default ooc iso}           \
-                                                               enum    {logical placement routing} \
-                                                               string   null   \
+                                  "partitions"           [list string  null  \
+                                                               string  null  \
+                                                               enum   {implement import greybox}  \
+                                                               enum   {logical placement routing} \
+                                                               string  null  \
                                                          ] \
                                   "link"                 [list boolean {0 1}]  \
                                   "opt"                  [list boolean {0 1}]  \
@@ -127,6 +116,42 @@ array set impl_attributes   [list "top"                  [list string   null]  \
                                   "drc.quiet"            [list boolean {0 1}]  \
                             ]
 
+array set ooc_attributes    [list "module"               [list string   null]  \
+                                  "inst"                 [list string   null]  \
+                                  "hierInst"             [list string   null]  \
+                                  "implXDC"              [list string   null]  \
+                                  "cores"                [list string   null]  \
+                                  "impl"                 [list boolean {0 1}]  \
+                                  "hd.isolated"          [list boolean {0 1}]  \
+                                  "budget.create"        [list boolean {0 1}]  \
+                                  "budget.percent"       [list integer  null]  \
+                                  "link"                 [list boolean {0 1}]  \
+                                  "opt"                  [list boolean {0 1}]  \
+                                  "opt.pre"              [list string   null]  \
+                                  "opt_options"          [list string   null]  \
+                                  "opt_directive"        [list enum     $opt_directives]   \
+                                  "place"                [list boolean {0 1}]  \
+                                  "place.pre"            [list string   null]  \
+                                  "place_options"        [list string   null]  \
+                                  "place_directive"      [list enum     $place_directives] \
+                                  "phys"                 [list boolean {0 1}]  \
+                                  "phys.pre"             [list string   null]  \
+                                  "phys_options"         [list string   null]  \
+                                  "phys_directive"       [list enum     $phys_directives]  \
+                                  "route"                [list boolean {0 1}]  \
+                                  "route.pre"            [list string   null]  \
+                                  "route_options"        [list string   null]  \
+                                  "route_directive"      [list enum     $route_directives] \
+                                  "bitstream"            [list boolean {0 1}]  \
+                                  "bitstream.pre"        [list string   null]  \
+                                  "bitstream_options"    [list string   null]  \
+                                  "bitstream_settings"   [list string   null]  \
+                                  "implCheckpoint"       [list string   null]  \
+                                  "preservation"         [list enum    {logical placement routing}] \
+                                  "drc.quiet"            [list boolean {0 1}]  \
+                             ]
+   
+
 ###############################################################
 ### Define a top-level implementation
 ###############################################################
@@ -141,7 +166,6 @@ proc add_implementation { name } {
 
    lappend implementations $name
    set_attribute impl $name "top"                 ""
-   set_attribute impl $name "name"                $name
    set_attribute impl $name "implXDC"             "" 
    set_attribute impl $name "linkXDC"             "" 
    set_attribute impl $name "cores"               ""
@@ -152,13 +176,8 @@ proc add_implementation { name } {
    set_attribute impl $name "td.impl"             0
    set_attribute impl $name "pr.impl"             0
    set_attribute impl $name "ic.impl"             0
-   set_attribute impl $name "incr.impl"           0
-   set_attribute impl $name "ooc.impl"            0
-   set_attribute impl $name "iso.impl"            0
-   set_attribute impl $name "pr.budget"           0
-   set_attribute impl $name "pr.budget_exclude"   ""
+   set_attribute impl $name "partitions"          [list ]
    set_attribute impl $name "link"                1
-   set_attribute impl $name "partitions"          ""
    set_attribute impl $name "opt"                 1
    set_attribute impl $name "opt.pre"             ""
    set_attribute impl $name "opt_options"         ""
@@ -188,6 +207,56 @@ proc add_implementation { name } {
    set_attribute impl $name "drc.quiet"           0
 }
 
+###############################################################
+### Define an OOC implementation
+###############################################################
+proc add_ooc_implementation { name } {
+   global ooc_implementations
+   global dcpDir
+
+   set procname [lindex [info level 0] 0]
+   
+   if {[lsearch -exact $ooc_implementations $name] >= 0} {
+      set errMsg "\nERROR: OOC implementation $name is already defined"
+      error $errMsg
+   }
+
+   lappend ooc_implementations $name
+   set_attribute ooc $name "module"              ""
+   set_attribute ooc $name "inst"                "$name"
+   set_attribute ooc $name "hierInst"            ""
+   set_attribute ooc $name "implXDC"             "" 
+   set_attribute ooc $name "cores"               ""
+   set_attribute ooc $name "impl"                0
+   set_attribute ooc $name "hd.isolated"         0
+   set_attribute ooc $name "budget.create"       0
+   set_attribute ooc $name "budget.percent"      50
+   set_attribute ooc $name "link"                1
+   set_attribute ooc $name "opt"                 1
+   set_attribute ooc $name "opt.pre"             ""
+   set_attribute ooc $name "opt_options"         ""
+   set_attribute ooc $name "opt_directive"       ""
+   set_attribute ooc $name "place"               1
+   set_attribute ooc $name "place.pre"           ""
+   set_attribute ooc $name "place_options"       ""
+   set_attribute ooc $name "place_directive"     ""
+   set_attribute ooc $name "phys"                1
+   set_attribute ooc $name "phys.pre"            ""
+   set_attribute ooc $name "phys_options"        ""
+   set_attribute ooc $name "phys_directive"      ""
+   set_attribute ooc $name "route"               1
+   set_attribute ooc $name "route.pre"           ""
+   set_attribute ooc $name "route_options"       ""
+   set_attribute ooc $name "route_directive"     ""
+   set_attribute ooc $name "bitstream"           0
+   set_attribute ooc $name "bitstream.pre"       ""
+   set_attribute ooc $name "bitstream_options"   ""
+   set_attribute ooc $name "bitstream_settings"  ""
+   set_attribute ooc $name "implCheckpoint"      "$dcpDir/${name}_route_design.dcp"
+   set_attribute ooc $name "preservation"        "routing"
+   set_attribute ooc $name "drc.quiet"           0
+}
+   
 ###############################################################
 ### Add a module
 ###############################################################
@@ -231,6 +300,7 @@ proc set_attribute { type name attribute {values null} } {
 
    switch -exact -- $type {
       module  {set list_type "modules"}
+      ooc     {set list_type "ooc_implementations"}
       impl    {set list_type "implementations"}
       default {error "\nERROR: Invalid type \'$type\' specified"}
    }
@@ -257,6 +327,7 @@ proc get_attribute { type name attribute } {
 
    switch -exact -- $type {
       module  {set list_type "modules"}
+      ooc     {set list_type "ooc_implementations"}
       impl    {set list_type "implementations"}
       default {error "\nERROR: Invalid type \'$type\' specified"}
    }
@@ -333,9 +404,6 @@ proc set_directives {$type $name} {
    set_attribute $type $name route_directive $Directives(route)
 }
 
-###############################################################
-### List All modules and Runs being synthesized/implemented 
-###############################################################
 proc list_runs { } {
    #### Print list of Modules
    if {[llength [get_modules synth]]} {
@@ -374,13 +442,9 @@ proc list_runs { } {
          set RMs ""
          set staticState ""
          foreach partition $partitions {
-            lassign $partition module cell state name type level dcp
+            lassign $partition name cell state level dcp
             if {![string match $cell $top]} {
-               if {[string match $state "greybox"]} {
-                  lappend RMs "$state"
-               } else {
-                  lappend RMs "$module\($state\)"
-               }
+               lappend RMs "$name\($state\) "
             } else {
                set staticState $state
             }
@@ -410,59 +474,30 @@ proc list_runs { } {
    #### Print list of Implementations
    if {[llength [get_implementations "!pr.impl impl" &&]]} {
       set table "-title {#HD: List of Implementations to be implemented}"
-      append table " -row {Implementation Top Partitions \"Flow Type\" write_bistream}"
+      append table " -row {Implementation Top Partitions Assembly TopDown In-Context write_bistream}"
       foreach impl [get_implementations "!pr.impl impl" &&] {
          set partitions [get_attribute impl $impl partitions]
          set top        [get_attribute impl $impl top]
          set hd         [get_attribute impl $impl hd.impl]
          set td         [get_attribute impl $impl td.impl]
          set ic         [get_attribute impl $impl ic.impl]
-         set incr       [get_attribute impl $impl incr.impl]
-         set ooc        [get_attribute impl $impl ooc.impl]
-         set iso        [get_attribute impl $impl iso.impl]
          set bitstream  [get_attribute impl $impl bitstream]
-
-         if {$hd} {
-            set runType "Assembly"
-         } elseif {$td} {
-            set runType "Top-Down"
-         } elseif {$ic} {
-            set runType "In-Context"
-         } elseif {$incr} {
-            set runType "Incremental"
-         } elseif {$ooc} {
-            set runType "Out-of-Context"
-         } elseif {$iso} {
-            set runType "Isolation"
-         } else {
-            set runType "Flat"
-         }
-
-         set hdCells "" 
-         set state ""
-         set topState "implement"
+         set hdCells ""
          foreach partition $partitions {
-            lassign $partition module cell state name type level dcp
+            lassign $partition name cell state level dcp
             if {![string match $cell $top]} {
-               if {![llength $name]} {
-                  set name [lindex [split $cell "/"] end]
-               }
                lappend hdCells "$name\($state\)"
             } else {
                set topState $state
             }
          }
-
-         if {[llength $hdCells]} {
-            for {set i 0} {$i < [llength $hdCells]} {incr i} {
-               if {$i==0} {
-                  append table " -row {$impl $top\($topState\) [lindex $hdCells $i] $runType $bitstream}"
-               } else {
-                  append table " -row {\"\" \"\"  [lindex $hdCells $i] \"\" \"\"}"
-               } 
-            }
-         } else {
-            append table " -row {$impl $top\($topState\) \"\" $runType $bitstream}"
+         set hdCount [llength $hdCells]
+         for {set i 0} {$i < $hdCount} {incr i} {
+            if {$i==0} {
+               append table " -row {$impl $top\($state\) [lindex $hdCells $i] $hd $td $ic $bitstream}"
+            } else {
+               append table " -row {\"\" \"\"  [lindex $hdCells $i] \"\" \"\" \"\" \"\"}"
+            } 
          }
       }
       print_table $table 
@@ -475,9 +510,7 @@ proc list_runs { } {
          incr count
       }
    }
-   puts "\n"
 }
-
 ###############################################################
 ### Sorts the list of configurations to put any configuration
 ### that implements Static at the beginning of the list. This
@@ -491,7 +524,7 @@ proc sort_configurations { configurations } {
       set partitions [get_attribute impl $configuration partitions]
       set top        [get_attribute impl $configuration top]
       foreach partition $partitions {
-         lassign $partition module cell state name type level dcp
+         lassign $partition name cell state level dcp
          if {[string match $cell $top]} {
             if {[string match -nocase $state "implement"]} {
                set configs [linsert $configs 0 $configuration]
@@ -535,6 +568,7 @@ proc report_attributes { type name } {
 
    switch -exact -- $type {
       module  {set list_type "modules"}
+      ooc     {set list_type "ooc_implementations"}
       impl    {set list_type "implementations"}
       default {error "\nERROR: Invalid type \'$type\' specified"}
    }
@@ -557,14 +591,6 @@ proc report_attributes { type name } {
 proc get_configurations { } {
    set configurations [get_implementations pr.impl]
    return $configurations
-}
-
-###############################################################
-### Get a list of all implementations that have ooc.impl set to 1 
-###############################################################
-proc get_ooc_implementations { } {
-   set implementations [get_implementations "ooc.impl iso.impl" ||]
-   return $implementations
 }
 
 ###############################################################

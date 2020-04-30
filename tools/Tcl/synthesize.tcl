@@ -62,7 +62,7 @@ proc synthesize { module } {
    if {$ipRepo != ""} {
       puts "\tLoading IP Repositories:\n\t+ [join $ipRepo "\n\t+ "]"
       command "set_property IP_REPO_PATHS \{$ipRepo\} \[current_fileset\]" "$resultDir/temp.log"
-      command "update_ip_catalog" "$resultDir/temp.log"
+      command "update_ip_catalog" "$resultsDir/temp.log"
    }
    
    set start_time [clock seconds]
@@ -161,7 +161,7 @@ proc synthesize { module } {
    if {$topLevel} {
       command "synth_design -mode default $options -top $moduleName -part $part" "$resultDir/${moduleName}_synth_design.rds"
    } else {
-      command "synth_design -mode out_of_context -directive AreaOptimized_high $options -top $moduleName -part $part" "$resultDir/${moduleName}_synth_design.rds"
+      command "synth_design -mode out_of_context $options -top $moduleName -part $part" "$resultDir/${moduleName}_synth_design.rds"
    }
    set end_time [clock seconds]
    log_time synth_design $start_time $end_time 0 "$moduleName $options"

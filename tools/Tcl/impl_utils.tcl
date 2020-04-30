@@ -2,10 +2,10 @@
 # Source scripts need for implementation
 ###############################################################
 if {[info exists tclDir]} {
+   source $tclDir/ooc_impl.tcl
    source $tclDir/implement.tcl
    source $tclDir/step.tcl
 }
-
 ###############################################################
 # Find netlist for specified module
 ###############################################################
@@ -65,14 +65,14 @@ proc get_ooc_results { implementations } {
          error $errMsg
       }
 
-      if {[get_property IS_BLACKBOX [get_cells $hierInst]]} {
-         set start_time [clock seconds]
+      if {[get_property IS_BLACKBOX [get_cells $hierInst]} {
          puts "\tReading in checkpoint $readCheckpoint for $instName \[[clock format $start_time -format {%a %b %d %H:%M:%S %Y}]\]"
          if {${hd.isolated}} {
             command "set_property HD.ISOLATED 1 \[get_cells $hierInst]"
          } else {
             command "set_property HD.PARTITION 1 \[get_cells $hierInst]"
          }
+         set start_time [clock seconds]
          command "read_checkpoint -cell $hierInst $readCheckpoint -strict" "$resultDir/read_checkpoint_${instName}.log"
          set end_time [clock seconds]
          log_time read_checkpoint $start_time $end_time 0 "Resolve blacbox for $instName"
@@ -118,7 +118,7 @@ proc generate_pr_binfiles { config } {
    set interface     [get_attribute impl $config cfgmem.interface]
    if {$icap || $pcap} {
       foreach partition $partitions {
-         lassign $partition name cell state name type level dcp
+         lassign $partition name cell state level dcp
          if {![string match $cell $top]} {
             set pblock [get_pblock -quiet -of [get_cells $cell]]
             set bitFile "$bitDir/${config}_${pblock}_partial.bit"
@@ -184,7 +184,7 @@ proc generate_pr_bitstreams { configs } {
          command "puts \"$msg\""
          set logFile "$bitDir/write_bitstream_${config}.log"
          foreach partition $partitions {
-            lassign $partition name cell state name type level dcp
+            lassign $partition name cell state level dcp
             if {[string match $cell $top]} {
                set configFile "$implDir/$config/${top}_route_design.dcp"
                if {[file exists $configFile]} {
@@ -227,6 +227,85 @@ proc generate_pr_bitstreams { configs } {
 }
 
 ###############################################################
+# Create budget constraints on unsed RP pins 
+###############################################################
+proc pr_budget { cells } {
+   set LUT_STRING1 "HD_PR*"
+   set LUT_STRING2 "VCC_HD*"
+   set LUT_STRING3 "GND_HD*"
+
+   set_msg_config -id "Constraints 18-514" -suppress
+   set_msg_config -id "Constraints 18-515" -suppress
+   set_msg_config -id "Constraints 18-402" -suppress
+
+   foreach cell $cells {
+      puts "Processing Cell $cell:"
+      set inputs [get_pins -of [get_cells $cell] -filter DIRECTION==IN]
+      set outputs [get_pins -of [get_cells $cell] -filter DIRECTION==OUT]
+
+      #Process Input Pins. Ignore clock pins tied to SIN LUT1 buffer, and capture active clock name
+      #to be used during output pin processing.
+      puts "\tProcessing input pins:"
+      set count 0
+      foreach pin $inputs {
+         set HD_LUT [get_cells -quiet -of [get_pins -quiet -leaf -of [get_nets -quiet -of [get_pins $pin]] -filter "NAME=~$cell/$LUT_STRING1 || NAME=~$cell/$LUT_STRING2 || NAME=~$cell/$LUT_STRING3"]]
+         set driver [get_property REF_NAME [get_cells -quiet -of [get_pins -quiet -leaf -of [get_nets -quiet -of [get_pins $pin]] -filter DIRECTION==OUT]]]
+         if {[llength $HD_LUT] && ![string match "BUF*" $driver]} {
+            #puts "\tSetting constraint on input pin: $pin ($HD_LUT)"
+            set_max_delay -to [get_pins $HD_LUT/I0] 2
+            incr count
+         } elseif {![llength $HD_LUT] && [string match "BUF*" $driver]} {
+            set clock [get_nets -boundary_type lower -of [get_pins $pin]]
+            puts "\tFound active clock: $clock"
+         } else {
+            #puts "\tSkipping pin: $pin"
+         }
+      }
+      puts "\tAdded $count input path segmentation constraints for $cell"
+      #Check if an active clock was found in the RP. It doesn't really matter
+      #which clock gets connected to the inserted output flow since we are creating
+      #path segmentation constraints. However, an active clock must exist as non-active
+      #clocks (connected to SIN buffer) have a DONT_TOUCH and can't be connected/modified.
+      if {![info exists clock]} {
+         set errMsg "Error: No active clock found in the RP $cell."
+         error $errMsg
+      } else {
+         puts "\n\tUsing clock $clock for FDRE inserted on $cell\n"
+      }
+
+      #Process output pins. Insert a FF before each SOUT LUT1 buffer to prevent timing arcs
+      #from being disabled by a constrant (LUT1 connected to GND).
+      puts "\tProcessing output pins:"
+      set count 0
+      foreach pin $outputs {
+         set HD_LUT [get_cells -quiet -of [get_pins -quiet -leaf -of [get_nets -quiet -of [get_pins $pin]] -filter "NAME=~$cell/$LUT_STRING1 || NAME=~$cell/$LUT_STRING2 || NAME=~$cell/$LUT_STRING3"]]
+         if {[llength $HD_LUT]} {
+            #puts "\tSetting constraint on output pin: $pin ($HD_LUT)"
+            set HD_FF ${HD_LUT}_FF
+            set HD_NET ${HD_LUT}_NET
+            set HD_GND_NET [get_nets -of [get_pins $HD_LUT/I0]]
+            disconnect_net -net $HD_GND_NET -objects [get_pins $HD_LUT/I0]
+            create_cell $HD_FF -reference FDRE
+            create_net $HD_NET
+            connect_net -net $HD_NET -objects [get_pins [list $HD_LUT/I0 $HD_FF/Q]]
+            connect_net -net $HD_GND_NET -objects [get_pins $HD_FF/D]
+            connect_net -net $clock -objects [get_pins $HD_FF/C] 
+            set_property DONT_TOUCH 1 [get_cells $HD_FF]
+            set_property DONT_TOUCH 1 [get_nets $HD_NET]
+            set_max_delay -datapath_only -from [get_pins $HD_FF/Q] 3
+            incr count
+         } else {
+            #puts "\tSkipping pin: $pin"
+         }
+      }
+      puts "\tAdded $count input path segmentation constraints for $cell"
+   }
+   reset_msg_config -quiet -id "Constraints 18-514" -suppress
+   reset_msg_config -quiet -id "Constraints 18-515" -suppress
+   reset_msg_config -quiet -id "Constraints 18-402" -suppress
+}
+
+###############################################################
 # Verify all configurations 
 ###############################################################
 proc verify_configs { configs } {
@@ -255,7 +334,7 @@ proc verify_configs { configs } {
    
    if {[llength $additionalConfigFiles]} {
       set start_time [clock seconds]
-      set msg "#HD: Running pr_verify between initial config $initialConfig and subsequent configurations $additionalConfigs"
+      set msg "#HD: Running pr_verify between initial config $initialConfig and additional configurations $additionalConfigs"
       command "puts \"$msg\""
       set logFile "pr_verify_results.log"
       command "pr_verify -full_check -initial $initialConfigFile -additional \"$additionalConfigFiles\"" $logFile
@@ -326,7 +405,7 @@ proc add_xdc { xdc { synth 0} } {
 proc readXDC { xdc {cell ""} } {
    upvar resultDir resultDir
 
-   puts "\tReading XDC files"
+   puts "\tAdding XDC files"
    #Flatten list if nested lists exist
    set files [join [join $xdc]]
    foreach file $files {
@@ -357,12 +436,7 @@ proc add_ip { ips } {
             set ipPathList [lrange $ip_split 0 end-1]
             set ipPath [join $ipPathList "/"]
             set ipName [lindex [split $xci "."] 0]
-            set ipType [lindex [split $xci "."] end]
-            puts "\t#HD: Adding \'$ipType\' file $xci"
-            command "add_files $ipPath/$xci" "$resultDir/${ipName}_add.log"
-            if {[string match $ipType "bd"]} {
-               return
-            }
+            command "add_files $ipPath/$xci"
             if {[get_property GENERATE_SYNTH_CHECKPOINT [get_files $ipPath/$xci]]} {
                if {![file exists $ipPath/${ipName}.dcp]} {
                   puts "\tSynthesizing IP $ipName"
@@ -401,6 +475,36 @@ proc add_cores { cores } {
    if {[string length $files] > 0} { 
       command "add_files $files"
    }
+}
+
+#==============================================================
+# TCL proc for exporting inteface nets to an XDC
+# Currently, write_checkpoint -cell does not write out
+# interface nets, so this proc is a way to preserve these
+# routes for doing timing checks of all configurations in SW 
+#==============================================================
+proc fix_interface_nets { cell {xdc ""} } {
+   #Define default file name if one is not specified
+   if {![llength $xdc]} {
+      set xdc "[lindex [split $cell /] end].xdc"
+   }
+   #Check to see if any pins have PartPins
+   set pins [get_pins $cell/* -filter HD.ASSIGNED_PPLOCS!=""]
+   if {![llength $pins]} {
+      return
+   }
+   puts "Creating output file \"$xdc\""
+   set FH [open $xdc w]
+   foreach pin $pins {
+      if {[llength [get_property HD.ASSIGNED_PPLOCS $pin]]} {
+         set net [get_nets -of $pin]
+         set_property IS_ROUTE_FIXED 1 $net
+         puts $FH "set_property FIXED_ROUTE [get_property FIXED_ROUTE $net] \[get_nets $net\]"
+         flush $FH
+         set_property IS_ROUTE_FIXED 0 $net
+      }
+   }
+   close $FH
 }
 
 #==============================================================
@@ -450,36 +554,6 @@ proc check_drc { module {ruleDeck all} {quiet 0} } {
       if {!$quiet} {
          error $errMsg
       }
-   }
-}
-
-#==============================================================
-# TCL proc for print out rule information for given ruledecks 
-# Use get_drc_ruledecks to list valid ruledecks
-#==============================================================
-proc printRuleDecks { {decks ""} } {
-   if {[llength $decks]} {
-      set rules [get_drc_checks -of [get_drc_ruledecks $decks]]
-      foreach rule $rules {
-         set name [get_property NAME [get_drc_checks $rule]]
-         set description [get_property DESCRIPTION [get_drc_checks $rule]]
-         set severity [get_property SEVERITY [get_drc_checks $rule]]
-         puts "\t${name}(${severity}): ${description}"
-      }
-   } else {
-      puts "Rule Decks:\n\t[join [get_drc_ruledecks] "\n\t"]"
-   }
-}
-
-#==============================================================
-# TCL proc for print out rule information for given rules
-#==============================================================
-proc printRules { rules } {
-   foreach rule $rules {
-      set name [get_property NAME [get_drc_checks $rule]]
-      set description [get_property DESCRIPTION [get_drc_checks $rule]]
-      set severity [get_property SEVERITY [get_drc_checks $rule]]
-      puts "\t${name}(${severity}): $description"
    }
 }
 
@@ -658,21 +732,32 @@ proc insert_proxy_flop { cell } {
    set_property HD.PARTITION 1 [get_cells $cell]
 }
 
-proc verbose {} {
-   set_param place.hardVerbose   469538
-   set_param place.oldMsgVerbose 1
-   set_param place.GPPlot        1
-   set_param route.flowDbg       1
-   set_param route.timingDbg     1
-   set_param route.promoteErrors true
+#==============================================================
+# TCL proc for print out rule information for given ruledecks 
+# Use get_drc_ruledecks to list valid ruledecks
+#==============================================================
+proc printRuleDecks { {decks ""} } {
+   if {[llength $decks]} {
+      set rules [get_drc_checks -of [get_drc_ruledecks $decks]]
+      foreach rule $rules {
+         set name [get_property NAME [get_drc_checks $rule]]
+         set description [get_property DESCRIPTION [get_drc_checks $rule]]
+         set severity [get_property SEVERITY [get_drc_checks $rule]]
+         puts "\t${name}(${severity}): ${description}"
+      }
+   } else {
+      puts "Rule Decks:\n\t[join [get_drc_ruledecks] "\n\t"]"
+   }
 }
 
-#Detect and fix unsafe timing paths to temporarily clean up incorretly constrained design. For testing ONLY!!!
-proc fix_timing {} {
-   set clk_intr [split [report_clock_interaction -return_string] \n]
-   foreach line $clk_intr {
-      if { [regexp {^(\S+)\s+(\S+)\s+\S+.*Timed \(unsafe\).*} $line full src dst]} {
-         set_false_path -from [get_clocks $src] -to [get_clocks $dst]
-      }
+#==============================================================
+# TCL proc for print out rule information for given rules
+#==============================================================
+proc printRules { rules } {
+   foreach rule $rules {
+      set name [get_property NAME [get_drc_checks $rule]]
+      set description [get_property DESCRIPTION [get_drc_checks $rule]]
+      set severity [get_property SEVERITY [get_drc_checks $rule]]
+      puts "\t${name}(${severity}): $description"
    }
 }

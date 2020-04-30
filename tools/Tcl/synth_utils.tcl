@@ -28,18 +28,17 @@ proc add_prj { prj } {
             }
             lassign $line type lib file
             if {![string match -nocase $type "dcp"]     && \
-                ![string match -nocase $type "xci"]     && \
                 ![string match -nocase $type "header"]  && \
                 ![string match -nocase $type "system"]  && \
                 ![string match -nocase $type "verilog"] && \
                 ![string match -nocase $type "vhdl"]} {
                set errMsg "\nERROR: File type $type is not a supported value.\n"
-               append errMsg "Supported types are:\n\tdcp\n\txci\n\theader\n\tsystem\n\tverilog\n\tvhdl\n\t"
+               append errMsg "Supported types are:\n\tdcp\n\theader\n\tsystem\n\tverilog\n\tvhdl\n\t"
                error $errMsg
             }
             if {[file exists ${srcDir}/$file]} {
                set file ${srcDir}/$file
-               command "add_files $file" "add_files.log"
+               command "add_files $file"
                if {[string match -nocase $type "vhdl"]} {
                   command "set_property LIBRARY $lib \[get_files $file\]"
                }

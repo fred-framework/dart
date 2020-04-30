@@ -17,10 +17,6 @@ Script Version: 2014.1
                                  (TopDown). Various implementation attibutes (listed below) can be defined 
                                  or obtained using set_attribute or get_attribute, respectively.
                                   
-    - add_configuration       -> Used to define a Partial Reconfiguation implementation. Various configuration 
-                                 attibutes (listed below) can be defined or obtained using set_attribute
-                                 or get_attribute, respectively.
-
 + Valid Module Attributes
     - "moduleName"          -> Defines the actual module name. Default is value specified for add_module. 
     - "top_level"           -> Specify if the module is the top-level of the design
@@ -56,23 +52,23 @@ Script Version: 2014.1
     - "budget.percent       -> Specify percent of clock to be used for interface budget constraints. Default is 50. 
     - "link"                -> Specify if link_design should be run (Default is 1)
     - "opt"                 -> Specify if opt_design should be run (Default is 1)
-    - "opt_pre"             -> Specify script to run prior to opt_design
+    - "opt.pre"             -> Specify script to run prior to opt_design
     - "opt_options"         -> Specify opt_design options
     - "opt_directive"       -> Specify opt_design directive
     - "place"               -> Specify if place_design should be run (Default is 1)
-    - "place_pre"           -> Specify script to run prior to place_design
+    - "place.pre"           -> Specify script to run prior to place_design
     - "place_options"       -> Specify place_desig options
     - "place_directive"     -> Specify place_design directive
     - "phys"                -> Specify if phys_opt_design should be run (Default is 1)
-    - "phys_pre"            -> Specify script to run prior to phys_opt_design
+    - "phys.pre"            -> Specify script to run prior to phys_opt_design
     - "phys_options"        -> Specify phys_opt_design options
     - "phys_directive"      -> Specify phys_opt_design directive
     - "route"               -> Specify if route_design should be run (Default is 1)
-    - "route_pre"           -> Specify script to run prior to route_design
+    - "route.pre"           -> Specify script to run prior to route_design
     - "route_options"       -> Specify route_design options
     - "route_directive"     -> Specify route_design directive
     - "bitstream"           -> Specify if write_bitstream should be run (Default is 0)
-    - "bitstream_pre"       -> Specify script to run prior to write_bitstream
+    - "bitstream.pre"       -> Specify script to run prior to write_bitstream
     - "bitstream_options"   -> Specify write_bitstream options
     - "bitstream_settings"  -> Specify configuration bitstream settings (UG908 - Table A-1)
     - "implCheckpoint"      -> Specify location of post-route_design checkpoint (Default is $dcpDir)
@@ -85,57 +81,27 @@ Script Version: 2014.1
     - "cores"               -> Specify any synthesized IP cores not already in the netlist (NGC, EDF, EDN)
     - "hd.impl"             -> Specify if the implementation run has OOC modules to import
     - "td.impl"             -> Specify if the implementation run is a TopDown run to generate OOC constraints
+    - "pr.impl"             -> Specify if the implementation run uses Partial Reconfiguration
     - "impl"                -> Specify if implementation should be run (Default is 0)
     - "link"                -> Specify if link_design should be run (Default is 1)
     - "opt"                 -> Specify if opt_design should be run (Default is 1)
-    - "opt_pre"             -> Specify script to run prior to opt_design
+    - "opt.pre"             -> Specify script to run prior to opt_design
     - "opt_options"         -> Specify opt_design options
     - "opt_directive"       -> Specify opt_design directive
     - "place"               -> Specify if place_design should be run (Default is 1)
-    - "place_pre"           -> Specify script to run prior to place_design
+    - "place.pre"           -> Specify script to run prior to place_design
     - "place_options"       -> Specify place_desig options
     - "place_directive"     -> Specify place_design directive
     - "phys"                -> Specify if phys_opt_design should be run (Default is 1)
-    - "phys_pre"            -> Specify script to run prior to phys_opt_design
+    - "phys.pre"            -> Specify script to run prior to phys_opt_design
     - "phys_options"        -> Specify phys_opt_design options
     - "phys_directive"      -> Specify phys_opt_design directive
     - "route"               -> Specify if route_design should be run (Default is 1)
-    - "route_pre"           -> Specify script to run prior to route_design
+    - "route.pre"           -> Specify script to run prior to route_design
     - "route_options"       -> Specify route_design options
     - "route_directive"     -> Specify route_design directive
     - "bitstream"           -> Specify if write_bitstream should be run (Default is 0)
-    - "bitstream_pre"       -> Specify script to run prior to write_bitstream
-    - "bitstream_options"   -> Specify write_bitstream options
-    - "bitstream_settings"  -> Specify configuration bitstream settings (UG908 - Table A-1)
-
-+ Valid Configuration Attributes
-    - "top"                 -> Specify the top module name of implementation
-    - "implXDC"             -> Specify the top XDC files.
-    - "linkXDC"             -> Specify XDC files that must be read in post module importing.
-    - "cores"               -> Specify any synthesized IP cores not already in the netlist (NGC, EDF, EDN)
-    - "impl"                -> Specify if implementation should be run (Default is 0)
-    - "settings"            -> Specify the module name, hierachical instance name, and state (implement or
-                               import) of Static and each RM
-    - "link"                -> Specify if link_design should be run (Default is 1)
-    - "opt"                 -> Specify if opt_design should be run (Default is 1)
-    - "opt_pre"             -> Specify script to run prior to opt_design
-    - "opt_options"         -> Specify opt_design options
-    - "opt_directive"       -> Specify opt_design directive
-    - "place"               -> Specify if place_design should be run (Default is 1)
-    - "place_pre"           -> Specify script to run prior to place_design
-    - "place_options"       -> Specify place_desig options
-    - "place_directive"     -> Specify place_design directive
-    - "phys"                -> Specify if phys_opt_design should be run (Default is 1)
-    - "phys_pre"            -> Specify script to run prior to phys_opt_design
-    - "phys_options"        -> Specify phys_opt_design options
-    - "phys_directive"      -> Specify phys_opt_design directive
-    - "route"               -> Specify if route_design should be run (Default is 1)
-    - "route_pre"           -> Specify script to run prior to route_design
-    - "route_options"       -> Specify route_design options
-    - "route_directive"     -> Specify route_design directive
-    - "verify"              -> Specify if pr_verify should be run (Default is 0)
-    - "bitstream"           -> Specify if write_bitstream should be run (Default is 0)
-    - "bitstream_pre"       -> Specify script to run prior to write_bitstream
+    - "bitstream.pre"       -> Specify script to run prior to write_bitstream
     - "bitstream_options"   -> Specify write_bitstream options
     - "bitstream_settings"  -> Specify configuration bitstream settings (UG908 - Table A-1)
 
@@ -191,18 +157,18 @@ Script Version: 2014.1
     - replace_iobuf_bibuf
     - swap_clock_buffers
 
-+ log.tcl - Defined the following procs used for logging the commands, critical messages, and results
+    - log_time
+
++ log_utils.tcl - Defined the following procs used for logging the commands, critical messages, and results
     - log_time
     - log_data
     - command
     - parse_log
+    - print_table
 
-+ log.tcl - Defined the following procs used for logging the commands, critical messages, and results
-    - log_time
-+ run.tcl      - Called from design.tcl; controls the flows that are run
-+ synth.tcl    - Proc used to run all synthesis runs
-+ ooc_impl.tcl - Proc used to run OOC implementations
-+ pr_impl.tcl  - Proc used to run PR configurations
-+ impl.tcl     - Proc used to run TopDown, Assembly, or Flat implementations
-+ step.tcl     - Proc used to call each step of implementation
++ run.tcl        - Called from design.tcl; controls the flows that are run
++ synthesize.tcl - Proc used to run all synthesis runs
++ ooc_impl.tcl   - Proc used to run OOC implementations
++ implement.tcl  - Proc used to run Partial Reconfiguration, TopDown, Assembly, or Flat implementations
++ step.tcl       - Proc used to call each step of implementation
 

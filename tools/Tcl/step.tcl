@@ -91,15 +91,14 @@ proc impl_step {phase instance {options none} {directive none} {pre none} {setti
    set end_time [clock seconds]
    log_time $phase $start_time $end_time 0 "$impl_step" 
    command "puts \"\t#HD: Completed: $phase\""
-   puts "\t################################"
+   puts "\t################################\n"
       
    #Write out checkpoint for successfully completed phase
    if {($dcpLevel > 0 || [string match $phase "route_design"]) && ![string match $phase "write_bitstream"]} {
       set start_time [clock seconds]
-      puts "\tWriting post-$phase checkpoint: $resultDir/${instance}_$phase.dcp \[[clock format $start_time -format {%a %b %d %H:%M:%S %Y}]\]\n"
       command "write_checkpoint -force $resultDir/${instance}_$phase.dcp" "$resultDir/temp.log"
       set end_time [clock seconds]
-      log_time write_checkpoint $start_time $end_time 0 "Post-$phase checkpoint"
+      log_time write_checkpoint $start_time $end_time 0 "Post $phase checkpoint"
    }
 
    #Write out additional reports controled by verbose level

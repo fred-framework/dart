@@ -43,7 +43,7 @@ proc insert_clock_buffer { type nets } {
 #==============================================================
 proc remove_buffer { buffers } {
    reset_property -quiet LOC [get_cells -quiet -hier -filter {(LOC!="") && (PRIMITIVE_LEVEL==LEAF)}]
-   #place_design -unplace
+   place_design -unplace
    foreach buf $buffers {
       set inputNet [get_nets -of [get_pins $buf/I]]
       set outputNet [get_nets -of [get_pins $buf/O]]

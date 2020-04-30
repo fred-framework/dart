@@ -40,12 +40,12 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         prep_input(); 
     	init_dir_struct();
-/*
+
         prep_proj_directory();
         generate_synthesis_tcl();
 
         start_synthesis(synthesis_script);
-*/
+
         parse_synthesis_report();
  
         fl_inst = new flora(&in_flora);
@@ -435,7 +435,7 @@ void pr_tool::parse_synthesis_report()
 
 void pr_tool::generate_impl_tcl(flora *fl_ptr)
 { 
-    unsigned long i, k, conf_ptr, temp_index = 0;
+    unsigned long i, k, partition_ptr, temp_index = 0;
     ofstream write_impl_tcl;
     string config_name;
     impl_script = Project_dir + "/impl.tcl";
@@ -501,7 +501,8 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 
 //     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
 //     write_impl_tcl<< "set top \"hdmi_out_wrapper\"" <<endl; 
-     write_impl_tcl<< "set top \"system_wrapper\"" <<endl; 
+//     write_impl_tcl<< "set top \"system_wrapper_2_slots\"" <<endl; 
+     write_impl_tcl<< "set top \"system_wrapper_1_slots\"" <<endl; 
      write_impl_tcl<< "set static \"Static\" "<<endl;
      write_impl_tcl<< "add_module $static" <<endl;
      write_impl_tcl<< "set_attribute module $static moduleName    $top" <<endl;
@@ -539,12 +540,18 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
             write_impl_tcl <<"[list [list $static           $top \t" + implement + "   ] \\" <<endl;
         else
             write_impl_tcl <<"[list [list $static           $top \t" + import   + "   ] \\" <<endl;
-        for(conf_ptr = 0; conf_ptr <  fl_ptr->from_solver.num_partition; conf_ptr++) {
-            if(fl_ptr->alloc[conf_ptr].num_tasks_in_part > 0) {
-                fl_ptr->alloc[conf_ptr].num_tasks_in_part--;
+        for(partition_ptr = 0; partition_ptr <  fl_ptr->from_solver.num_partition; partition_ptr++) {
+            if(fl_ptr->alloc[partition_ptr].num_tasks_in_part > 0) {
+                fl_ptr->alloc[partition_ptr].num_tasks_in_part--;
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[conf_ptr].task_id[temp_index]].rm_tag 
-                   <<"\t " << fl_ptr->cell_name[conf_ptr]  <<" implement] \\" <<endl;
+                write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[partition_ptr].task_id[temp_index]].rm_tag 
+                   <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
+            }
+
+            else {
+                write_impl_tcl <<"\t \t \t \t \t";
+                write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[partition_ptr].task_id[0]].rm_tag
+                               <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl;
             }
         }
         write_impl_tcl <<"]"<<endl;
@@ -576,12 +583,19 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
             write_impl_tcl <<"[list [list $static           $top \t" + implement + "   ] \\" <<endl;
         else
             write_impl_tcl <<"[list [list $static           $top \t" + import   + "   ] \\" <<endl;
-        for(conf_ptr = 0; conf_ptr <  num_rm_partitions; conf_ptr++) {
-            if(alloc[conf_ptr].num_modules_in_partition > 0) {
-                alloc[conf_ptr].num_modules_in_partition--;
+        for(partition_ptr = 0; partition_ptr <  num_rm_partitions; partition_ptr++) {
+            if(alloc[partition_ptr].num_modules_in_partition > 0) {
+                alloc[partition_ptr].num_modules_in_partition--;
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << rm_list[alloc[conf_ptr].rm_id[temp_index]].rm_tag 
-                   <<"\t " << fl_ptr->cell_name[conf_ptr]  <<" implement] \\" <<endl;
+                write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[temp_index]].rm_tag 
+                   <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
+            }
+            else {
+                write_impl_tcl <<"\t \t \t \t \t";
+                write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[0]].rm_tag 
+                               <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl;
+
+            
             }
         }
         write_impl_tcl <<"]"<<endl;

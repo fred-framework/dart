@@ -1,20 +1,17 @@
-#Detect if file is being sourced from "design.tcl", and create log files if so
-if {[info exists tclDir]} {
-   set runLog "run"
-   set commandLog "command"
-   set criticalLog "critical"
+set runLog "run"
+set commandLog "command"
+set criticalLog "critical"
 
-   set logs [list $runLog $commandLog $criticalLog]
-   foreach log $logs {
-      if {[file exists ${log}.log]} {
-         file copy -force $log.log ${log}_prev.log
-      }
+set logs [list $runLog $commandLog $criticalLog]
+foreach log $logs {
+   if {[file exists ${log}.log]} {
+      file copy -force $log.log ${log}_prev.log
    }
-
-   set RFH [open "$runLog.log" w]
-   set CFH [open "$commandLog.log" w]
-   set WFH [open "$criticalLog.log" w]
 }
+
+set RFH [open "$runLog.log" w]
+set CFH [open "$commandLog.log" w]
+set WFH [open "$criticalLog.log" w]
 
 ###############################################################
 ### Log time of various commands to run log
@@ -106,18 +103,24 @@ proc log_data {impl instance} {
 ### Print command to STDOUT if verbose > 1 
 ###############################################################
 proc command { command  {log ""} {quiet 0} } {
-   global verbose CFH
+   global verbose CFH RFH
    upvar #1 cfh cfh
+   upvar #1 rfh rfh
    
+   if {![info exists rfh]} {
+      set rfh "stdout"
+   }
    if {![info exists cfh]} {
       set cfh "stdout"
    }
-
+   if {![info exists RFH]} {
+      set RFH "stdout"
+   }
    if {![info exists CFH]} {
       set CFH "stdout"
    }
 
-   #Write all commands to command.log if file hanlde exists
+   #Write all commans to command.log if file hanlde exists
    if {![string match $cfh "stdout"]} {
       puts $cfh $command
       flush $cfh
@@ -126,6 +129,19 @@ proc command { command  {log ""} {quiet 0} } {
       puts $CFH $command
       flush $CFH
    }
+
+   #Write "puts" commands to the run.log as well
+#   if {[string match [lindex [split $command] 0] "puts"]} {
+#      set putString [lindex $command 1]
+#      if {[string match "#HD:*" $putString] && !$verbose} {
+#         puts $putString
+#      }
+#      if {![string match $rfh "stdout"]} {
+#         puts $rfh $putString
+#         puts $RFH $putString
+#         flush $RFH
+#      }
+#   }
 
    #ignore new-line, comments, or if verbose=0 (to generate scripts only)
    if {[string match "\n" $command] || [string match "#*" $command] || !$verbose} {
@@ -213,21 +229,6 @@ proc parse_log { log } {
    flush $WFH
 }
 
-###############################################################
-### Read specified file, split per line, and return list 
-###############################################################
-proc read_file_lines {file} {
-   if {![file exists $file]} {
-      puts "Error: Specified file $file does not exist. Please check path."
-      return
-   }
-   set fh [open $file r]
-   set fileData [read $fh]
-   close $fh
-   set fileLines [split $fileData "\n" ]
-   return $fileLines
-}
-
 #################################################
 # Proc to print out data in a table format
 # Table column sizes are determined by script
@@ -256,8 +257,8 @@ proc read_file_lines {file} {
 #################################################
 proc print_table { args } {
    set args [join $args]
-   set title "Table"
    set FH "stdout"
+   set title "Table"
 
    #Override defaults with command options
    set argLength [llength $args]
@@ -272,7 +273,6 @@ proc print_table { args } {
                       incr rowCount
                      }
          {-file}     {set FH [open $value w]}
-         {-handle}   {upvar $value FH}
          {-help}     {set     helpMsg "Description:"
                       lappend helpMsg "Prints out a table in order the Rows are specified.\n"
                       lappend helpMsg "Syntax:"
