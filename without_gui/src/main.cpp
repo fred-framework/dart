@@ -6,7 +6,8 @@
 void usage(){
     cout << "pr_tool <version>, 2020, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Usage:\n";
-    cout << "  pr_tool <# IPs> <CSV file> <project_dir>\n\n";
+    cout << "  pr_tool <# IPs> <CSV file>\n";
+    cout << "  the current directory must be empty to receive the pr_tool project.\n\n";
 }
 
 bool has_only_digits(const string s){
@@ -19,11 +20,22 @@ std::string getEnvVar( std::string const & key )
     return val == NULL ? std::string("") : std::string(val);
 }
 
+vector<string> split(const string& text, char delimiter) {
+    string tmp;
+    vector<string> stk;
+    stringstream ss(text);
+    while(getline(ss,tmp, delimiter)) {
+        stk.push_back(tmp);
+    }
+    return stk;
+}
+
+
 int main(int argc, char* argv[])
 {
 
 // checking arguments
-    if (argc != 4){
+    if (argc != 3){
         cout << "ERROR: invalid usage\n\n";
         usage();
         exit(1);
@@ -39,13 +51,8 @@ int main(int argc, char* argv[])
             usage();
             exit(1);
         }
-        fs::path output_path(argv[3]);
-        if (fs::exists(output_path)){
-            cout << "ERROR: the output project directory must not exist\n\n";
-            exit(1);
-        }
-        if (!fs::create_directory(output_path)){
-            cout << "ERROR: the output project directory cannot be created. Check the write access to this path.\n\n";
+        if (!fs::is_empty(fs::current_path())){
+            cout << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
             exit(1);
         }
 
@@ -63,6 +70,34 @@ int main(int argc, char* argv[])
 
 // check vivado is in the path and its version
 // TODO
+    try{
+        FILE *vivado_out_p = popen("vivado -version", "r");
+
+        if (!vivado_out_p)
+        {
+            cout << "ERROR: vivado not found. please set it in the PATH environment variable\n";
+            exit(1);
+        }
+
+        char buffer[1024];
+        // get only the 1st line to check the vivado version
+        fgets(buffer, sizeof(buffer), vivado_out_p);
+        pclose(vivado_out_p);
+        string line_with_vivado_version = buffer;
+        if (line_with_vivado_version.find("Vivado") ==std::string::npos){
+            cout << "ERROR: vivado not found. please set it in the PATH environment variable\n";
+            exit(1);        
+        }
+        vector<string> tokens = split(line_with_vivado_version, ' ');
+        if (tokens[1] != "v2018.3"){
+            cout << "ERROR: expecting vivado version 'v2018.3' but found '" << tokens[1] << "'\n";
+            exit(1);        
+        }
+    }
+    catch (std::system_error & e)
+    {
+        std::cerr << "Exception :: " << e.what();
+    } 
 
 // start doing usefull stuff ...
 #ifdef RUN_FLORA
@@ -86,7 +121,7 @@ int main(int argc, char* argv[])
     //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
     pr_input.path_to_input = argv[2];
     // where the project will be created
-    pr_input.path_to_output = argv[3];
+    pr_input.path_to_output = fs::current_path().string();
 
     pr_tool tool(&pr_input);
 #endif    

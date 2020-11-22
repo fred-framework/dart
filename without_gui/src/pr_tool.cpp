@@ -701,7 +701,7 @@ void pr_tool::init_dir_struct()
     cout << "PR_TOOL: Project directory is " << Project_dir <<endl;
 
     //creating project sub-directories
-    Project_dir += "/pr_tool_proj"; 
+    //Project_dir += "/pr_tool_proj"; 
     Src_path = Project_dir + "/Sources";
     hdl_copy_path = Src_path + "/hdl";
     fplan_xdc_file = Src_path + "/constraints/pblocks.xdc";
