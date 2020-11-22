@@ -59,6 +59,7 @@ typedef struct{
     unsigned long num_rm_partitions;
 #endif
     std::string path_to_input;
+    std::string path_to_output;
 }input_to_pr;
 
 typedef struct {
@@ -101,6 +102,7 @@ public:
 #endif 
     input_to_pr *input_pr;
     fpga_type type;
+    string dart_path;
 
     //variables to manage project directory
     std::string Project_dir; //= "/home/holmes/test_pr_dir";
@@ -128,10 +130,9 @@ public:
     void prep_proj_directory();
     void create_vivado_project();
     void generate_synthesis_tcl();
-    void start_synthesis(std::string synth_script);
+    void run_vivado(std::string synth_script);
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
-    void start_implementation(std::string impl_script); 
     
     explicit pr_tool(input_to_pr *);
 
