@@ -17,7 +17,7 @@ endif
 LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi81 -lm -lstdc++fs
 
 all:
-	@echo "Please run the make file using the follwoing format"
+	@echo "Please run the make file using the following format"
 	@echo ""
 	@echo "make target FPGA=type_of_FPGA"
 	@echo ""
