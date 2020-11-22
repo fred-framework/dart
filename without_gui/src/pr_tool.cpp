@@ -173,7 +173,9 @@ void pr_tool::generate_synthesis_tcl()
 {
      unsigned long i;
      ofstream write_synth_tcl;
-     synthesis_script = Project_dir + "/ooc_synth.tcl";
+     fs::path script(Project_dir);
+     script /= fs::path("ooc_synth.tcl");
+     synthesis_script = script.string();
      //tcl_home = folder + "/TCL";
 
      write_synth_tcl.open(synthesis_script); 
