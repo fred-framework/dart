@@ -2,6 +2,17 @@ CC = g++
 CFLAGS = -Iwithout_gui/include/
 CFLAGS += -Iinclude/
 CFLAGS += -std=c++17
+CFLAGS += -L$(GUROBI_HOME)/lib
+CFLAGS += -ggdb -g3
+
+ifndef GUROBI_HOME
+$(error GUROBI_HOME is not defined)
+endif
+
+ifndef DART_HOME
+$(error DART_HOME is not defined)
+endif
+
 
 LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi81 -lm -lstdc++fs
 

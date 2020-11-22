@@ -354,7 +354,7 @@ void pr_tool::parse_synthesis_report()
 #ifdef WITH_PARTITIONING
     for(i = 0; i < num_rm_modules; i++) {
         string line, word;
-        cout <<"PR_TOOL:filename is" << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+        cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
                       rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
 
         ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 

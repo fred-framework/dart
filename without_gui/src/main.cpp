@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
         }
 
     }
-// checking enrironment variables
+// checking DART_HOME enrironment variables
     string dart_path = getEnvVar ("DART_HOME");
     if (dart_path.empty()){
         cout << "ERROR: DART_HOME environment variable is not defined\n\n";
@@ -68,8 +68,27 @@ int main(int argc, char* argv[])
         exit(1);
     }  
 
+// checking GUROBI_HOME enrironment variables
+    string gurobi_path = getEnvVar ("GUROBI_HOME");
+    if (gurobi_path.empty()){
+        cout << "ERROR: GUROBI_HOME environment variable is not defined\n\n";
+        exit(1);
+    }
+    if (!fs::exists(gurobi_path) || !fs::is_directory(gurobi_path)){
+        cout << "ERROR: GUROBI_HOME points to an invalid directory '" << gurobi_path << "'\n";
+        exit(1);
+    }  
+    gurobi_path = getEnvVar ("GRB_LICENSE_FILE");
+    if (gurobi_path.empty()){
+        cout << "ERROR: GRB_LICENSE_FILE environment variable is not defined\n\n";
+        exit(1);
+    }
+    if (!fs::exists(gurobi_path) || !fs::is_regular_file(gurobi_path)){
+        cout << "ERROR: GRB_LICENSE_FILE points to an invalid file '" << gurobi_path << "'\n";
+        exit(1);
+    }  
+
 // check vivado is in the path and its version
-// TODO
     try{
         FILE *vivado_out_p = popen("vivado -version", "r");
 
