@@ -24,7 +24,7 @@ all:
 	@echo "please use a specific target "
 	@echo "'flora_with_partitioning'  ---> floorplanner with partitioning"
 	@echo "'flora_without_partitioning' ---> only floorplanner without partitioning"
-	@echo "'pr_tool_with_part' ---> run the PR flow with including floorplanning and partitoning'" 
+	@echo "'pr_tool_with_part' ---> run the PR flow with including floorplanning and partitioning'" 
 	@echo "'pr_tool_without_part' ---> run the PR flow including only the floorplanning "
 	@echo " "	
 	@echo "for type of FPGA please use ZYNQ or PYNQ"
