@@ -43,6 +43,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         prep_proj_directory();
         generate_synthesis_tcl();
+        create_vivado_project();       
 
         start_synthesis(synthesis_script);
 
@@ -149,7 +150,7 @@ void pr_tool::prep_proj_directory()
     } 
     
     fs::copy("tools/Tcl", tcl_project, fs::copy_options::recursive); 
-    fs::copy("tools/load_prj.py", Src_path, fs::copy_options::recursive); 
+    //fs::copy("tools/load_prj.py", Src_path, fs::copy_options::recursive); 
     fs::copy("tools/start_vivado", Project_dir, fs::copy_options::recursive); 
     fs::copy("tools/synth_static/", 
         Project_dir + "/Synth/Static", 
@@ -237,12 +238,75 @@ void pr_tool::generate_synthesis_tcl()
      write_synth_tcl.close(); 
 }
 
+void pr_tool::create_vivado_project()
+{ 
+    try{
+        chdir(("cd " + Project_dir).c_str());
+        fs::current_path(Src_path);
+        // using the fs::path in order to have an, OS independent, safe path string
+        // taking into account the dir separator
+        fs::path  dir = fs::path("cores");
+        if (!fs::exists(dir) || !fs::is_directory(dir)){
+            cout << "ERROR: '" << dir.string() << "' directory not found.\n";
+            exit(1);
+        }
+        
+        dir = fs::path("project");
+        if (!fs::exists(dir) || !fs::is_directory(dir)){
+            cout << "ERROR: '" << dir.string() << "' directory not found.\n";
+            exit(1);
+        }
+
+        // iterates over every dirs in 'cores'
+        for (const auto & entry : fs::directory_iterator("cores")){
+            if (!fs::is_directory(entry.path())){
+                cout << "ERROR: expecting only directories with IPs inside the 'cores' dir.\n";
+                exit(1);
+            }
+
+            // entry.path() returns 'cores/myip', but only the last part is required
+            // so, i need to split the string
+            string ip_name = entry.path();
+            vector<string> aux = split(ip_name,fs::path::preferred_separator);
+            ip_name = aux[aux.size()-1];
+
+            // open prj file for writing 
+            ofstream prj_file;
+            fs::path prj_file_name("project");
+            prj_file_name /= (ip_name + ".prj");
+            prj_file.open(prj_file_name.string());
+
+            // check the IP dir
+            fs::path vhd_path("cores");
+            vhd_path /= ip_name / fs::path("hdl") / fs::path("vhdl");
+            if (!fs::exists(vhd_path) || !fs::is_directory(vhd_path)){
+                cout << "ERROR: '" << vhd_path.string() << "' directory not found.\n";
+                exit(1);
+            }
+
+            // write all vhd file names into the prj file
+            int vhd_file_cnt=0;
+            for (const auto & entry2 : fs::directory_iterator(vhd_path)){
+                if (fs::is_regular_file(entry2) && (fs::path(entry2).extension() == ".vhd")){
+                    prj_file << "vhdl xil_defaultlib ./Sources/" + entry2.path().string() +"\n";
+                    vhd_file_cnt++;
+                }
+            }
+            cout << "PR_TOOL: IP '" << ip_name << "' has " << vhd_file_cnt << " files\n";
+        }
+    }
+    catch (std::system_error & e)
+    {
+        std::cerr << "Exception :: " << e.what();
+    }      
+}
 
 void pr_tool::start_synthesis(std::string synth_script)
 { 
     chdir(("cd " + Project_dir).c_str());
-    fs::current_path(Src_path);
-    std::system(("python3.6  load_prj.py"));
+    //fs::current_path(Src_path);
+    //std::system(("python3.6  load_prj.py"));
+    // the python file execution has been replaced by create_vivado_project()
     fs::current_path(Project_dir);
     std::string vivado_path = "start_vivado";
     std::system(("./"+ vivado_path + " " + synth_script).c_str());

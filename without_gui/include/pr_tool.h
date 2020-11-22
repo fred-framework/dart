@@ -29,7 +29,16 @@
 #define DSP_MARGIN   0
 #endif
 
-namespace fs = std::experimental::filesystem;
+#ifdef __cpp_lib_filesystem
+    #include <filesystem>
+    using fs = std::filesystem;
+#elif __cpp_lib_experimental_filesystem
+    #include <experimental/filesystem>
+    namespace fs = std::experimental::filesystem;
+#else
+    #error "no filesystem support ='("
+#endif
+
 using namespace std;
 //using namespace Ui;
 
@@ -60,6 +69,25 @@ typedef struct {
 //The main class to process everything
 class pr_tool
 {
+
+// get the directory separator depending on the OS
+string dir_separator(){
+    string s;
+    s.assign(1,fs::path::preferred_separator);    
+    return s;
+}
+
+// split a string, or a path, by the delimiter
+vector<string> split(const string& text, char delimiter) {
+    string tmp;
+    vector<string> stk;
+    stringstream ss(text);
+    while(getline(ss,tmp, delimiter)) {
+        stk.push_back(tmp);
+    }
+    return stk;
+}
+
 
 public:
 
@@ -98,6 +126,7 @@ public:
     void prep_input();
     void init_dir_struct();
     void prep_proj_directory();
+    void create_vivado_project();
     void generate_synthesis_tcl();
     void start_synthesis(std::string synth_script);
     void parse_synthesis_report();
