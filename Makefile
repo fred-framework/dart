@@ -2,18 +2,29 @@ CC = g++
 CFLAGS = -Iwithout_gui/include/
 CFLAGS += -Iinclude/
 CFLAGS += -std=c++17
+CFLAGS += -L$(GUROBI_HOME)/lib
+CFLAGS += -ggdb -g3
+
+ifndef GUROBI_HOME
+$(error GUROBI_HOME is not defined)
+endif
+
+ifndef DART_HOME
+$(error DART_HOME is not defined)
+endif
+
 
 LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi81 -lm -lstdc++fs
 
 all:
-	@echo "Please run the make file using the follwoing format"
+	@echo "Please run the make file using the following format"
 	@echo ""
 	@echo "make target FPGA=type_of_FPGA"
 	@echo ""
 	@echo "please use a specific target "
 	@echo "'flora_with_partitioning'  ---> floorplanner with partitioning"
 	@echo "'flora_without_partitioning' ---> only floorplanner without partitioning"
-	@echo "'pr_tool_with_part' ---> run the PR flow with including floorplanning and partitoning'" 
+	@echo "'pr_tool_with_part' ---> run the PR flow with including floorplanning and partitioning'" 
 	@echo "'pr_tool_without_part' ---> run the PR flow including only the floorplanning "
 	@echo " "	
 	@echo "for type of FPGA please use ZYNQ or PYNQ"

@@ -29,7 +29,16 @@
 #define DSP_MARGIN   0
 #endif
 
-namespace fs = std::experimental::filesystem;
+#ifdef __cpp_lib_filesystem
+    #include <filesystem>
+    using fs = std::filesystem;
+#elif __cpp_lib_experimental_filesystem
+    #include <experimental/filesystem>
+    namespace fs = std::experimental::filesystem;
+#else
+    #error "no filesystem support ='("
+#endif
+
 using namespace std;
 //using namespace Ui;
 
@@ -50,6 +59,7 @@ typedef struct{
     unsigned long num_rm_partitions;
 #endif
     std::string path_to_input;
+    std::string path_to_output;
 }input_to_pr;
 
 typedef struct {
@@ -60,6 +70,25 @@ typedef struct {
 //The main class to process everything
 class pr_tool
 {
+
+// get the directory separator depending on the OS
+string dir_separator(){
+    string s;
+    s.assign(1,fs::path::preferred_separator);    
+    return s;
+}
+
+// split a string, or a path, by the delimiter
+vector<string> split(const string& text, char delimiter) {
+    string tmp;
+    vector<string> stk;
+    stringstream ss(text);
+    while(getline(ss,tmp, delimiter)) {
+        stk.push_back(tmp);
+    }
+    return stk;
+}
+
 
 public:
 
@@ -73,6 +102,7 @@ public:
 #endif 
     input_to_pr *input_pr;
     fpga_type type;
+    string dart_path;
 
     //variables to manage project directory
     std::string Project_dir; //= "/home/holmes/test_pr_dir";
@@ -98,11 +128,11 @@ public:
     void prep_input();
     void init_dir_struct();
     void prep_proj_directory();
+    void create_vivado_project();
     void generate_synthesis_tcl();
-    void start_synthesis(std::string synth_script);
+    void run_vivado(std::string synth_script);
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
-    void start_implementation(std::string impl_script); 
     
     explicit pr_tool(input_to_pr *);
 
