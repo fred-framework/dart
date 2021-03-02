@@ -1,8 +1,9 @@
 ###############################################################
 ###   Main flow - Do Not Edit
 ###############################################################
-#TODO: For now define the script version here... find a better home like the README or design.tcl?
-set scriptVer "2018.3"
+# DART was tested with these versions of Vivado. It's recommeded to stick with them.
+#set scriptVer "2018.3"
+set scriptVer "2019.2"
 set vivado [exec which vivado]
 if {[llength $vivado]} {
    set vivadoVer [version -short]
