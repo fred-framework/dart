@@ -44,6 +44,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
     	init_dir_struct();
 
         prep_proj_directory();
+
         generate_synthesis_tcl();
         create_vivado_project();       
 
@@ -60,6 +61,8 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         generate_impl_tcl(fl_inst);
 
         run_vivado(impl_script);    
+       
+        generate_fred_files();
   }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
@@ -70,6 +73,80 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 pr_tool::~pr_tool()
 {
     cout << "PR_TOOL: destruction of PR_tool" <<endl;
+}
+
+void pr_tool::generate_fred_files()
+{
+    int k, i, bitstream_id = 100;
+    std::string str, src, dest;
+    unsigned long fred_input_buff_size = 1048576;
+    unsigned long fred_output_buff_size = 32768;
+
+    ofstream write_fred_arch, write_fred_hw;
+    write_fred_arch.open(fred_dir +"/arch.csv");
+    write_fred_hw.open(fred_dir +"/hw_tasks.csv");
+   
+    cout << "PR_TOOL: creating FRED files "<<endl;
+
+    /*  FRED architectural description file header */
+    write_fred_arch <<"# FRED Architectural description file. \n";
+    write_fred_arch <<"# Warning: This file must match synthesized hardware! \n \n";
+    write_fred_arch <<"# Each line defines a partition, syntax: \n";
+    write_fred_arch <<"# <partition name>, <num slots> \n \n";
+    write_fred_arch <<"# example: \n";
+    write_fred_arch <<"# \"ex_partition, 3\" \n";
+    write_fred_arch <<"# defines a partion named \"ex_partition\" containing 3 slots\n";
+
+    /*  HW_tasks description file header*/
+    write_fred_hw << "# FRED hw-tasks description file. \n ";
+    write_fred_hw << "# Warning: This file must match synthesized hardware! \n \n";
+    write_fred_hw << "# Each line defines a HW-Tasks: \n ";
+    write_fred_hw << "# <name>, <hw_id>, <partition>, <bistream_path>, <buff_0_size>, ... <buff_7_size> \n ";
+    write_fred_hw << "# Note: the association between a hw-task and its partition \n ";
+    write_fred_hw << "# it's defined during the synthesis flow! Here is specified only \n ";
+    write_fred_hw << "# to guess the number of bistreams and their length. \n \n ";
+    write_fred_hw << "# example: \n ";
+    write_fred_hw << "# \"ex_hw_task, 64, ex_partition, bits, 1024, 1024, 1024\" \n ";
+    write_fred_hw << "# defines a hw-task named \"ex_hw_task\", with id 64, allocated on a \n ";
+    write_fred_hw << "# partition named \"ex_partition\", whose bitstreams are located in \n ";
+    write_fred_hw << "# the \"/bits\" folder, and uses three input/output buffers of size 1024 bytes. \n \n ";
+
+#ifdef WITH_PARTITIONING
+
+#else
+    /* Create the arch.csv and hw_tasks.csv files for FRED */
+    for(k = 0; k < num_rm_partitions; k++) {
+        write_fred_arch << "p"<<k << ", "  << alloc[k].num_hw_tasks_in_part << "\n";
+    }
+
+    for(i = 0; i < max_modules_in_partition; i++) {
+        for(k = 0; k < num_rm_partitions; k++) {
+            write_fred_hw << "config_"<<i<<"_pblock_slot_"<<k<<"_partial, " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+            bitstream_id++;
+        }
+    }
+   
+    /* Create the FRED bitstream partition directories */
+    for(k = 0; k < num_rm_partitions; k++) {
+        str = "fred/dart_fred/bits/p"+ std::to_string(k);
+        fs::create_directories(str);
+    }
+
+    /* Copy the partial bitstreams */
+    for(i = 0; i < max_modules_in_partition; i++) {
+        for(k = 0; k < num_rm_partitions; k++) {
+            src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
+            dest = "fred/dart_fred/bits/p"+ std::to_string(k);
+            fs::copy(src, dest);
+        }
+    }
+
+    /*Copy one of the static bitstreams to FRED*/
+    fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+
+    write_fred_arch.close();
+    write_fred_hw.close();
+#endif
 }
 
 void pr_tool::prep_input()
@@ -111,6 +188,7 @@ void pr_tool::prep_input()
         for(i = 0; i < num_rm_modules; i++) {
             if(rm_list[i].partition_id  == k){
                 alloc[k].num_modules_in_partition += 1;
+                alloc[k].num_hw_tasks_in_part += 1;
                 alloc[k].rm_id.push_back(i);
             }
         }
@@ -120,7 +198,6 @@ void pr_tool::prep_input()
 
 #endif
 }
-
 
 void pr_tool::prep_proj_directory()
 {
@@ -141,6 +218,8 @@ void pr_tool::prep_proj_directory()
         fs::create_directories(Project_dir / fs::path("Bitstreams"));
         fs::create_directories(hdl_copy_path);
         fs::create_directories(tcl_project);
+        fs::create_directories(fred_dir);
+        fs::create_directories(fred_dir / fs::path("dart_fred/bits"));
 
         //TODO: 1. assert if directory/files exists
         //      2. remove leading or trailing space from source_path
@@ -166,8 +245,6 @@ void pr_tool::prep_proj_directory()
         std::cerr << "Exception :: " << e.what();
     } 
 }
-
-
 
 void pr_tool::generate_synthesis_tcl()
 {
@@ -709,7 +786,7 @@ void pr_tool::init_dir_struct()
     fplan_xdc_file = Src_path + "/constraints/pblocks.xdc";
     tcl_project = Project_dir + "/Tcl";
     synthesis_script = Project_dir + "/ooc_synth.tcl" ;
-    impl_script = Project_dir + "/impl.tcl";;
-
+    impl_script = Project_dir + "/impl.tcl";
+    fred_dir = Project_dir + "/fred";
 }
 

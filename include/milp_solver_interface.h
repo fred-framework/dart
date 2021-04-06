@@ -11,6 +11,7 @@ typedef std::vector<pos> Vecpos;
 
 typedef struct {
     unsigned int num_tasks_in_part;
+    unsigned int num_hw_tasks_in_part;
     std::vector<unsigned int> task_id;                                  
 }hw_task_allocation;
 

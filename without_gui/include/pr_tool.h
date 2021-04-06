@@ -64,6 +64,7 @@ typedef struct{
 
 typedef struct {
     unsigned int num_modules_in_partition = 0;
+    unsigned int num_hw_tasks_in_part = 0;
     std::vector<unsigned int> rm_id;
 }partition_allocation;
 
@@ -112,6 +113,7 @@ public:
     std::string tcl_project; // = Project_dir + "/Tcl";
     std::string synthesis_script; // = Project_dir + "/ooc_synth.tcl" ;
     std::string impl_script; // = Project_dir + "/impl.tcl";
+    std::string fred_dir;
     //pointer to an instance of flora
     flora *fl_inst;
     input_to_flora in_flora;
@@ -133,7 +135,8 @@ public:
     void run_vivado(std::string synth_script);
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
-    
+    void generate_fred_files();
+
     explicit pr_tool(input_to_pr *);
 
     ~pr_tool();

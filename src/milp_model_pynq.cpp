@@ -1699,5 +1699,5 @@ int pynq_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
 
     status = solve_milp_pynq(to_sim);
 
-return 0;
+    return status;
 }
