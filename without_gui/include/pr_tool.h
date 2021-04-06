@@ -135,7 +135,7 @@ public:
     void run_vivado(std::string synth_script);
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
-    void generate_fred_files();
+    void generate_fred_files(flora *fptr);
 
     explicit pr_tool(input_to_pr *);
 

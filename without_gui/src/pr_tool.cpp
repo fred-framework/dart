@@ -62,7 +62,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         run_vivado(impl_script);    
        
-        generate_fred_files();
+        generate_fred_files(fl_inst);
   }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
@@ -75,9 +75,10 @@ pr_tool::~pr_tool()
     cout << "PR_TOOL: destruction of PR_tool" <<endl;
 }
 
-void pr_tool::generate_fred_files()
+void pr_tool::generate_fred_files(flora *fl_ptr)
 {
     int k, i, bitstream_id = 100;
+    unsigned long partitions;
     std::string str, src, dest;
     unsigned long fred_input_buff_size = 1048576;
     unsigned long fred_output_buff_size = 32768;
@@ -112,6 +113,37 @@ void pr_tool::generate_fred_files()
     write_fred_hw << "# the \"/bits\" folder, and uses three input/output buffers of size 1024 bytes. \n \n ";
 
 #ifdef WITH_PARTITIONING
+        for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+            write_fred_arch << "p"<<k << ", "  << fl_ptr->alloc[k].num_hw_tasks_in_part << "\n";
+        }
+
+        for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
+            for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+                write_fred_hw << "config_"<<i<<"_pblock_slot_"<<k<<"_partial, " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                bitstream_id++;
+            }
+        }
+
+    /* Create the FRED bitstream partition directories */
+    for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+        str = "fred/dart_fred/bits/p"+ std::to_string(k);
+        fs::create_directories(str);
+    }
+
+    /* Copy the partial bitstreams */
+    for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
+        for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+            src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin";
+            dest = "fred/dart_fred/bits/p"+ std::to_string(k);
+            fs::copy(src, dest);
+        }
+    }
+
+    /*Copy one of the static bitstreams to FRED*/
+    fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+
+    write_fred_arch.close();
+    write_fred_hw.close();
 
 #else
     /* Create the arch.csv and hw_tasks.csv files for FRED */

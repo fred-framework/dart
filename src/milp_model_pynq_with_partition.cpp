@@ -1861,6 +1861,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
 				}	
 				if(is_part_allocated) {
 					(*to_sim->task_alloc)[index].num_tasks_in_part = num_tasks_in_part;
+					(*to_sim->task_alloc)[index].num_hw_tasks_in_part = num_tasks_in_part;
                 	index += 1;
 				}
             }
