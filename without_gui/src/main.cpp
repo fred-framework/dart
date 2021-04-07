@@ -88,6 +88,17 @@ int main(int argc, char* argv[])
         exit(1);
     }  
 
+// check vivado enrironment variable used by tools/start_vivado    
+    string vivado_path = getEnvVar ("XILINX_VIVADO");
+    if (vivado_path.empty()){
+        cout << "ERROR: XILINX_VIVADO environment variable is not defined\n\n";
+        exit(1);
+    }
+    if (!fs::exists(vivado_path) || !fs::is_directory(vivado_path)){
+        cout << "ERROR: XILINX_VIVADO points to an invalid file '" << vivado_path << "'\n";
+        exit(1);
+    } 
+
 // check vivado is in the path and its version
     try{
         FILE *vivado_out_p = popen("vivado -version", "r");
