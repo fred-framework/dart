@@ -108,10 +108,12 @@ int main(int argc, char* argv[])
             exit(1);        
         }
         vector<string> tokens = split(line_with_vivado_version, ' ');
+        /*
         if (tokens[1] != "v2018.3"){
             cout << "ERROR: expecting vivado version 'v2018.3' but found '" << tokens[1] << "'\n";
             exit(1);        
         }
+        */
     }
     catch (std::system_error & e)
     {
