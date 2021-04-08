@@ -1,0 +1,3 @@
+Command: read_checkpoint -cell system_i/slot_p0_s0 /home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/lixo/Synth/FFT_ifft/fft_top_synth.dcp -strict
+INFO: [Netlist 29-17] Analyzing 120 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds

@@ -141,6 +141,7 @@ int main(int argc, char* argv[])
             cout << "WARNING: expecting vivado version 'v2018.3' or 'v2019.2' but found '" << tokens[1] << "'\n";
             cout << "unexpected errors might occur with different Vivado versions\n";
         }
+        */
     }
     catch (std::system_error & e)
     {

@@ -695,10 +695,10 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<"### Top Module Definitions" <<endl;
      write_impl_tcl<<" ####################################################################" <<endl;
 
-//     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
+     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
 //     write_impl_tcl<< "set top \"hdmi_out_wrapper\"" <<endl; 
 //     write_impl_tcl<< "set top \"system_wrapper_2_slots\"" <<endl; 
-     write_impl_tcl<< "set top \"system_wrapper_1_slots\"" <<endl; 
+//     write_impl_tcl<< "set top \"system_wrapper_1_slots\"" <<endl; 
      write_impl_tcl<< "set static \"Static\" "<<endl;
      write_impl_tcl<< "add_module $static" <<endl;
      write_impl_tcl<< "set_attribute module $static moduleName    $top" <<endl;

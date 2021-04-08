@@ -1,0 +1,26 @@
+#-----------------------------------------------------------
+# Vivado v2018.3 (64-bit)
+# SW Build 2405991 on Thu Dec  6 23:36:41 MST 2018
+# IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
+# Start of session at: Sat Apr 25 01:01:38 2020
+# Process ID: 19364
+# Current directory: /usr/local/src/xilinx/xilinx_18/hls_projects/fft_ifft/proj/solution1/impl/ip
+# Command line: vivado -notrace -mode batch -source run_ippack.tcl
+# Log file: /usr/local/src/xilinx/xilinx_18/hls_projects/fft_ifft/proj/solution1/impl/ip/vivado.log
+# Journal file: /usr/local/src/xilinx/xilinx_18/hls_projects/fft_ifft/proj/solution1/impl/ip/vivado.jou
+#-----------------------------------------------------------
+source run_ippack.tcl -notrace
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/opt/Xilinx_18/Vivado/2018.3/data/ip'.
+create_ip: Time (s): cpu = 00:00:04 ; elapsed = 00:00:06 . Memory (MB): peak = 1426.492 ; gain = 117.621 ; free physical = 179 ; free virtual = 9764
+WARNING: [IP_Flow 19-3374] An attempt to modify the value of disabled parameter 'memory_options_hybrid' from 'false' to '0' has been ignored for IP 'fft_config1_1_core'
+INFO: [IP_Flow 19-1686] Generating 'Synthesis' target for IP 'fft_config1_1_core'...
+INFO: [IP_Flow 19-1686] Generating 'Simulation' target for IP 'fft_config1_1_core'...
+WARNING: [IP_Flow 19-3374] An attempt to modify the value of disabled parameter 'memory_options_hybrid' from 'false' to '0' has been ignored for IP 'fft_config1_s_core'
+INFO: [IP_Flow 19-1686] Generating 'Synthesis' target for IP 'fft_config1_s_core'...
+INFO: [IP_Flow 19-1686] Generating 'Simulation' target for IP 'fft_config1_s_core'...
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/opt/Xilinx_18/Vivado/2018.3/data/ip'.
+INFO: [Common 17-206] Exiting Vivado at Sat Apr 25 01:02:12 2020...

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <core name="" type="" target="">
+    <kernel name="top_fdct" language="c" vlnv="xilinx.com:hls:top_fdct:1.0" attributes="" hash="" preferredWorkGroupSizeMultiple="0" workGroupSize="1" debug="false" interrupt="true">
+      <port name="M_AXI_MEM_BUS" mode="master" range="0xFFFFFFFF" dataWidth="16" portType="addressable" base="0x00000000"/>
+      <port name="S_AXI_CTRL_BUS" mode="slave" range="0x1000" dataWidth="32" portType="addressable" base="0x00000000"/>
+      <arg name="in_block" addressQualifier="1" id="0" port="M_AXI_MEM_BUS" size="0x4" offset="0x10" hostOffset="0x0" hostSize="0x4" type="short[]"/>
+      <arg name="out_block" addressQualifier="1" id="1" port="M_AXI_MEM_BUS" size="0x4" offset="0x18" hostOffset="0x0" hostSize="0x4" type="short[]"/>
+      <compileWorkGroupSize x="1" y="1" z="1"/>
+    </kernel>
+  </core>
+</project>

@@ -1,0 +1,14 @@
+	#HD: Parsing log file "/home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/lixo/Synth/FFT_ifft/create_project.log":
+
+
+	#HD: Parsing log file "/home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/lixo/Synth/FFT_ifft/fft_top_synth_design.rds":
+	CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'fft_config1_1_core' instantiated as 'fft_config1_1_U0/inst' [/home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/lixo/Sources/cores/FFT_ifft/hdl/vhdl/fft_config1_1.vhd:86]
+	CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'fft_config1_s_core' instantiated as 'fft_config1_U0/inst' [/home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/lixo/Sources/cores/FFT_ifft/hdl/vhdl/fft_config1_s.vhd:86]
+
+
+	#HD: Parsing log file "/home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/lixo/Synth/FFT_ifft/temp.log":
+
+
+	#HD: Parsing log file "/home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/lixo/Synth/FFT_ifft/temp.log":
+
+

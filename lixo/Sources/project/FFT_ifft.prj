@@ -1,0 +1,16 @@
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/start_for_fft_config1_1_U0.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/dummy_proc_fe11.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/dummy_proc_be.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fifo_w16_d2_A.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/start_for_dummy_proc_be_U0.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fft_config1_1.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fifo_w32_d1024_A.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fft_config1_s.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/start_for_dummy_proc_middle_U0.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/start_for_fft_config1_U0.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fifo_w32_d5_A.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/dummy_proc_middle.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fft_top_mem_bus_m_axi.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fft_top_ctrl_bus_s_axi.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fifo_w8_d2_A.vhd
+vhdl xil_defaultlib ./Sources/cores/FFT_ifft/hdl/vhdl/fft_top.vhd
