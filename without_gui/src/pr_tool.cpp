@@ -208,7 +208,7 @@ void pr_tool::prep_input()
         rm.partition_id = std::stoul(str);
 #endif
         rm.rm_tag = csv_data.get_value(i, k++);
-        rm.source_path = csv_data.get_value(i, k++);
+        //rm.source_path = csv_data.get_value(i, k++);
         rm.top_module = csv_data.get_value(i, k++);
         
         rm_list.push_back(rm);
@@ -253,6 +253,10 @@ void pr_tool::prep_proj_directory()
         fs::create_directories(fred_dir);
         fs::create_directories(fred_dir / fs::path("dart_fred/bits"));
 
+        // getting the path to the IPs. this has been checked in the main
+        char * val = getenv( "DART_IP_PATH" );
+        string dart_ip_path  = val == NULL ? std::string("") : std::string(val);
+
         //TODO: 1. assert if directory/files exists
         //      2. remove leading or trailing space from source_path
 
@@ -260,7 +264,7 @@ void pr_tool::prep_proj_directory()
         for(i = 0; i < num_rm_modules; i++){
             std::string str = Src_path / fs::path("cores") / rm_list[i].rm_tag;
             fs::create_directories(str);
-            fs::copy(fs::path(rm_list[i].source_path) / rm_list[i].rm_tag, str, fs::copy_options::recursive); 
+            fs::copy(fs::path(dart_ip_path) / rm_list[i].rm_tag, str, fs::copy_options::recursive); 
         } 
         fs::path dir_source(dart_path);
         dir_source /= fs::path("tools") / fs::path("Tcl");

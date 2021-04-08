@@ -4,10 +4,17 @@
 // TODO: BIruk, I dont know if it is the usage for all configurations.
 // If i's not, please extend this procedure for the other usages.
 void usage(){
-    cout << "pr_tool <version>, 2020, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
+    cout << "pr_tool <version>, 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Usage:\n";
     cout << "  pr_tool <# IPs> <CSV file>\n";
     cout << "  the current directory must be empty to receive the pr_tool project.\n\n";
+    cout << "Environment variables:\n";
+
+    cout << " - XILINX_VIVADO: points to the Vivado directory;\n";
+    cout << " - DART_HOME: the source dir for DART;\n";
+    cout << " - DART_IP_PATH: the directory where the IPs are stores;\n";
+    cout << " - GUROBI_HOME: the home dir for gurobi installation;\n";
+    cout << " - GRB_LICENSE_FILE: Gurobi's license file.\n\n";
 }
 
 bool has_only_digits(const string s){
@@ -67,6 +74,17 @@ int main(int argc, char* argv[])
         cout << "ERROR: DART_HOME points to an invalid directory '" << dart_path << "'\n";
         exit(1);
     }  
+
+// checking DART_HOME enrironment variables
+    string dart_ip_path = getEnvVar ("DART_IP_PATH");
+    if (dart_ip_path.empty()){
+        cout << "ERROR: DART_IP_PATH environment variable is not defined\n\n";
+        exit(1);
+    }
+    if (!fs::exists(dart_ip_path) || !fs::is_directory(dart_ip_path)){
+        cout << "ERROR: DART_IP_PATH points to an invalid directory '" << dart_ip_path << "'\n";
+        exit(1);
+    } 
 
 // checking GUROBI_HOME enrironment variables
     string gurobi_path = getEnvVar ("GUROBI_HOME");

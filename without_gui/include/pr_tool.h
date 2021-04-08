@@ -48,7 +48,7 @@ typedef struct{
     unsigned int partition_id;
 #endif
     std::string rm_tag;
-    std::string source_path;
+    //std::string source_path;
     std::string top_module;
 }reconfigurable_module;
 
