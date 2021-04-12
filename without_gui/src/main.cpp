@@ -7,8 +7,7 @@ void usage(){
     cout << "pr_tool <version>, 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Usage:\n";
     cout << "  pr_tool <# IPs> <CSV file> <static part DCP file> <static top module>\n\n";
-    cout << "  The current directory must be empty to receive the pr_tool project.\n";
-    cout << "  Assuming that the name of the top module matches the DCP filename.\n\n";
+    cout << "  The current directory must be empty to receive the pr_tool project.\n\n";
     cout << "Environment variables:\n";
 
     cout << " - XILINX_VIVADO: points to the Vivado directory;\n";
