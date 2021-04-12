@@ -58,6 +58,8 @@ typedef struct{
 #else
     unsigned long num_rm_partitions;
 #endif
+    std::string static_dcp_file;
+    std::string static_top_module;
     std::string path_to_input;
     std::string path_to_output;
 }input_to_pr;

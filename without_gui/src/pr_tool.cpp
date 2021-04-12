@@ -276,6 +276,12 @@ void pr_tool::prep_proj_directory()
         fs::path dir_dest(Project_dir);
         dir_dest /= fs::path("Synth") / fs::path("Static");
         fs::copy(dir_source, dir_dest, fs::copy_options::recursive);
+        // copy the DCP provided by the user
+        // the dcp file must be renamed to <original_name>_synth.dcp
+        string dcp_filename = fs::path(input_pr->static_dcp_file).filename().replace_extension("");
+        // the following lines seems complex, but it's only dir_dest + orig_filename + _synth + orig_extension
+        dcp_filename = string(dir_dest) + string (fs::path("/")) + dcp_filename + "_synth" + string(fs::path(input_pr->static_dcp_file).extension());
+        fs::copy_file(input_pr->static_dcp_file, dcp_filename, fs::copy_options::overwrite_existing);
     }catch (std::system_error & e)
     {
         std::cerr << "Exception :: " << e.what();
@@ -623,7 +629,7 @@ void pr_tool::parse_synthesis_report()
         
         write_flora_input.close();        
 #ifdef WITH_PARTITIONING 
-        in_flora = {num_rm_modules, Project_dir +"/flora_input.csv"};
+        in_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
 #else
         in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv"};
 #endif
@@ -695,7 +701,8 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<"### Top Module Definitions" <<endl;
      write_impl_tcl<<" ####################################################################" <<endl;
 
-     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
+     write_impl_tcl<< "set top \"" << input_pr->static_top_module << "_wrapper\"" <<endl; 
+//     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
 //     write_impl_tcl<< "set top \"hdmi_out_wrapper\"" <<endl; 
 //     write_impl_tcl<< "set top \"system_wrapper_2_slots\"" <<endl; 
 //     write_impl_tcl<< "set top \"system_wrapper_1_slots\"" <<endl; 

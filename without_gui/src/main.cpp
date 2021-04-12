@@ -6,8 +6,9 @@
 void usage(){
     cout << "pr_tool <version>, 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Usage:\n";
-    cout << "  pr_tool <# IPs> <CSV file>\n";
-    cout << "  the current directory must be empty to receive the pr_tool project.\n\n";
+    cout << "  pr_tool <# IPs> <CSV file> <static part DCP file> <static top module>\n\n";
+    cout << "  The current directory must be empty to receive the pr_tool project.\n";
+    cout << "  Assuming that the name of the top module matches the DCP filename.\n\n";
     cout << "Environment variables:\n";
 
     cout << " - XILINX_VIVADO: points to the Vivado directory;\n";
@@ -42,7 +43,7 @@ int main(int argc, char* argv[])
 {
 
 // checking arguments
-    if (argc != 3){
+    if (argc != 5){
         cout << "ERROR: invalid usage\n\n";
         usage();
         exit(1);
@@ -60,6 +61,17 @@ int main(int argc, char* argv[])
         }
         if (!fs::is_empty(fs::current_path())){
             cout << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
+            exit(1);
+        }
+        // testing the static part DCP file
+        if (!fs::exists(argv[3])){
+            cout << "ERROR: DCP file '" << argv[3] << "' not found\n\n";
+            usage();
+            exit(1);
+        }
+        if (fs::path(argv[3]).extension() != ".dcp"){
+            cout << "ERROR: expecting DCP file extension but got '" << argv[3] << "'\n\n";
+            usage();
             exit(1);
         }
 
@@ -141,7 +153,6 @@ int main(int argc, char* argv[])
             cout << "WARNING: expecting vivado version 'v2018.3' or 'v2019.2' but found '" << tokens[1] << "'\n";
             cout << "unexpected errors might occur with different Vivado versions\n";
         }
-        */
     }
     catch (std::system_error & e)
     {
@@ -169,6 +180,12 @@ int main(int argc, char* argv[])
 #endif
     //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
     pr_input.path_to_input = argv[2];
+    // DCP file of the static part
+    pr_input.static_dcp_file = argv[3];
+    // It's assuming the name of the DCP file is the same name of the top module !!!!
+    // get the filename without the extension
+    //pr_input.static_top_module = fs::path(argv[3]).filename().replace_extension("");
+    pr_input.static_top_module = argv[4];
     // where the project will be created
     pr_input.path_to_output = fs::current_path().string();
 

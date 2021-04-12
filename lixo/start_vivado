@@ -1,9 +1,0 @@
-#!/bin/bash
-
-if [[ -z "${XILINX_VIVADO}" ]]; then
-  echo "XILINX_VIVADO is undefined"
-  exit 1
-fi
-
-source ${XILINX_VIVADO}/settings64.sh
-${XILINX_VIVADO}/bin/vivado -mode batch -source $@ -notrace
