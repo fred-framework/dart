@@ -1,4 +1,8 @@
 #!/bin/bash
 
-source /opt/Xilinx/Vivado/2018.3/settings64.sh
-/opt/Xilinx/Vivado/2018.3/bin/vivado -mode batch -source $@ -notrace
+#source /tools/Xilinx/Vivado/2020.2/settings64.sh
+#/tools/Xilinx/Vivado/2020.2/bin/vivado -mode batch -source $@ -notrace
+
+#source /opt/Xilinx/Vivado/2018.3/settings64.sh
+#/opt/Xilinx/Vivado/2018.3/bin/vivado -mode batch -source $@ -notrace
+vivado -mode batch -source $@ -notrace

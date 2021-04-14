@@ -39,29 +39,43 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         
         //Instantiate flora
         //flora fl_inst;
-
+        
+        //pre-process the design
         prep_input(); 
     	init_dir_struct();
-
+/*
         prep_proj_directory();
 
+        //generate synthesis script 
         generate_synthesis_tcl();
         create_vivado_project();       
 
+        //syntehsize reconfigurable accelerators
         run_vivado(synthesis_script);
-
+*/
+        //extract resource consumption of accelerators
         parse_synthesis_report();
  
+        //perform floorplanning/partitioning
         fl_inst = new flora(&in_flora);
         fl_inst->clear_vectors();       
         fl_inst->prep_input();
         fl_inst->start_optimizer();
         fl_inst->generate_xdc(fplan_xdc_file);
 
+        //generate static hardware
+        generate_static_part(fl_inst);
+
+        //synthesize static part
+        synthesize_static();
+
+        //generate implementation script
         generate_impl_tcl(fl_inst);
 
+        //run vivado implementation
         run_vivado(impl_script);    
-       
+      
+        //generate the run-time management files for FRED
         generate_fred_files(fl_inst);
   }
     else {
@@ -244,14 +258,17 @@ void pr_tool::prep_proj_directory()
         fs::create_directories(Src_path / fs::path("constraints"));
         fs::create_directories(Src_path / fs::path("cores"));
         fs::create_directories(Src_path / fs::path("netlist"));
+        fs::create_directories(Src_path / fs::path("ip_repo"));
         fs::create_directories(Project_dir / fs::path("Synth"));
         fs::create_directories(Project_dir / fs::path("Implement"));
         fs::create_directories(Project_dir / fs::path("Checkpoint"));
         fs::create_directories(Project_dir / fs::path("Bitstreams"));
+        fs::create_directories(ip_repo_path);
         fs::create_directories(hdl_copy_path);
         fs::create_directories(tcl_project);
         fs::create_directories(fred_dir);
         fs::create_directories(fred_dir / fs::path("dart_fred/bits"));
+        fs::create_directories(static_dir);
 
         //TODO: 1. assert if directory/files exists
         //      2. remove leading or trailing space from source_path
@@ -271,7 +288,9 @@ void pr_tool::prep_proj_directory()
         dir_source = dart_path / fs::path("tools") / fs::path("synth_static");
         fs::path dir_dest(Project_dir);
         dir_dest /= fs::path("Synth") / fs::path("Static");
-        fs::copy(dir_source, dir_dest, fs::copy_options::recursive);
+        fs::copy(dir_source, dir_dest, fs::copy_options::recursive); 
+        dir_source = dart_path / fs::path("tools") / fs::path("acc_bbox_ip");
+        fs::copy(dir_source, ip_repo_path, fs::copy_options::recursive);
     }catch (std::system_error & e)
     {
         std::cerr << "Exception :: " << e.what();
@@ -691,7 +710,8 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<"### Top Module Definitions" <<endl;
      write_impl_tcl<<" ####################################################################" <<endl;
 
-     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
+//     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
+     write_impl_tcl<< "set top \"dart_wrapper\"" <<endl; 
 //     write_impl_tcl<< "set top \"hdmi_out_wrapper\"" <<endl; 
 //     write_impl_tcl<< "set top \"system_wrapper_2_slots\"" <<endl; 
 //     write_impl_tcl<< "set top \"system_wrapper_1_slots\"" <<endl; 
@@ -814,11 +834,194 @@ void pr_tool::init_dir_struct()
     //creating project sub-directories
     //Project_dir += "/pr_tool_proj"; 
     Src_path = Project_dir + "/Sources";
+    ip_repo_path =Src_path + "/ip_repo";
     hdl_copy_path = Src_path + "/hdl";
     fplan_xdc_file = Src_path + "/constraints/pblocks.xdc";
     tcl_project = Project_dir + "/Tcl";
     synthesis_script = Project_dir + "/ooc_synth.tcl" ;
     impl_script = Project_dir + "/impl.tcl";
     fred_dir = Project_dir + "/fred";
+    static_dir = Project_dir + "/static_hw";
 }
 
+void pr_tool::generate_static_part(flora *fl_ptr) 
+{
+    int i, j, k;
+    unsigned int num_partitions = 0;
+    ofstream write_static_tcl;
+
+#ifdef WITH_PARTITIONING
+    num_partitions = fl_ptr->from_solver.num_partition;
+#else
+    num_partitions = num_rm_partitions;
+#endif
+    
+    static_hw_script = Project_dir + "/static.tcl";
+    write_static_tcl.open(static_hw_script);
+
+    //create the project
+    write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z020clg400-1 " <<endl;  //TODO: define Board
+    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
+    write_static_tcl << "set_property  ip_repo_paths "<<ip_repo_path<<" [current_project]" <<endl;
+    write_static_tcl << "update_ip_catalog " <<endl;
+    write_static_tcl << "create_bd_design \"dart\" " <<endl;
+    write_static_tcl << "update_compile_order -fileset sources_1 " <<endl;
+    write_static_tcl << "startgroup " <<endl;
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0" <<endl; //TODO: PS must be templated
+    write_static_tcl << "endgroup " <<endl;
+    
+    //create the bbox instance of the accelerator IPs and the decouplers (two decouplers for each acc)
+    for(i=0, j=0; i < num_partitions; i++, j++) {
+        write_static_tcl << "startgroup " <<endl;
+        write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:hls:hw_task_0:1.0 hw_task_0_" <<std::to_string(i) <<endl;
+        write_static_tcl << "endgroup " <<endl;
+        write_static_tcl << "startgroup " <<endl;
+        write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl; //for Vivado 2019.2 and below
+        //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl;
+        write_static_tcl << "endgroup " <<endl;
+        write_static_tcl << "set_property -dict [list CONFIG.ALL_PARAMS {HAS_AXI_LITE 1 HAS_SIGNAL_CONTROL 0 INTF {acc_ctrl "
+                            "{ID 0 VLNV xilinx.com:interface:aximm_rtl:1.0 PROTOCOL axi4lite SIGNALS {ARVALID {PRESENT 1} "
+                            "ARREADY {PRESENT 1} AWVALID {PRESENT 1} AWREADY {PRESENT 1} BVALID {PRESENT 1} BREADY {PRESENT 1} "
+                            "RVALID {PRESENT 1} RREADY {PRESENT 1} WVALID {PRESENT 1} WREADY {PRESENT 1} AWADDR {PRESENT 1} "
+                            "AWLEN {PRESENT 0} AWSIZE {PRESENT 0} AWBURST {PRESENT 0} AWLOCK {PRESENT 0} AWCACHE {PRESENT 0} "
+                            "AWPROT {PRESENT 1} WDATA {PRESENT 1} WSTRB {PRESENT 1} WLAST {PRESENT 0} BRESP {PRESENT 1} "
+                            "ARADDR {PRESENT 1} ARLEN {PRESENT 0} ARSIZE {PRESENT 0} ARBURST {PRESENT 0} ARLOCK {PRESENT 0} "
+                            "ARCACHE {PRESENT 0} ARPROT {PRESENT 1} RDATA {PRESENT 1} RRESP {PRESENT 1} RLAST {PRESENT 0}}}}} "
+                            "CONFIG.GUI_HAS_AXI_LITE {1} CONFIG.GUI_HAS_SIGNAL_CONTROL {0} CONFIG.GUI_SELECT_INTERFACE {0} "
+                            "CONFIG.GUI_INTERFACE_NAME {acc_ctrl} CONFIG.GUI_SELECT_VLNV {xilinx.com:interface:aximm_rtl:1.0} "
+                            "CONFIG.GUI_INTERFACE_PROTOCOL {axi4lite} CONFIG.GUI_SIGNAL_SELECT_0 {ARVALID} CONFIG.GUI_SIGNAL_SELECT_1 {ARREADY} "
+                            "CONFIG.GUI_SIGNAL_SELECT_2 {AWVALID} CONFIG.GUI_SIGNAL_SELECT_3 {AWREADY} CONFIG.GUI_SIGNAL_SELECT_4 {BVALID} "
+                            "CONFIG.GUI_SIGNAL_SELECT_5 {BREADY} CONFIG.GUI_SIGNAL_SELECT_6 {RVALID} CONFIG.GUI_SIGNAL_SELECT_7 {RREADY} "
+                            "CONFIG.GUI_SIGNAL_SELECT_8 {WVALID} CONFIG.GUI_SIGNAL_SELECT_9 {WREADY} CONFIG.GUI_SIGNAL_DECOUPLED_0 {true} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_1 {true} CONFIG.GUI_SIGNAL_DECOUPLED_2 {true} CONFIG.GUI_SIGNAL_DECOUPLED_3 {true} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_4 {true} CONFIG.GUI_SIGNAL_DECOUPLED_5 {true} CONFIG.GUI_SIGNAL_DECOUPLED_6 {true} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_7 {true} CONFIG.GUI_SIGNAL_DECOUPLED_8 {true} CONFIG.GUI_SIGNAL_DECOUPLED_9 {true} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_0 {true} CONFIG.GUI_SIGNAL_PRESENT_1 {true} CONFIG.GUI_SIGNAL_PRESENT_2 {true} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_3 {true} CONFIG.GUI_SIGNAL_PRESENT_4 {true} CONFIG.GUI_SIGNAL_PRESENT_5 {true} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_6 {true} CONFIG.GUI_SIGNAL_PRESENT_7 {true} CONFIG.GUI_SIGNAL_PRESENT_8 {true} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_9 {true}] [get_bd_cells pr_decoupler_" << std::to_string(j)<< "]" <<endl;
+        j++; 
+        write_static_tcl << "startgroup" << endl;
+        write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl; //for Vivado 2019.2 and below
+        //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl;
+        write_static_tcl << "endgroup" << endl;
+    
+        write_static_tcl << " set_property -dict [list CONFIG.ALL_PARAMS {HAS_SIGNAL_CONTROL 1 HAS_SIGNAL_STATUS 0 INTF "
+                            "{acc_data {ID 0 VLNV xilinx.com:interface:aximm_rtl:1.0 MODE slave}}} CONFIG.GUI_HAS_SIGNAL_CONTROL {1} " 
+                            "CONFIG.GUI_HAS_SIGNAL_STATUS {0} CONFIG.GUI_SELECT_INTERFACE {0} CONFIG.GUI_INTERFACE_NAME {acc_data} "
+                            "CONFIG.GUI_SELECT_VLNV {xilinx.com:interface:aximm_rtl:1.0} CONFIG.GUI_INTERFACE_PROTOCOL {axi4} " 
+                            "CONFIG.GUI_SELECT_MODE {slave} CONFIG.GUI_SIGNAL_SELECT_0 {ARVALID} CONFIG.GUI_SIGNAL_SELECT_1 {ARREADY} "
+                            "CONFIG.GUI_SIGNAL_SELECT_2 {AWVALID} CONFIG.GUI_SIGNAL_SELECT_3 {AWREADY} CONFIG.GUI_SIGNAL_SELECT_4 {BVALID} "
+                            "CONFIG.GUI_SIGNAL_SELECT_5 {BREADY} CONFIG.GUI_SIGNAL_SELECT_6 {RVALID} CONFIG.GUI_SIGNAL_SELECT_7 {RREADY} "
+                            "CONFIG.GUI_SIGNAL_SELECT_8 {WVALID} CONFIG.GUI_SIGNAL_SELECT_9 {WREADY} CONFIG.GUI_SIGNAL_DECOUPLED_0 {true} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_1 {true} CONFIG.GUI_SIGNAL_DECOUPLED_2 {true} CONFIG.GUI_SIGNAL_DECOUPLED_3 {true} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_4 {true} CONFIG.GUI_SIGNAL_DECOUPLED_5 {true} CONFIG.GUI_SIGNAL_DECOUPLED_6 {true} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_7 {true} CONFIG.GUI_SIGNAL_DECOUPLED_8 {true} CONFIG.GUI_SIGNAL_DECOUPLED_9 {true} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_0 {true} CONFIG.GUI_SIGNAL_PRESENT_1 {true} CONFIG.GUI_SIGNAL_PRESENT_2 {true} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_3 {true} CONFIG.GUI_SIGNAL_PRESENT_4 {true} CONFIG.GUI_SIGNAL_PRESENT_5 {true} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_6 {true} CONFIG.GUI_SIGNAL_PRESENT_7 {true} CONFIG.GUI_SIGNAL_PRESENT_8 {true} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_9 {true}] [get_bd_cells pr_decoupler_"<< std::to_string(j) << "]" <<endl;
+    }
+  
+    //connect PS to DDR and Fixed IO
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:processing_system7 -config {make_external \"FIXED_IO, DDR\" "
+                        "apply_board_preset \"1\" Master \"Disable\" Slave \"Disable\" }  [get_bd_cells processing_system7_0]" <<endl;
+
+    write_static_tcl << "startgroup " <<endl;
+    write_static_tcl << "set_property -dict [list CONFIG.PCW_USE_S_AXI_HP0 {1}] [get_bd_cells processing_system7_0] " <<endl; //TODO: number of HPO should be changed based on number of acc
+    write_static_tcl << "endgroup " <<endl;
+
+    //create AXI bars
+    //For now we create two axi bars: one for the control registers and the other for memory access 
+    write_static_tcl << "startgroup" <<endl;
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0" <<endl;
+    write_static_tcl << "endgroup" <<endl;
+    write_static_tcl << "startgroup" <<endl;
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_1" <<endl;
+    write_static_tcl << "endgroup" <<endl;
+
+    write_static_tcl << "startgroup " <<endl;
+    write_static_tcl << "set_property -dict [list CONFIG.NUM_MI {"<< std::to_string(2*num_partitions) << "}] [get_bd_cells axi_interconnect_0]" <<endl;
+    write_static_tcl << "endgroup" <<endl;
+    write_static_tcl << "startgroup" <<endl;
+    write_static_tcl << "set_property -dict [list CONFIG.NUM_SI {"<<std::to_string(num_partitions)<< "} CONFIG.NUM_MI {1}] [get_bd_cells axi_interconnect_1]" <<endl;
+    write_static_tcl << "endgroup" <<endl;
+
+    
+    for(i=0, j=0; i < num_partitions; i++, j++) {
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins hw_task_0_"<<std::to_string(i)<<"/s_axi_ctrl_bus] [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_ctrl]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_ctrl] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_AXI]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_AXI]" <<endl;
+        write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins processing_system7_0/M_AXI_GP0]" <<endl; 
+        
+        j++;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins hw_task_0_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_data] -boundary_type upper [get_bd_intf_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_AXI]" <<endl;
+        write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]" <<endl;
+    
+        write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
+        
+        //connect acc clk
+        write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} "
+                            "[get_bd_pins hw_task_0_"<<std::to_string(i)<<"/ap_clk]" <<endl;
+    }
+    
+    //connect interconnects to master clock
+    write_static_tcl << "startgroup" <<endl;
+    for(i=0, j=0; i < num_partitions; i++, j+=2) {
+        write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_ACLK]" <<endl;
+        write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_ACLK]" <<endl;
+        write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_ACLK]" <<endl;
+    }
+
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/ACLK]" <<endl;
+    //write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M00_ACLK]" <<endl;
+    //write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M01_ACLK]" <<endl;
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/S00_ACLK]" <<endl;
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/ACLK]" <<endl;
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/M00_ACLK]" <<endl;
+    //write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/S00_ACLK]" <<endl;
+    write_static_tcl << "endgroup" <<endl;
+
+    for(j=0; j < num_partitions * 2; j+=2) { 
+        write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<
+        "/s_axi_reg_aresetn] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] " <<endl;
+    }
+    
+    //Address map for accelerators
+    //TODO: Generate the linux device tree from this mapping
+    for(i=0, j=0; i < num_partitions; i++, j+=2) {
+        write_static_tcl << "assign_bd_address [get_bd_addr_segs {hw_task_0_"<<std::to_string(i)<<"/s_axi_ctrl_bus/Reg }]" <<endl;
+        write_static_tcl << "assign_bd_address [get_bd_addr_segs {pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg/Reg }]" <<endl;
+        write_static_tcl << "assign_bd_address [get_bd_addr_segs {processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM }]" <<endl;
+    }
+
+    //create a wrapper
+    write_static_tcl << "make_wrapper -files [get_files "<< static_dir <<"/dart_project.srcs/sources_1/bd/dart/dart.bd] -top " <<endl;
+    write_static_tcl << "add_files -norecurse "<< static_dir<<"/dart_project.srcs/sources_1/bd/dart/hdl/dart_wrapper.v " <<endl;
+
+    write_static_tcl << "update_compile_order -fileset sources_1" <<endl;
+    write_static_tcl << "set_property synth_checkpoint_mode None [get_files  "<<static_dir<<"/dart_project.srcs/sources_1/bd/dart/dart.bd]" << endl;
+    write_static_tcl << "generate_target all [get_files  "<< static_dir <<"/dart.srcs/sources_1/bd/dart/dart.bd]" <<endl;
+
+    //create synthesis runs in vivado
+    write_static_tcl << "reset_run synth_1" <<endl;
+    write_static_tcl << "launch_runs synth_1 -jobs 8" <<endl;
+    write_static_tcl << "wait_on_run -timeout 360 synth_1" <<endl;
+}
+
+void pr_tool::synthesize_static()
+{
+    std::string src = static_dir +"/dart_project.runs/synth_1/dart_wrapper.dcp";
+    std::string dest = Project_dir + "/Synth/Static/dart_wrapper_synth.dcp";
+    run_vivado(static_hw_script);
+    
+    try {
+        fs::copy(src, dest);
+    }catch (std::system_error & e)
+    {
+        std::cerr << "Exception :: " << e.what();
+    }
+
+
+}
