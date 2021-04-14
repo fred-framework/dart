@@ -43,7 +43,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         //pre-process the design
         prep_input(); 
     	init_dir_struct();
-/*
+
         prep_proj_directory();
 
         //generate synthesis script 
@@ -52,7 +52,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         //syntehsize reconfigurable accelerators
         run_vivado(synthesis_script);
-*/
+
         //extract resource consumption of accelerators
         parse_synthesis_report();
  
@@ -1022,6 +1022,4 @@ void pr_tool::synthesize_static()
     {
         std::cerr << "Exception :: " << e.what();
     }
-
-
 }
