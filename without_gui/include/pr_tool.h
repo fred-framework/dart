@@ -10,6 +10,7 @@
 #include "fpga.h"
 #include "flora.h"
 #include "fine_grained.h"
+#include "gen_wrapper.h"
 
 #define MAX_RECONF_MODULES 1
 #define MAX_MODULES 100
@@ -92,7 +93,10 @@ vector<string> split(const string& text, char delimiter) {
 
 
 public:
-
+    
+    //name of wrapper module
+    std::string wrapper_top_name = "hw_task";
+    
     //Reconfigurable module instance
     vector<reconfigurable_module> rm_list;
 #ifdef WITH_PARTITIONING
@@ -141,6 +145,7 @@ public:
     void generate_fred_files(flora *fptr);
     void generate_static_part(flora *fl);
     void synthesize_static(); 
+    void generate_wrapper();
 
     explicit pr_tool(input_to_pr *);
 

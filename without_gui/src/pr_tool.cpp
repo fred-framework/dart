@@ -45,6 +45,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
     	init_dir_struct();
 
         prep_proj_directory();
+        generate_wrapper();
 
         //generate synthesis script 
         generate_synthesis_tcl();
@@ -364,6 +365,7 @@ void pr_tool::generate_synthesis_tcl()
      write_synth_tcl<<"### RP Module Definitions" <<endl;
      write_synth_tcl<<" ####################################################################" <<endl;
 
+#ifdef WITH_PARTITIONING
      for(i = 0; i < num_rm_modules; i++) {
          write_synth_tcl << "add_module " << rm_list[i].rm_tag <<endl;
          write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
@@ -371,7 +373,15 @@ void pr_tool::generate_synthesis_tcl()
          write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
          write_synth_tcl <<endl;
      }
-
+#else
+     for(i = 0; i < num_rm_modules; i++) {
+         write_synth_tcl << "add_module " << rm_list[i].rm_tag <<endl;
+         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << wrapper_top_name << "_" << rm_list[i].partition_id  <<endl;
+         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;                   
+         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
+         write_synth_tcl <<endl;
+     }
+#endif
      write_synth_tcl << "source $tclDir/run.tcl" <<endl;
      write_synth_tcl << "exit" <<endl;
      write_synth_tcl.close(); 
@@ -431,6 +441,12 @@ void pr_tool::create_vivado_project()
                     vhd_file_cnt++;
                 }
             }
+
+#ifndef WITH_PARTITIONING            
+            prj_file << "system xil_defaultlib ./Sources/cores/"<<ip_name<<"/hdl/verilog/wrapper_top.v" <<endl;
+            vhd_file_cnt++;
+#endif
+
             cout << "PR_TOOL: IP '" << ip_name << "' has " << vhd_file_cnt << " files\n";
         }
     }
@@ -467,7 +483,6 @@ void pr_tool::run_vivado(std::string synth_script)
         std::cerr << "Exception :: " << e.what();
     }   
 }
-
 
 void pr_tool::parse_synthesis_report()
 {
@@ -545,10 +560,10 @@ void pr_tool::parse_synthesis_report()
                 k = 0;
 
                 cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                              rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
+                              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt" <<endl;
 
                 ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                              rm_list[i].top_module + "_utilization_synth.rpt");
+                              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt");
 
                 while (getline(file, line)) {
                     if(line.find(lut) != string::npos) {
@@ -725,12 +740,19 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<"### RP Module Definitions" <<endl;
      write_impl_tcl<<" ####################################################################" <<endl;
 
-
+#ifdef WITH_PARTITIONING
     for(i = 0; i < num_rm_modules; i++) {
         write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
         write_impl_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
         write_impl_tcl <<endl;
      }
+#else
+    for(i = 0; i < num_rm_modules; i++) {
+        write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
+        write_impl_tcl << "set_attribute module "  << rm_list[i].rm_tag <<  " moduleName\t" << wrapper_top_name << "_" << rm_list[i].partition_id <<endl;
+        write_impl_tcl <<endl;
+     }
+#endif
 
 #ifdef WITH_PARTITIONING
     for(i = 0, k = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++, k++) {
@@ -860,7 +882,14 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl.open(static_hw_script);
 
     //create the project
-    write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z020clg400-1 " <<endl;  //TODO: define Board
+#ifdef FPGA_PYNQ
+    write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z020clg400-1 " <<endl;  
+#elif FPGA_ZYNQ
+    write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
+#else
+    write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
+#endif
+
     write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
     write_static_tcl << "set_property  ip_repo_paths "<<ip_repo_path<<" [current_project]" <<endl;
     write_static_tcl << "update_ip_catalog " <<endl;
@@ -1022,4 +1051,24 @@ void pr_tool::synthesize_static()
     {
         std::cerr << "Exception :: " << e.what();
     }
+}
+
+void pr_tool::generate_wrapper()
+{
+#ifndef WITH_PARTITIONING
+    int i,j,k;
+
+    for(i = 0; i < num_rm_modules; i++) {
+        create_acc_wrapper(rm_list[i]);
+    }
+#endif
+/*
+    for(i = 0; i < num_rm_modules; i++) {
+         write_synth_tcl << "add_module " << rm_list[i].rm_tag <<endl;
+         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
+         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;
+         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
+         write_synth_tcl <<endl;
+     }
+*/
 }
