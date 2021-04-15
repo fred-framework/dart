@@ -9,9 +9,6 @@ using namespace std;
 #ifndef GENERATE_XDC_H
 #define GENERATE_XDC_H
 
-//TODO: Make slot_names be assigned dynamically depending on the 
-//      number of slots instead of being a fixed array
-
 string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
                        "slot_4", "slot_5"};
 

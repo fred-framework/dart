@@ -1,0 +1,11 @@
+
+****** Vivado v2019.2 (64-bit)
+  **** SW Build 2700185 on Thu Oct 24 18:45:48 MDT 2019
+  **** IP Build 2699827 on Thu Oct 24 21:16:38 MDT 2019
+    ** Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
+
+source run_ippack.tcl -notrace
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/opt/Xilinx_19_2/Vivado/2019.2/data/ip'.
+INFO: [Common 17-206] Exiting Vivado at Thu Apr 15 17:59:01 2021...
