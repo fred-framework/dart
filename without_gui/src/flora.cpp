@@ -211,7 +211,11 @@ void flora::generate_cell_name(unsigned long num_part, vector<std::string> *cell
 {
     int i;
     for(i = 0; i < num_part; i++)
+//        (*cell)[i] = "dart_i/hw_task_0_" + to_string(i);
+        (*cell)[i] = "dart_i/hw_task_0_" + to_string(i) + "/inst";
+/*
         (*cell)[i] = flora_input->static_top_module + "_i/hw_task_0_" + to_string(i) + "/inst";
+*/        
 //        (*cell)[i] = "design_1_i/hw_task_0_" + to_string(i) + "/inst";
 //        (*cell)[i] = "hdmi_out_i/slot_" + to_string(i) + "_0";
 //        (*cell)[i] = "system_i/slot_p0_s" + to_string(i);

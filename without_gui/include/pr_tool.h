@@ -110,11 +110,14 @@ public:
     //variables to manage project directory
     std::string Project_dir; //= "/home/holmes/test_pr_dir";
     std::string Src_path;// = Project_dir + "/Sources";
+    std::string ip_repo_path;
     std::string hdl_copy_path; //= Src_path + "/hdl";
     std::string fplan_xdc_file;// = Src_path + "/constraints/pblocks.xdc";
     std::string tcl_project; // = Project_dir + "/Tcl";
     std::string synthesis_script; // = Project_dir + "/ooc_synth.tcl" ;
     std::string impl_script; // = Project_dir + "/impl.tcl";
+    std::string static_hw_script;
+    std::string static_dir;
     std::string fred_dir;
     //pointer to an instance of flora
     flora *fl_inst;
@@ -138,6 +141,8 @@ public:
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
     void generate_fred_files(flora *fptr);
+    void generate_static_part(flora *fl);
+    void synthesize_static(); 
 
     explicit pr_tool(input_to_pr *);
 

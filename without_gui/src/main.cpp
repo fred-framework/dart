@@ -6,13 +6,18 @@
 void usage(){
     cout << "pr_tool <version>, 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Usage:\n";
-    cout << "  pr_tool <# IPs> <CSV file> <static part DCP file> <static top module>\n\n";
+    cout << "  pr_tool <# IPs> <CSV file> <static part DCP file> <static top module>\n";
+    cout << "     Mandatory arguments:\n";
+    cout << "      - <# IPs>\n";
+    cout << "      - <CSV file>\n";
+    cout << "     Optional arguments:\n";
+    cout << "      - <static part DCP file>\n"; 
+    cout << "      - <static top module>\n\n";
     cout << "  The current directory must be empty to receive the pr_tool project.\n\n";
     cout << "Environment variables:\n";
-
     cout << " - XILINX_VIVADO: points to the Vivado directory;\n";
     cout << " - DART_HOME: the source dir for DART;\n";
-    cout << " - DART_IP_PATH: the directory where the IPs are stores;\n";
+    cout << " - DART_IP_PATH: the directory where the IPs are stored;\n";
     cout << " - GUROBI_HOME: the home dir for gurobi installation;\n";
     cout << " - GRB_LICENSE_FILE: Gurobi's license file.\n\n";
 }
@@ -42,7 +47,7 @@ int main(int argc, char* argv[])
 {
 
 // checking arguments
-    if (argc != 5){
+    if (argc != 3 && argc != 5){
         cout << "ERROR: invalid usage\n\n";
         usage();
         exit(1);
@@ -62,16 +67,18 @@ int main(int argc, char* argv[])
             cout << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
             exit(1);
         }
-        // testing the static part DCP file
-        if (!fs::exists(argv[3])){
-            cout << "ERROR: DCP file '" << argv[3] << "' not found\n\n";
-            usage();
-            exit(1);
-        }
-        if (fs::path(argv[3]).extension() != ".dcp"){
-            cout << "ERROR: expecting DCP file extension but got '" << argv[3] << "'\n\n";
-            usage();
-            exit(1);
+        if (argc == 5){
+            // testing the static part DCP file
+            if (!fs::exists(argv[3])){
+                cout << "ERROR: DCP file '" << argv[3] << "' not found\n\n";
+                usage();
+                exit(1);
+            }
+            if (fs::path(argv[3]).extension() != ".dcp"){
+                cout << "ERROR: expecting DCP file extension but got '" << argv[3] << "'\n\n";
+                usage();
+                exit(1);
+            }
         }
 
     }
@@ -179,12 +186,14 @@ int main(int argc, char* argv[])
 #endif
     //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
     pr_input.path_to_input = argv[2];
-    // DCP file of the static part
-    pr_input.static_dcp_file = argv[3];
-    // It's assuming the name of the DCP file is the same name of the top module !!!!
-    // get the filename without the extension
-    //pr_input.static_top_module = fs::path(argv[3]).filename().replace_extension("");
-    pr_input.static_top_module = argv[4];
+    if (argc == 5){
+        // DCP file of the static part
+        pr_input.static_dcp_file = argv[3];
+        // It's assuming the name of the DCP file is the same name of the top module !!!!
+        // get the filename without the extension
+        //pr_input.static_top_module = fs::path(argv[3]).filename().replace_extension("");
+        pr_input.static_top_module = argv[4];
+    }
     // where the project will be created
     pr_input.path_to_output = fs::current_path().string();
 
