@@ -95,7 +95,7 @@ vector<string> split(const string& text, char delimiter) {
 public:
     
     //name of wrapper module
-    std::string wrapper_top_name = "hw_task";
+    std::string wrapper_top_name = "acc";
     
     //Reconfigurable module instance
     vector<reconfigurable_module> rm_list;

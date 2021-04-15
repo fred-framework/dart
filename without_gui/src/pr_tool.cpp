@@ -725,11 +725,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<"### Top Module Definitions" <<endl;
      write_impl_tcl<<" ####################################################################" <<endl;
 
-//     write_impl_tcl<< "set top \"design_1_wrapper\"" <<endl; 
      write_impl_tcl<< "set top \"dart_wrapper\"" <<endl; 
-//     write_impl_tcl<< "set top \"hdmi_out_wrapper\"" <<endl; 
-//     write_impl_tcl<< "set top \"system_wrapper_2_slots\"" <<endl; 
-//     write_impl_tcl<< "set top \"system_wrapper_1_slots\"" <<endl; 
      write_impl_tcl<< "set static \"Static\" "<<endl;
      write_impl_tcl<< "add_module $static" <<endl;
      write_impl_tcl<< "set_attribute module $static moduleName    $top" <<endl;
@@ -902,7 +898,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     //create the bbox instance of the accelerator IPs and the decouplers (two decouplers for each acc)
     for(i=0, j=0; i < num_partitions; i++, j++) {
         write_static_tcl << "startgroup " <<endl;
-        write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:hls:hw_task_0:1.0 hw_task_0_" <<std::to_string(i) <<endl;
+        write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:hls:acc:1.0 acc_" <<std::to_string(i) <<endl;
         write_static_tcl << "endgroup " <<endl;
         write_static_tcl << "startgroup " <<endl;
         write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl; //for Vivado 2019.2 and below
@@ -978,13 +974,13 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 
     
     for(i=0, j=0; i < num_partitions; i++, j++) {
-        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins hw_task_0_"<<std::to_string(i)<<"/s_axi_ctrl_bus] [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_ctrl]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins acc_"<<std::to_string(i)<<"/s_axi_ctrl_bus] [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_ctrl]" <<endl;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_ctrl] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins processing_system7_0/M_AXI_GP0]" <<endl; 
         
         j++;
-        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins hw_task_0_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_data] -boundary_type upper [get_bd_intf_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]" <<endl;
     
@@ -992,7 +988,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         
         //connect acc clk
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} "
-                            "[get_bd_pins hw_task_0_"<<std::to_string(i)<<"/ap_clk]" <<endl;
+                            "[get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk]" <<endl;
     }
     
     //connect interconnects to master clock
@@ -1020,14 +1016,30 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     //Address map for accelerators
     //TODO: Generate the linux device tree from this mapping
     for(i=0, j=0; i < num_partitions; i++, j+=2) {
-        write_static_tcl << "assign_bd_address [get_bd_addr_segs {hw_task_0_"<<std::to_string(i)<<"/s_axi_ctrl_bus/Reg }]" <<endl;
+        write_static_tcl << "assign_bd_address [get_bd_addr_segs {acc_"<<std::to_string(i)<<"/s_axi_ctrl_bus/Reg }]" <<endl;
         write_static_tcl << "assign_bd_address [get_bd_addr_segs {pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg/Reg }]" <<endl;
         write_static_tcl << "assign_bd_address [get_bd_addr_segs {processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM }]" <<endl;
+    }
+
+    //connect interrupts
+    write_static_tcl << "startgroup " <<endl;
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat:2.1 xlconcat_0 " <<endl;
+    write_static_tcl << "endgroup " <<endl;
+    write_static_tcl << "set_property -dict [list CONFIG.NUM_PORTS {"<<num_partitions<<"}] [get_bd_cells xlconcat_0]" <<endl;
+    write_static_tcl << "startgroup" <<endl;
+    write_static_tcl << "set_property -dict [list CONFIG.PCW_USE_FABRIC_INTERRUPT {1} CONFIG.PCW_IRQ_F2P_INTR {1}] [get_bd_cells processing_system7_0]" <<endl;
+    write_static_tcl << "endgroup" <<endl;
+    write_static_tcl << "connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins processing_system7_0/IRQ_F2P]" <<endl;
+
+    for(i=0, j=0; i < num_partitions; i++, j+=2) {
+        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<i<<"/interrupt] [get_bd_pins xlconcat_0/In"<<i<<"] " <<endl;
     }
 
     //create a wrapper
     write_static_tcl << "make_wrapper -files [get_files "<< static_dir <<"/dart_project.srcs/sources_1/bd/dart/dart.bd] -top " <<endl;
     write_static_tcl << "add_files -norecurse "<< static_dir<<"/dart_project.srcs/sources_1/bd/dart/hdl/dart_wrapper.v " <<endl;
+
+    write_static_tcl << "save_bd_design  " <<endl;
 
     write_static_tcl << "update_compile_order -fileset sources_1" <<endl;
     write_static_tcl << "set_property synth_checkpoint_mode None [get_files  "<<static_dir<<"/dart_project.srcs/sources_1/bd/dart/dart.bd]" << endl;
@@ -1062,13 +1074,4 @@ void pr_tool::generate_wrapper()
         create_acc_wrapper(rm_list[i]);
     }
 #endif
-/*
-    for(i = 0; i < num_rm_modules; i++) {
-         write_synth_tcl << "add_module " << rm_list[i].rm_tag <<endl;
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
-         write_synth_tcl <<endl;
-     }
-*/
 }
