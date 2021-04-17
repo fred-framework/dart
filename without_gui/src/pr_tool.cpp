@@ -4,6 +4,8 @@
 #include "pr_tool.h"
 #include <fstream>
 
+#undef RE_WRAP
+
 using namespace std;
 
 pr_tool::pr_tool(input_to_pr *pr_input) 
@@ -45,11 +47,13 @@ pr_tool::pr_tool(input_to_pr *pr_input)
     	init_dir_struct();
 
         prep_proj_directory();
-        generate_wrapper();
 
+#ifdef WITHOUT_PARTITIONING
+        generate_wrapper(fl_inst);
+#endif
         //generate synthesis script 
-        generate_synthesis_tcl();
         create_vivado_project();       
+        generate_synthesis_tcl(fl_inst);
 
         //syntehsize reconfigurable accelerators
         run_vivado(synthesis_script);
@@ -69,6 +73,14 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         //synthesize static part
         synthesize_static();
+
+#ifdef WITH_PARTITIONING
+        //re_synthesis_after_wrap = 1;
+        generate_wrapper(fl_inst);
+        create_vivado_project();       
+        generate_synthesis_tcl(fl_inst);
+        run_vivado(synthesis_script);
+#endif
 
         //generate implementation script
         generate_impl_tcl(fl_inst);
@@ -298,15 +310,17 @@ void pr_tool::prep_proj_directory()
     } 
 }
 
-void pr_tool::generate_synthesis_tcl()
+void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
 {
-     unsigned long i;
+     unsigned long i, j, k;
      ofstream write_synth_tcl;
      fs::path script(Project_dir);
      script /= fs::path("ooc_synth.tcl");
      synthesis_script = script.string();
+     std::string tag, top_mod;
      //tcl_home = folder + "/TCL";
 
+     cout << "PR_TOOL: creating synthesis scripts "<<endl;
      write_synth_tcl.open(synthesis_script); 
 
      write_synth_tcl << "set tclParams [list hd.visual 1]" <<endl;
@@ -366,12 +380,27 @@ void pr_tool::generate_synthesis_tcl()
      write_synth_tcl<<" ####################################################################" <<endl;
 
 #ifdef WITH_PARTITIONING
-     for(i = 0; i < num_rm_modules; i++) {
-         write_synth_tcl << "add_module " << rm_list[i].rm_tag <<endl;
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
-         write_synth_tcl <<endl;
+    if (re_synthesis_after_wrap == 1) {
+        for(i = 0; i < fl_ptr->from_solver.num_partition; i++) {
+            for(k = 0; k <  fl_ptr->alloc[i].num_hw_tasks_in_part; k++) {          
+                tag = rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag;
+                write_synth_tcl << "add_module " << tag <<endl;
+                write_synth_tcl << "set_attribute module " <<tag << " moduleName\t" << wrapper_top_name << "_" << i <<endl;
+                write_synth_tcl << "set_attribute module " <<tag << " prj \t" << "$prjDir/" << tag <<".prj" <<endl;
+                write_synth_tcl << "set_attribute module " <<tag << " synth \t" << "${run.rmSynth}" <<endl;
+                write_synth_tcl <<endl;
+            }
+        }
+    }
+    
+    else {     
+         for(i = 0; i < num_rm_modules; i++) {
+             write_synth_tcl << "add_module " << rm_list[i].rm_tag <<endl;
+             write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
+             write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;
+             write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
+             write_synth_tcl <<endl;
+         }
      }
 #else
      for(i = 0; i < num_rm_modules; i++) {
@@ -385,6 +414,8 @@ void pr_tool::generate_synthesis_tcl()
      write_synth_tcl << "source $tclDir/run.tcl" <<endl;
      write_synth_tcl << "exit" <<endl;
      write_synth_tcl.close(); 
+     
+     re_synthesis_after_wrap = 1;
 }
 
 void pr_tool::create_vivado_project()
@@ -442,7 +473,12 @@ void pr_tool::create_vivado_project()
                 }
             }
 
-#ifndef WITH_PARTITIONING            
+#ifdef WITH_PARTITIONING 
+            if(re_synthesis_after_wrap == 1) {
+                prj_file << "system xil_defaultlib ./Sources/cores/"<<ip_name<<"/hdl/verilog/wrapper_top.v" <<endl;
+                vhd_file_cnt++;
+            }
+#else
             prj_file << "system xil_defaultlib ./Sources/cores/"<<ip_name<<"/hdl/verilog/wrapper_top.v" <<endl;
             vhd_file_cnt++;
 #endif
@@ -663,9 +699,11 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 { 
     unsigned long i, k, partition_ptr, temp_index = 0;
     ofstream write_impl_tcl;
-    string config_name;
+    string config_name, tag;
     impl_script = Project_dir + "/impl.tcl";
     string implement = "implement", import = "import";
+     
+    cout << "PR_TOOL: creating implementation script "<<endl;
 
     write_impl_tcl.open(impl_script);
 
@@ -737,11 +775,22 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<" ####################################################################" <<endl;
 
 #ifdef WITH_PARTITIONING
-    for(i = 0; i < num_rm_modules; i++) {
+/*    for(i = 0; i < num_rm_modules; i++) {
         write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
         write_impl_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
         write_impl_tcl <<endl;
      }
+    */
+//    if (re_synthesis_after_wrap == 1) {
+        for(i = 0; i < fl_ptr->from_solver.num_partition; i++) {
+            for(k = 0; k <  fl_ptr->alloc[i].num_hw_tasks_in_part; k++) {
+                tag = rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag;
+                write_impl_tcl << "add_module " << tag <<endl;
+                write_impl_tcl << "set_attribute module " <<tag << " moduleName\t" << wrapper_top_name << "_" << i <<endl;
+                
+           }
+        }
+//    }
 #else
     for(i = 0; i < num_rm_modules; i++) {
         write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
@@ -1065,13 +1114,30 @@ void pr_tool::synthesize_static()
     }
 }
 
-void pr_tool::generate_wrapper()
+void pr_tool::generate_wrapper(flora *fl_ptr)
 {
-#ifndef WITH_PARTITIONING
     int i,j,k;
+#ifndef WITH_PARTITIONING
 
     for(i = 0; i < num_rm_modules; i++) {
-        create_acc_wrapper(rm_list[i]);
+        create_acc_wrapper(rm_list[i].top_module, rm_list[i].rm_tag, rm_list[i].partition_id );
     }
+#else
+    for(i = 0; i < fl_ptr->from_solver.num_partition; i++) {
+        for(k = 0; k <  fl_ptr->alloc[i].num_hw_tasks_in_part; k++) {                                                      
+            create_acc_wrapper(rm_list[fl_ptr->alloc[i].task_id[k]].top_module, 
+                                rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag, 
+                                i);
+        }
+    }
+/*
+    if(fl_ptr->alloc[partition_ptr].num_tasks_in_part > 0) {
+        fl_ptr->alloc[partition_ptr].num_tasks_in_part--;                                                                                          
+        write_impl_tcl <<"\t \t \t \t \t";                                                                                                         
+        write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[partition_ptr].task_id[temp_index]].rm_tag                                              
+        <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;                                                                 
+    }
+                
+*/
 #endif
 }

@@ -1,16 +1,16 @@
 #include <fstream>
 
-#define create_acc_wrapper(reconfigurable_module)\
+#define create_acc_wrapper(top, rm_tag, partition_id)\
 {\
     ofstream acc_wrapper;  \
-    std::string wrapper_new_top =  Src_path + "/cores/" + reconfigurable_module.rm_tag + "/hdl/verilog/wrapper_top.v"; \
+    std::string wrapper_new_top =  Src_path + "/cores/" + rm_tag + "/hdl/verilog/wrapper_top.v"; \
     acc_wrapper.open(wrapper_new_top);\
     \
     acc_wrapper << "// Copyright (c) 2020-2021 Scoula Superiore Sant'Anna, Retis lab" <<endl;\
     acc_wrapper << "// This is the hdl top wrapper for reconfigurable accelerators" <<endl <<endl;\
     acc_wrapper << "// Author -- Biruk Seyoum" <<endl <<endl;\
     \
-    acc_wrapper << "module " << wrapper_top_name <<"_"<< reconfigurable_module.partition_id<<" (" <<endl;\
+    acc_wrapper << "module " << wrapper_top_name <<"_"<< partition_id<<" (" <<endl;\
     acc_wrapper << "\t s_axi_ctrl_bus_AWVALID," <<endl;\
     acc_wrapper << "\t s_axi_ctrl_bus_AWREADY," <<endl;\
     acc_wrapper << "\t s_axi_ctrl_bus_AWADDR," <<endl;\
@@ -172,7 +172,7 @@
     acc_wrapper << "input  [C_M_AXI_MEM_BUS_ID_WIDTH - 1:0] m_axi_mem_bus_BID;"<<endl;\
     acc_wrapper << "input  [C_M_AXI_MEM_BUS_BUSER_WIDTH - 1:0] m_axi_mem_bus_BUSER;" <<endl <<endl;\
     \
-    acc_wrapper << "\t"<< reconfigurable_module.top_module<<" top_inst("<<endl;\
+    acc_wrapper << "\t"<< top<<" top_inst("<<endl;\
     acc_wrapper << "\t .s_axi_ctrl_bus_AWVALID(s_axi_ctrl_bus_AWVALID)," <<endl;\
     acc_wrapper << "\t .s_axi_ctrl_bus_AWREADY(s_axi_ctrl_bus_AWREADY)," <<endl;\
     acc_wrapper << "\t .s_axi_ctrl_bus_AWADDR(s_axi_ctrl_bus_AWADDR)," <<endl;\
