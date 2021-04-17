@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
             cout << "ERROR: CSV file '" << csv_filename.string() << "' not found\n\n";
             usage();
             exit(1);
-        }
+        }*
         if (!fs::is_empty(fs::current_path())){
             cout << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
             exit(1);
@@ -79,6 +79,7 @@ int main(int argc, char* argv[])
                 usage();
                 exit(1);
             }
+        }
         }
 
     }
