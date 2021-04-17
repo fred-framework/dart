@@ -4,10 +4,22 @@
 // TODO: BIruk, I dont know if it is the usage for all configurations.
 // If i's not, please extend this procedure for the other usages.
 void usage(){
-    cout << "pr_tool <version>, 2020, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
+    cout << "pr_tool <version>, 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Usage:\n";
-    cout << "  pr_tool <# IPs> <CSV file>\n";
-    cout << "  the current directory must be empty to receive the pr_tool project.\n\n";
+    cout << "  pr_tool <# IPs> <CSV file> <static part DCP file> <static top module>\n";
+    cout << "     Mandatory arguments:\n";
+    cout << "      - <# IPs>\n";
+    cout << "      - <CSV file>\n";
+    cout << "     Optional arguments:\n";
+    cout << "      - <static part DCP file>\n"; 
+    cout << "      - <static top module>\n\n";
+    cout << "  The current directory must be empty to receive the pr_tool project.\n\n";
+    cout << "Environment variables:\n";
+    cout << " - XILINX_VIVADO: points to the Vivado directory;\n";
+    cout << " - DART_HOME: the source dir for DART;\n";
+    cout << " - DART_IP_PATH: the directory where the IPs are stored;\n";
+    cout << " - GUROBI_HOME: the home dir for gurobi installation;\n";
+    cout << " - GRB_LICENSE_FILE: Gurobi's license file.\n\n";
 }
 
 bool has_only_digits(const string s){
@@ -35,7 +47,7 @@ int main(int argc, char* argv[])
 {
 
 // checking arguments
-    if (argc != 3){
+    if (argc != 3 && argc != 5){
         cout << "ERROR: invalid usage\n\n";
         usage();
         exit(1);
@@ -55,6 +67,19 @@ int main(int argc, char* argv[])
             cout << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
             exit(1);
         }
+        if (argc == 5){
+            // testing the static part DCP file
+            if (!fs::exists(argv[3])){
+                cout << "ERROR: DCP file '" << argv[3] << "' not found\n\n";
+                usage();
+                exit(1);
+            }
+            if (fs::path(argv[3]).extension() != ".dcp"){
+                cout << "ERROR: expecting DCP file extension but got '" << argv[3] << "'\n\n";
+                usage();
+                exit(1);
+            }
+        }
 
     }
 // checking DART_HOME enrironment variables
@@ -67,6 +92,17 @@ int main(int argc, char* argv[])
         cout << "ERROR: DART_HOME points to an invalid directory '" << dart_path << "'\n";
         exit(1);
     }  
+
+// checking DART_HOME enrironment variables
+    string dart_ip_path = getEnvVar ("DART_IP_PATH");
+    if (dart_ip_path.empty()){
+        cout << "ERROR: DART_IP_PATH environment variable is not defined\n\n";
+        exit(1);
+    }
+    if (!fs::exists(dart_ip_path) || !fs::is_directory(dart_ip_path)){
+        cout << "ERROR: DART_IP_PATH points to an invalid directory '" << dart_ip_path << "'\n";
+        exit(1);
+    } 
 
 // checking GUROBI_HOME enrironment variables
     string gurobi_path = getEnvVar ("GUROBI_HOME");
@@ -88,6 +124,17 @@ int main(int argc, char* argv[])
         exit(1);
     }  
 
+// check vivado enrironment variable used by tools/start_vivado    
+    string vivado_path = getEnvVar ("XILINX_VIVADO");
+    if (vivado_path.empty()){
+        cout << "ERROR: XILINX_VIVADO environment variable is not defined\n\n";
+        exit(1);
+    }
+    if (!fs::exists(vivado_path) || !fs::is_directory(vivado_path)){
+        cout << "ERROR: XILINX_VIVADO points to an invalid file '" << vivado_path << "'\n";
+        exit(1);
+    } 
+
 // check vivado is in the path and its version
     try{
         FILE *vivado_out_p = popen("vivado -version", "r");
@@ -108,12 +155,10 @@ int main(int argc, char* argv[])
             exit(1);        
         }
         vector<string> tokens = split(line_with_vivado_version, ' ');
-        /*
-        if (tokens[1] != "v2018.3"){
-            cout << "ERROR: expecting vivado version 'v2018.3' but found '" << tokens[1] << "'\n";
-            exit(1);        
+        if (! (tokens[1] == "v2019.2" || tokens[1] == "v2018.3")){
+            cout << "WARNING: expecting vivado version 'v2018.3' or 'v2019.2' but found '" << tokens[1] << "'\n";
+            cout << "unexpected errors might occur with different Vivado versions\n";
         }
-        */
     }
     catch (std::system_error & e)
     {
@@ -141,6 +186,14 @@ int main(int argc, char* argv[])
 #endif
     //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
     pr_input.path_to_input = argv[2];
+    if (argc == 5){
+        // DCP file of the static part
+        pr_input.static_dcp_file = argv[3];
+        // It's assuming the name of the DCP file is the same name of the top module !!!!
+        // get the filename without the extension
+        //pr_input.static_top_module = fs::path(argv[3]).filename().replace_extension("");
+        pr_input.static_top_module = argv[4];
+    }
     // where the project will be created
     pr_input.path_to_output = fs::current_path().string();
 
