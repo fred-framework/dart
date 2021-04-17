@@ -73,6 +73,7 @@ flora_without_partitioning: build
 
 pr_tool_without_part: SOURCES = without_gui/src/pr_tool.cpp
 pr_tool_without_part: SOURCES += without_gui/src/flora.cpp
+pr_tool_without_part: CFLAGS += -DWITHOUT_PARTITIONING
 pr_tool_without_part: BIN = run_pr_tool_without_part
 pr_tool_without_part: build
 

@@ -1134,6 +1134,9 @@ void pr_tool::synthesize_static()
 void pr_tool::generate_wrapper(flora *fl_ptr)
 {
     int i,j,k;
+
+    cout << "PR_TOOL: generating HDL wrappers " <<endl;
+
 #ifndef WITH_PARTITIONING
 
     for(i = 0; i < num_rm_modules; i++) {
