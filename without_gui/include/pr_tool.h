@@ -49,7 +49,7 @@ typedef struct{
     unsigned int partition_id;
 #endif
     std::string rm_tag;
-    std::string source_path;
+    //std::string source_path;
     std::string top_module;
 }reconfigurable_module;
 
@@ -59,6 +59,8 @@ typedef struct{
 #else
     unsigned long num_rm_partitions;
 #endif
+    std::string static_dcp_file;
+    std::string static_top_module;
     std::string path_to_input;
     std::string path_to_output;
 }input_to_pr;

@@ -235,7 +235,7 @@ void pr_tool::prep_input()
         rm.partition_id = std::stoul(str);
 #endif
         rm.rm_tag = csv_data.get_value(i, k++);
-        rm.source_path = csv_data.get_value(i, k++);
+        //rm.source_path = csv_data.get_value(i, k++);
         rm.top_module = csv_data.get_value(i, k++);
         
         rm_list.push_back(rm);
@@ -283,6 +283,10 @@ void pr_tool::prep_proj_directory()
         fs::create_directories(fred_dir / fs::path("dart_fred/bits"));
         fs::create_directories(static_dir);
 
+        // getting the path to the IPs. this has been checked in the main
+        char * val = getenv( "DART_IP_PATH" );
+        string dart_ip_path  = val == NULL ? std::string("") : std::string(val);
+
         //TODO: 1. assert if directory/files exists
         //      2. remove leading or trailing space from source_path
 
@@ -290,7 +294,7 @@ void pr_tool::prep_proj_directory()
         for(i = 0; i < num_rm_modules; i++){
             std::string str = Src_path / fs::path("cores") / rm_list[i].rm_tag;
             fs::create_directories(str);
-            fs::copy(fs::path(rm_list[i].source_path) / rm_list[i].rm_tag, str, fs::copy_options::recursive); 
+            fs::copy(fs::path(dart_ip_path) / rm_list[i].rm_tag, str, fs::copy_options::recursive); 
         } 
         fs::path dir_source(dart_path);
         dir_source /= fs::path("tools") / fs::path("Tcl");
@@ -304,6 +308,15 @@ void pr_tool::prep_proj_directory()
         fs::copy(dir_source, dir_dest, fs::copy_options::recursive); 
         dir_source = dart_path / fs::path("tools") / fs::path("acc_bbox_ip");
         fs::copy(dir_source, ip_repo_path, fs::copy_options::recursive);
+/*
+        fs::copy(dir_source, dir_dest, fs::copy_options::recursive);
+        // copy the DCP provided by the user
+        // the dcp file must be renamed to <original_name>_synth.dcp
+        string dcp_filename = fs::path(input_pr->static_dcp_file).filename().replace_extension("");
+        // the following lines seems complex, but it's only dir_dest + orig_filename + _synth + orig_extension
+        dcp_filename = string(dir_dest) + string (fs::path("/")) + dcp_filename + "_synth" + string(fs::path(input_pr->static_dcp_file).extension());
+        fs::copy_file(input_pr->static_dcp_file, dcp_filename, fs::copy_options::overwrite_existing);
+*/
     }catch (std::system_error & e)
     {
         std::cerr << "Exception :: " << e.what();
@@ -689,8 +702,9 @@ void pr_tool::parse_synthesis_report()
         
         write_flora_input.close();        
 #ifdef WITH_PARTITIONING 
-        in_flora = {num_rm_modules, Project_dir +"/flora_input.csv"};
+        in_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
 #else
+        //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv", input_pr->static_top_modul};
         in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv"};
 #endif
 }
@@ -764,6 +778,9 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl<<" ####################################################################" <<endl;
 
      write_impl_tcl<< "set top \"dart_wrapper\"" <<endl; 
+/*
+     write_impl_tcl<< "set top \"" << input_pr->static_top_module << "_wrapper\"" <<endl; 
+*/
      write_impl_tcl<< "set static \"Static\" "<<endl;
      write_impl_tcl<< "add_module $static" <<endl;
      write_impl_tcl<< "set_attribute module $static moduleName    $top" <<endl;
