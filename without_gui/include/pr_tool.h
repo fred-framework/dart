@@ -97,6 +97,9 @@ public:
     //name of wrapper module
     std::string wrapper_top_name = "acc";
     
+    //variable to modify synth_script after wrapper
+    unsigned int re_synthesis_after_wrap = 0;
+
     //Reconfigurable module instance
     vector<reconfigurable_module> rm_list;
 #ifdef WITH_PARTITIONING
@@ -122,7 +125,7 @@ public:
     std::string static_dir;
     std::string fred_dir;
     //pointer to an instance of flora
-    flora *fl_inst;
+    flora *fl_inst = NULL;
     input_to_flora in_flora;
 
 #ifdef WITH_PARTITIONING
@@ -138,14 +141,14 @@ public:
     void init_dir_struct();
     void prep_proj_directory();
     void create_vivado_project();
-    void generate_synthesis_tcl();
+    void generate_synthesis_tcl(flora *fl);
     void run_vivado(std::string synth_script);
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
     void generate_fred_files(flora *fptr);
     void generate_static_part(flora *fl);
     void synthesize_static(); 
-    void generate_wrapper();
+    void generate_wrapper(flora *fptr);
 
     explicit pr_tool(input_to_pr *);
 
