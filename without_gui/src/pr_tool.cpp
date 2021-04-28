@@ -970,6 +970,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl; //for Vivado 2019.2 and below
         //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl;
         write_static_tcl << "endgroup " <<endl;
+        /*
         write_static_tcl << "set_property -dict [list CONFIG.ALL_PARAMS {HAS_AXI_LITE 1 HAS_SIGNAL_CONTROL 0 INTF {acc_ctrl "
                             "{ID 0 VLNV xilinx.com:interface:aximm_rtl:1.0 PROTOCOL axi4lite SIGNALS {ARVALID {PRESENT 1} "
                             "ARREADY {PRESENT 1} AWVALID {PRESENT 1} AWREADY {PRESENT 1} BVALID {PRESENT 1} BREADY {PRESENT 1} "
@@ -991,12 +992,37 @@ void pr_tool::generate_static_part(flora *fl_ptr)
                             "CONFIG.GUI_SIGNAL_PRESENT_3 {true} CONFIG.GUI_SIGNAL_PRESENT_4 {true} CONFIG.GUI_SIGNAL_PRESENT_5 {true} "
                             "CONFIG.GUI_SIGNAL_PRESENT_6 {true} CONFIG.GUI_SIGNAL_PRESENT_7 {true} CONFIG.GUI_SIGNAL_PRESENT_8 {true} "
                             "CONFIG.GUI_SIGNAL_PRESENT_9 {true}] [get_bd_cells pr_decoupler_" << std::to_string(j)<< "]" <<endl;
+                            */
+   
+        write_static_tcl << "set_property -dict [list CONFIG.ALL_PARAMS {HAS_AXI_LITE 1 HAS_SIGNAL_CONTROL 0 INTF {acc_ctrl "
+                            "{ID 0 VLNV xilinx.com:interface:aximm_rtl:1.0 PROTOCOL axi4lite SIGNALS {ARVALID {PRESENT 1} "
+                            "ARREADY {PRESENT 1} AWVALID {PRESENT 1} AWREADY {PRESENT 1} BVALID {PRESENT 1} BREADY {PRESENT 1} "
+                            "RVALID {PRESENT 1} RREADY {PRESENT 1} WVALID {PRESENT 1} WREADY {PRESENT 1} AWADDR {PRESENT 1} "
+                            "AWLEN {PRESENT 0} AWSIZE {PRESENT 0} AWBURST {PRESENT 0} AWLOCK {PRESENT 0} AWCACHE {PRESENT 0} "
+                            "AWPROT {PRESENT 1} WDATA {PRESENT 1} WSTRB {PRESENT 1} WLAST {PRESENT 0} BRESP {PRESENT 1} "
+                            "ARADDR {PRESENT 1} ARLEN {PRESENT 0} ARSIZE {PRESENT 0} ARBURST {PRESENT 0} ARLOCK {PRESENT 0} "
+                            "ARCACHE {PRESENT 0} ARPROT {PRESENT 1} RDATA {PRESENT 1} RRESP {PRESENT 1} RLAST {PRESENT 0}} "
+                            "MODE slave} rp_reset {ID 1 VLNV xilinx.com:signal:reset_rtl:1.0}}} CONFIG.GUI_HAS_AXI_LITE {1} "
+                            "CONFIG.GUI_HAS_SIGNAL_CONTROL {0} CONFIG.GUI_SELECT_INTERFACE {1} CONFIG.GUI_INTERFACE_NAME {rp_reset} "
+                            "CONFIG.GUI_SELECT_VLNV {xilinx.com:signal:reset_rtl:1.0} CONFIG.GUI_INTERFACE_PROTOCOL {none} "
+                            "CONFIG.GUI_SELECT_MODE {master} CONFIG.GUI_SIGNAL_SELECT_0 {RST} CONFIG.GUI_SIGNAL_SELECT_1 {-1} "
+                            "CONFIG.GUI_SIGNAL_SELECT_2 {-1} CONFIG.GUI_SIGNAL_SELECT_3 {-1} CONFIG.GUI_SIGNAL_SELECT_4 {-1} "
+                            "CONFIG.GUI_SIGNAL_SELECT_5 {-1} CONFIG.GUI_SIGNAL_SELECT_6 {-1} CONFIG.GUI_SIGNAL_SELECT_7 {-1} "
+                            "CONFIG.GUI_SIGNAL_SELECT_8 {-1} CONFIG.GUI_SIGNAL_SELECT_9 {-1} CONFIG.GUI_SIGNAL_DECOUPLED_0 {true} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_1 {false} CONFIG.GUI_SIGNAL_DECOUPLED_2 {false} CONFIG.GUI_SIGNAL_DECOUPLED_3 {false} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_4 {false} CONFIG.GUI_SIGNAL_DECOUPLED_5 {false} CONFIG.GUI_SIGNAL_DECOUPLED_6 {false} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_7 {false} CONFIG.GUI_SIGNAL_DECOUPLED_8 {false} CONFIG.GUI_SIGNAL_DECOUPLED_9 {false} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_0 {true} CONFIG.GUI_SIGNAL_PRESENT_1 {false} CONFIG.GUI_SIGNAL_PRESENT_2 {false} CONFIG.GUI_SIGNAL_PRESENT_3 "
+                            "{false} CONFIG.GUI_SIGNAL_PRESENT_4 {false} CONFIG.GUI_SIGNAL_PRESENT_5 {false} CONFIG.GUI_SIGNAL_PRESENT_6 {false} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_7 {false} CONFIG.GUI_SIGNAL_PRESENT_8 {false} CONFIG.GUI_SIGNAL_PRESENT_9 {false}] [get_bd_cells pr_decoupler_" << std::to_string(j)<< "]" <<endl;
+
+   
         j++; 
         write_static_tcl << "startgroup" << endl;
         write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl; //for Vivado 2019.2 and below
         //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl;
         write_static_tcl << "endgroup" << endl;
-    
+    /*
         write_static_tcl << " set_property -dict [list CONFIG.ALL_PARAMS {HAS_SIGNAL_CONTROL 1 HAS_SIGNAL_STATUS 0 INTF "
                             "{acc_data {ID 0 VLNV xilinx.com:interface:aximm_rtl:1.0 MODE slave}}} CONFIG.GUI_HAS_SIGNAL_CONTROL {1} " 
                             "CONFIG.GUI_HAS_SIGNAL_STATUS {0} CONFIG.GUI_SELECT_INTERFACE {0} CONFIG.GUI_INTERFACE_NAME {acc_data} "
@@ -1012,6 +1038,21 @@ void pr_tool::generate_static_part(flora *fl_ptr)
                             "CONFIG.GUI_SIGNAL_PRESENT_3 {true} CONFIG.GUI_SIGNAL_PRESENT_4 {true} CONFIG.GUI_SIGNAL_PRESENT_5 {true} "
                             "CONFIG.GUI_SIGNAL_PRESENT_6 {true} CONFIG.GUI_SIGNAL_PRESENT_7 {true} CONFIG.GUI_SIGNAL_PRESENT_8 {true} "
                             "CONFIG.GUI_SIGNAL_PRESENT_9 {true}] [get_bd_cells pr_decoupler_"<< std::to_string(j) << "]" <<endl;
+    */
+    
+        write_static_tcl << "set_property -dict [list CONFIG.ALL_PARAMS {HAS_SIGNAL_STATUS 0 INTF {acc_data {ID 0 VLNV xilinx.com:interface:aximm_rtl:1.0} "
+                            "acc_interrupt {ID 1 VLNV xilinx.com:signal:interrupt_rtl:1.0}}} CONFIG.GUI_HAS_SIGNAL_STATUS {0} CONFIG.GUI_SELECT_INTERFACE {1} "
+                            "CONFIG.GUI_INTERFACE_NAME {acc_interrupt} CONFIG.GUI_SELECT_VLNV {xilinx.com:signal:interrupt_rtl:1.0} CONFIG.GUI_INTERFACE_PROTOCOL {none} "
+                            "CONFIG.GUI_SIGNAL_SELECT_0 {INTERRUPT} CONFIG.GUI_SIGNAL_SELECT_1 {-1} CONFIG.GUI_SIGNAL_SELECT_2 {-1} CONFIG.GUI_SIGNAL_SELECT_3 {-1} "
+                            "CONFIG.GUI_SIGNAL_SELECT_4 {-1} CONFIG.GUI_SIGNAL_SELECT_5 {-1} CONFIG.GUI_SIGNAL_SELECT_6 {-1} CONFIG.GUI_SIGNAL_SELECT_7 {-1} "
+                            "CONFIG.GUI_SIGNAL_SELECT_8 {-1} CONFIG.GUI_SIGNAL_SELECT_9 {-1} CONFIG.GUI_SIGNAL_DECOUPLED_0 {true} CONFIG.GUI_SIGNAL_DECOUPLED_1 {false} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_2 {false} CONFIG.GUI_SIGNAL_DECOUPLED_3 {false} CONFIG.GUI_SIGNAL_DECOUPLED_4 {false} CONFIG.GUI_SIGNAL_DECOUPLED_5 {false} "
+                            "CONFIG.GUI_SIGNAL_DECOUPLED_6 {false} CONFIG.GUI_SIGNAL_DECOUPLED_7 {false} CONFIG.GUI_SIGNAL_DECOUPLED_8 {false} CONFIG.GUI_SIGNAL_DECOUPLED_9 {false} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_0 {true} CONFIG.GUI_SIGNAL_PRESENT_1 {false} CONFIG.GUI_SIGNAL_PRESENT_2 {false} CONFIG.GUI_SIGNAL_PRESENT_3 {false} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_4 {false} CONFIG.GUI_SIGNAL_PRESENT_5 {false} CONFIG.GUI_SIGNAL_PRESENT_6 {false} CONFIG.GUI_SIGNAL_PRESENT_7 {false} "
+                            "CONFIG.GUI_SIGNAL_PRESENT_8 {false} CONFIG.GUI_SIGNAL_PRESENT_9 {false}] [get_bd_cells pr_decoupler_"<< std::to_string(j) << "]" <<endl;
+
+    
     }
   
     //connect PS to DDR and Fixed IO
@@ -1040,16 +1081,18 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 
     
     for(i=0, j=0; i < num_partitions; i++, j++) {
-        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins acc_"<<std::to_string(i)<<"/s_axi_ctrl_bus] [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_ctrl]" <<endl;
-        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_ctrl] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_AXI]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins acc_"<<std::to_string(i)<<"/s_axi_ctrl_bus] [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_ctrl]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_ctrl] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins processing_system7_0/M_AXI_GP0]" <<endl; 
+        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_rp_reset_RST]" <<endl;
         
         j++;
-        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
-        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_data] -boundary_type upper [get_bd_intf_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_AXI]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_data] [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
+        write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] -boundary_type upper [get_bd_intf_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]" <<endl;
-    
+        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT]" <<endl; 
+   
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
         
         //connect acc clk
@@ -1077,6 +1120,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     for(j=0; j < num_partitions * 2; j+=2) { 
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<
         "/s_axi_reg_aresetn] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] " <<endl;
+        write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_rp_reset_RST] [get_bd_pins rst_ps7_0_100M/interconnect_aresetn]" <<endl;
     }
     
     //Address map for accelerators
@@ -1097,8 +1141,9 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "endgroup" <<endl;
     write_static_tcl << "connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins processing_system7_0/IRQ_F2P]" <<endl;
 
-    for(i=0, j=0; i < num_partitions; i++, j+=2) {
-        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<i<<"/interrupt] [get_bd_pins xlconcat_0/In"<<i<<"] " <<endl;
+    for(i=0, j=1; i < num_partitions; i++, j+=2) {
+       // write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<i<<"/interrupt] [get_bd_pins xlconcat_0/In"<<i<<"] " <<endl;
+        write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_interrupt_INTERRUPT] [get_bd_pins xlconcat_0/In"<<std::to_string(i)<<"]" <<endl;
     }
 
     //create a wrapper
