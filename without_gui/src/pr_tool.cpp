@@ -110,9 +110,10 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     unsigned long fred_input_buff_size = 1048576;
     unsigned long fred_output_buff_size = 32768;
 
-    ofstream write_fred_arch, write_fred_hw;
+    ofstream write_fred_arch, write_fred_hw, write_ip_map;
     write_fred_arch.open(fred_dir +"/arch.csv");
     write_fred_hw.open(fred_dir +"/hw_tasks.csv");
+    write_ip_map.open(fred_dir +"/ip_map.csv");
    
     cout << "PR_TOOL: creating FRED files "<<endl;
 
@@ -144,10 +145,12 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
             write_fred_arch << "p"<<k << ", "  << fl_ptr->alloc[k].num_hw_tasks_in_part << "\n";
         }
 
-        for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
-            for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
-                write_fred_hw << "config_"<<i<<"_pblock_slot_"<<k<<"_partial, " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
-                bitstream_id++;
+        for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+            for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
+                if (i < fl_ptr->alloc[k].num_hw_tasks_in_part) {
+                    write_fred_hw << rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                    bitstream_id++;
+                }
             }
         }
 
@@ -158,11 +161,13 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     }
 
     /* Copy the partial bitstreams */
-    for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
-        for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
-            src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin";
-            dest = "fred/dart_fred/bits/p"+ std::to_string(k);
-            fs::copy(src, dest);
+    for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+        for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
+            if (i <  fl_ptr->alloc[k].num_hw_tasks_in_part) {
+                src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin";
+                dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(k) + ".bin";
+                fs::copy(src, dest);
+            }
         }
     }
 
@@ -178,10 +183,12 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
         write_fred_arch << "p"<<k << ", "  << alloc[k].num_hw_tasks_in_part << "\n";
     }
 
-    for(i = 0; i < max_modules_in_partition; i++) {
-        for(k = 0; k < num_rm_partitions; k++) {
-            write_fred_hw << "config_"<<i<<"_pblock_slot_"<<k<<"_partial, " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
-            bitstream_id++;
+    for(k = 0; k < num_rm_partitions; k++) {
+        for(i = 0; i < max_modules_in_partition; i++) {
+            if (i < alloc[k].num_hw_tasks_in_part) {
+                write_fred_hw << rm_list[alloc[k].rm_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                bitstream_id++;
+            }
         }
     }
    
@@ -192,11 +199,13 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     }
 
     /* Copy the partial bitstreams */
-    for(i = 0; i < max_modules_in_partition; i++) {
-        for(k = 0; k < num_rm_partitions; k++) {
-            src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
-            dest = "fred/dart_fred/bits/p"+ std::to_string(k);
-            fs::copy(src, dest);
+    for(k = 0; k < num_rm_partitions; k++) {
+        for(i = 0; i < max_modules_in_partition; i++) {
+            if (i < alloc[k].num_hw_tasks_in_part) {
+                src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
+                dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(k) + ".bin";
+                fs::copy(src, dest);
+            }
         }
     }
 
@@ -889,11 +898,10 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
             else {
                 write_impl_tcl <<"\t \t \t \t \t";
                 write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[0]].rm_tag 
-                               <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl;
-
-            
+                               <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
             }
         }
+        
         write_impl_tcl <<"]"<<endl;
         write_impl_tcl <<endl;
         write_impl_tcl <<"set_attribute impl "<<config_name <<" impl \t    ${run.prImpl} " <<endl;
