@@ -13,8 +13,9 @@ ifndef DART_HOME
 $(error DART_HOME is not defined)
 endif
 
-
-LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi81 -lm -lstdc++fs
+# in order to make this line independent of the gurobi version,
+# please make a symbolic link to 'libgurobi.so'
+LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi -lm -lstdc++fs
 
 help:
 	@echo "Please run the make file using the following format"
