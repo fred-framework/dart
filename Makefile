@@ -3,7 +3,7 @@ CFLAGS = -Iwithout_gui/include/
 CFLAGS += -Iinclude/
 CFLAGS += -std=c++17
 CFLAGS += -L$(GUROBI_HOME)/lib
-CFLAGS += -ggdb -g3
+#CFLAGS += -ggdb -g3
 
 ifndef GUROBI_HOME
 $(error GUROBI_HOME is not defined)
@@ -16,7 +16,7 @@ endif
 
 LDFLAGS = -lgurobi_g++5.2 -lgurobi_c++ -lgurobi81 -lm -lstdc++fs
 
-all:
+help:
 	@echo "Please run the make file using the following format"
 	@echo ""
 	@echo "make target FPGA=type_of_FPGA"
@@ -24,13 +24,28 @@ all:
 	@echo "please use a specific target "
 	@echo "'flora_with_partitioning'  ---> floorplanner with partitioning"
 	@echo "'flora_without_partitioning' ---> only floorplanner without partitioning"
-	@echo "'pr_tool_with_part' ---> run the PR flow with including floorplanning and partitioning'" 
-	@echo "'pr_tool_without_part' ---> run the PR flow including only the floorplanning "
+	@echo "'pr_tool_with_part' ---> run the PR flow with including floorplanning and partitioning" 
+	@echo "'pr_tool_without_part' ---> run the PR flow including only the floorplanning"
+	@echo "'pr_all' ---> compile both PR flow executables: floorplanning and partitioning; floorplanning only"
+	@echo "'flora_all' ---> compile both floorplanner executables: floorplanning and partitioning; floorplanning only"
+	@echo "'all_all' ---> compile the four executables: two for flora and two for the PR flow"
 	@echo " "	
 	@echo "for type of FPGA please use ZYNQ or PYNQ"
 	@echo " "
 	@echo "For example make pr_tool_with_part FPGA=PYNQ"
 
+
+.PHONY: pr_all flora_all all_all
+
+pr_all: 
+	make pr_tool_with_part 
+	make pr_tool_without_part 
+
+flora_all:
+	make flora_with_partitioning 
+	make flora_without_partitioning 
+
+all_all: pr_all flora_all
 
 SOURCES_SHARED = src/csv_data_manipulator.cpp include/fpga.h without_gui/src/main.cpp
 
@@ -40,11 +55,13 @@ CFLAGS += -DFPGA_PYNQ
 else ifeq ($(FPGA),ZYNQ)
 SOURCES_SHARED += include/zynq.h src/zynq.cpp include/zynq_fine_grained.h src/zynq_fine_grained.cpp
 CFLAGS += -DFPGA_ZYNQ
-else 
-SOURCES_SHARED += include/zynq.h src/zynq.cpp include/zynq_fine_grained.h src/zynq_fine_grained.cpp
-CFLAGS += -DFPGA_ZYNQ
+# remove the default value. this way LOWER_FPGA will work
+#else 
+#SOURCES_SHARED += include/zynq.h src/zynq.cpp include/zynq_fine_grained.h src/zynq_fine_grained.cpp
+#CFLAGS += -DFPGA_ZYNQ
 endif
 
+LOWER_FPGA  = $(shell echo $(FPGA) | tr A-Z a-z)
 
 ifeq ($(FPGA),PYNQ)
 flora_with_partitioning: SOURCES_MILP = src/milp_model_pynq_with_partition.cpp
@@ -85,7 +102,7 @@ pr_tool_with_part: BIN = run_pr_tool_with_part
 pr_tool_with_part: build
 
 build:
-	$(CC) -o bin/$(BIN) $(CFLAGS) $(SOURCES_SHARED) $(SOURCES_MILP) $(SOURCES) $(LDFLAGS)
+	$(CC) -o bin/$(BIN)_$(LOWER_FPGA) $(CFLAGS) $(SOURCES_SHARED) $(SOURCES_MILP) $(SOURCES) $(LDFLAGS)
 
 .PHONY: clean
 clean: 
