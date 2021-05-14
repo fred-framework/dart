@@ -60,6 +60,7 @@ typedef struct{
 //    fpga_type type_of_fpga;
     std::string path_to_input;
     std::string static_top_module;
+    bool use_ila;
 }input_to_flora;
 
 #define MY_RAND() ((double)((double)rand()/(double)RAND_MAX))

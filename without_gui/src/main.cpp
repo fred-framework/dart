@@ -6,13 +6,13 @@
 void usage(){
     cout << "pr_tool <version>, 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Usage:\n";
-    cout << "  pr_tool <# IPs> <CSV file> <static part DCP file> <static top module>\n";
+    cout << "  pr_tool <# IPs> <CSV file> <optional arguments>\n";
     cout << "     Mandatory arguments:\n";
-    cout << "      - <# IPs>\n";
-    cout << "      - <CSV file>\n";
+    cout << "      * <# IPs>\n";
+    cout << "      * <CSV file>\n";
     cout << "     Optional arguments:\n";
-    cout << "      - <static part DCP file>\n"; 
-    cout << "      - <static top module>\n\n";
+    cout << "      * --ila \n"; 
+    cout << "      * --static <static top module> <static part DCP file>\n\n";
     cout << "  The current directory must be empty to receive the pr_tool project.\n\n";
     cout << "Environment variables:\n";
     cout << " - XILINX_VIVADO: points to the Vivado directory;\n";
@@ -172,6 +172,16 @@ int main(int argc, char* argv[])
     in_flora.num_rm_modules = atol(argv[1]);
     //in_flora.type_of_fpga = (fpga_type) atol(argv[2]);
     in_flora.path_to_input = argv[2];
+    //TODO: improve this argument parsing
+    in_flora.use_ila = false;
+    if (argc>=4){
+        // the 1st 3 arguments are mandatory. start searching in the 4th argument
+        for (int i = 3; i < argc; ++i) {
+            if (std::string(argv[i]) == "--ila") {
+                in_flora.use_ila = true;
+            }
+        }
+    }
 
     flora fl(&in_flora);
     fl.clear_vectors();
@@ -187,14 +197,24 @@ int main(int argc, char* argv[])
 #endif
     //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
     pr_input.path_to_input = argv[2];
-    if (argc == 5){
-        // DCP file of the static part
-        pr_input.static_dcp_file = argv[3];
-        // It's assuming the name of the DCP file is the same name of the top module !!!!
-        // get the filename without the extension
-        //pr_input.static_top_module = fs::path(argv[3]).filename().replace_extension("");
-        pr_input.static_top_module = argv[4];
+
+    // in case the static part is defined by the used
+    if (argc>=4){
+        // the 1st 3 arguments are mandatory. start searching in the 4th argument
+        for (int i = 3; i < argc; ++i) {
+            if (std::string(argv[i]) == "--static") {
+                if (i + 2 < argc) { // Make sure we aren't at the end of argv!
+                    // Increment 'i' so we don't get the argument as the next argv[i].
+                    pr_input.static_top_module = argv[i++];
+                    pr_input.static_dcp_file = argv[i++];
+                } else {
+                    std::cerr << "--static option requires two arguments: the static top name and the static dcp file" << std::endl;
+                    return 1;
+                }  
+            }
+        }
     }
+
     // where the project will be created
     pr_input.path_to_output = fs::current_path().string();
 
