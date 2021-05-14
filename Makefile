@@ -3,6 +3,8 @@ CFLAGS = -Iwithout_gui/include/
 CFLAGS += -Iinclude/
 CFLAGS += -std=c++17
 CFLAGS += -L$(GUROBI_HOME)/lib
+# eliminate some warnings
+CFLAGS += -Wno-unused-result
 # change here to switch from debug to optimized compilation mode
 CFLAGS += -O2
 #CFLAGS += -ggdb -g3
