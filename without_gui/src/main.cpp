@@ -45,20 +45,25 @@ vector<string> split(const string& text, char delimiter) {
 
 int main(int argc, char* argv[])
 {
+    if (argc <3){
+        cerr << "ERROR: mandatory arguments are missing\n\n";
+        usage();
+        exit(1);
+    }
 // checking the mandatory arguments
     if (!has_only_digits(argv[1])){
-        cout << "ERROR: integer expected as the 1st parameter\n\n";
+        cerr << "ERROR: integer expected as the 1st parameter\n\n";
         usage();
         exit(1);
     }
     fs::path csv_filename(argv[2]);
     if (!fs::exists(csv_filename)){
-        cout << "ERROR: CSV file '" << csv_filename.string() << "' not found\n\n";
+        cerr << "ERROR: CSV file '" << csv_filename.string() << "' not found\n\n";
         usage();
         exit(1);
     }
     if (!fs::is_empty(fs::current_path())){
-        cout << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
+        cerr << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
         exit(1);
     }
 
@@ -76,18 +81,18 @@ int main(int argc, char* argv[])
                 static_dcp_file = argv[i++];
                 // testing the static part DCP file
                 if (!fs::exists(static_dcp_file)){
-                    cout << "ERROR: DCP file '" << static_dcp_file << "' not found\n\n";
+                    cerr << "ERROR: DCP file '" << static_dcp_file << "' not found\n\n";
                     usage();
                     exit(1);
                 }
                 if (fs::path(static_dcp_file).extension() != ".dcp"){
-                    cout << "ERROR: expecting DCP file extension but got '" << static_dcp_file << "'\n\n";
+                    cerr << "ERROR: expecting DCP file extension but got '" << static_dcp_file << "'\n\n";
                     usage();
                     exit(1);
                 }
 
             } else {
-                std::cerr << "--static option requires two arguments: the static top name and the static dcp file" << std::endl;
+                cerr << "--static option requires two arguments: the static top name and the static dcp file" << std::endl;
                 usage();
                 exit(1);
             }  
@@ -100,53 +105,53 @@ int main(int argc, char* argv[])
 // checking DART_HOME enrironment variables
     string dart_path = getEnvVar ("DART_HOME");
     if (dart_path.empty()){
-        cout << "ERROR: DART_HOME environment variable is not defined\n\n";
+        cerr << "ERROR: DART_HOME environment variable is not defined\n\n";
         exit(1);
     }
     if (!fs::exists(dart_path) || !fs::is_directory(dart_path)){
-        cout << "ERROR: DART_HOME points to an invalid directory '" << dart_path << "'\n";
+        cerr << "ERROR: DART_HOME points to an invalid directory '" << dart_path << "'\n";
         exit(1);
     }  
 
 // checking DART_HOME enrironment variables
     string dart_ip_path = getEnvVar ("DART_IP_PATH");
     if (dart_ip_path.empty()){
-        cout << "ERROR: DART_IP_PATH environment variable is not defined\n\n";
+        cerr << "ERROR: DART_IP_PATH environment variable is not defined\n\n";
         exit(1);
     }
     if (!fs::exists(dart_ip_path) || !fs::is_directory(dart_ip_path)){
-        cout << "ERROR: DART_IP_PATH points to an invalid directory '" << dart_ip_path << "'\n";
+        cerr << "ERROR: DART_IP_PATH points to an invalid directory '" << dart_ip_path << "'\n";
         exit(1);
     } 
 
 // checking GUROBI_HOME enrironment variables
     string gurobi_path = getEnvVar ("GUROBI_HOME");
     if (gurobi_path.empty()){
-        cout << "ERROR: GUROBI_HOME environment variable is not defined\n\n";
+        cerr << "ERROR: GUROBI_HOME environment variable is not defined\n\n";
         exit(1);
     }
     if (!fs::exists(gurobi_path) || !fs::is_directory(gurobi_path)){
-        cout << "ERROR: GUROBI_HOME points to an invalid directory '" << gurobi_path << "'\n";
+        cerr << "ERROR: GUROBI_HOME points to an invalid directory '" << gurobi_path << "'\n";
         exit(1);
     }  
     gurobi_path = getEnvVar ("GRB_LICENSE_FILE");
     if (gurobi_path.empty()){
-        cout << "ERROR: GRB_LICENSE_FILE environment variable is not defined\n\n";
+        cerr << "ERROR: GRB_LICENSE_FILE environment variable is not defined\n\n";
         exit(1);
     }
     if (!fs::exists(gurobi_path) || !fs::is_regular_file(gurobi_path)){
-        cout << "ERROR: GRB_LICENSE_FILE points to an invalid file '" << gurobi_path << "'\n";
+        cerr << "ERROR: GRB_LICENSE_FILE points to an invalid file '" << gurobi_path << "'\n";
         exit(1);
     }  
 
 // check vivado enrironment variable used by tools/start_vivado    
     string vivado_path = getEnvVar ("XILINX_VIVADO");
     if (vivado_path.empty()){
-        cout << "ERROR: XILINX_VIVADO environment variable is not defined\n\n";
+        cerr << "ERROR: XILINX_VIVADO environment variable is not defined\n\n";
         exit(1);
     }
     if (!fs::exists(vivado_path) || !fs::is_directory(vivado_path)){
-        cout << "ERROR: XILINX_VIVADO points to an invalid file '" << vivado_path << "'\n";
+        cerr << "ERROR: XILINX_VIVADO points to an invalid file '" << vivado_path << "'\n";
         exit(1);
     } 
 
@@ -156,7 +161,7 @@ int main(int argc, char* argv[])
 
         if (!vivado_out_p)
         {
-            cout << "ERROR: vivado not found. please set it in the PATH environment variable\n";
+            cerr << "ERROR: vivado not found. please set it in the PATH environment variable\n";
             exit(1);
         }
 
@@ -166,18 +171,20 @@ int main(int argc, char* argv[])
         pclose(vivado_out_p);
         string line_with_vivado_version = buffer;
         if (line_with_vivado_version.find("Vivado") ==std::string::npos){
-            cout << "ERROR: vivado not found. please set it in the PATH environment variable\n";
+            cerr << "ERROR: vivado not found. please set it in the PATH environment variable\n";
             exit(1);        
         }
         vector<string> tokens = split(line_with_vivado_version, ' ');
         if (! (tokens[1] == "v2019.2" || tokens[1] == "v2018.3")){
-            cout << "WARNING: expecting vivado version 'v2018.3' or 'v2019.2' but found '" << tokens[1] << "'\n";
-            cout << "unexpected errors might occur with different Vivado versions\n";
+            cerr << "WARNING: expecting vivado version 'v2018.3' or 'v2019.2' but found '" << tokens[1] << "'\n";
+            cerr << "unexpected errors might occur with different Vivado versions\n";
         }
     }
     catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what();
+        cerr << "ERROR: could not check vivado version\n";
+        exit(1);
     } 
 
 // start doing usefull stuff ...

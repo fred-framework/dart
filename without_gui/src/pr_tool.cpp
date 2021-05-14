@@ -335,7 +335,9 @@ void pr_tool::prep_proj_directory()
 */
     }catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what();
+        cerr << "ERROR: could not create the DART project" << endl;
+        exit(1);
     } 
 }
 
@@ -456,20 +458,20 @@ void pr_tool::create_vivado_project()
         // taking into account the dir separator
         fs::path  dir = fs::path("cores");
         if (!fs::exists(dir) || !fs::is_directory(dir)){
-            cout << "ERROR: '" << dir.string() << "' directory not found.\n";
+            cerr << "ERROR: '" << dir.string() << "' directory not found.\n";
             exit(1);
         }
         
         dir = fs::path("project");
         if (!fs::exists(dir) || !fs::is_directory(dir)){
-            cout << "ERROR: '" << dir.string() << "' directory not found.\n";
+            cerr << "ERROR: '" << dir.string() << "' directory not found.\n";
             exit(1);
         }
 
         // iterates over every dirs in 'cores'
         for (const auto & entry : fs::directory_iterator("cores")){
             if (!fs::is_directory(entry.path())){
-                cout << "ERROR: expecting only directories with IPs inside the 'cores' dir.\n";
+                cerr << "ERROR: expecting only directories with IPs inside the 'cores' dir.\n";
                 exit(1);
             }
 
@@ -489,7 +491,7 @@ void pr_tool::create_vivado_project()
             fs::path vhd_path("cores");
             vhd_path /= ip_name / fs::path("hdl") / fs::path("vhdl");
             if (!fs::exists(vhd_path) || !fs::is_directory(vhd_path)){
-                cout << "ERROR: '" << vhd_path.string() << "' directory not found.\n";
+                cerr << "ERROR: '" << vhd_path.string() << "' directory not found.\n";
                 exit(1);
             }
 
@@ -517,7 +519,10 @@ void pr_tool::create_vivado_project()
     }
     catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what();
+        cerr << "ERROR: could not create Vivado project" << endl;
+        exit(1);
+
     }      
 }
 
@@ -531,12 +536,12 @@ void pr_tool::run_vivado(std::string synth_script)
     fs::path bash_script(Project_dir);
     bash_script /= fs::path("start_vivado");
     if (!fs::is_regular_file(bash_script)){
-        cout << "ERROR: " << bash_script.string() << " not found\n";
+        cerr << "ERROR: " << bash_script.string() << " not found\n";
         exit(1);
     }
     fs::path vivado_script(synth_script);
     if (!fs::is_regular_file(vivado_script)){
-        cout << "ERROR: " << vivado_script.string() << " not found\n";
+        cerr << "ERROR: " << vivado_script.string() << " not found\n";
         exit(1);
     }
     // run vivado
@@ -545,7 +550,9 @@ void pr_tool::run_vivado(std::string synth_script)
     }
     catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what();
+        cerr << "ERROR: could not run Vivado" << endl;
+        exit(1);
     }   
 }
 
@@ -1125,6 +1132,7 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins processing_system7_0/M_AXI_GP0]" <<endl; 
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_rp_reset_RST]" <<endl;
+        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
         
         j++;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_data] [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
@@ -1135,12 +1143,15 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
 
         write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-        write_static_tcl << "   connect_bd_intf_net -intf_net [get_bd_intf_nets acc_"<<std::to_string(i)<<"_m_axi_mem_bus] [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
-        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_nets acc_"<<std::to_string(i)<<"_m_axi_mem_bus]" <<endl;
-        write_static_tcl << "   connect_bd_intf_net -intf_net [get_bd_intf_nets pr_decoupler_"<<std::to_string(j-1)<<"_rp_acc_ctrl] [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
-        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_nets pr_decoupler_"<<std::to_string(j-1)<<"_rp_acc_ctrl]" <<endl;
+        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
+        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
+        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
+        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
         //WARNING: tapping the interrupt signal before the decouple. perhaps it would be better to tap it after the decoupler, but it would complicate a bit the interrupt connection with the concat
-        write_static_tcl << "   connect_bd_net -net acc_"<<std::to_string(i)<<"_interrupt [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+        //write_static_tcl << "   connect_bd_net -net acc_"<<std::to_string(i)<<"_interrupt [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+        write_static_tcl << "   connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+        write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
+        write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
         write_static_tcl << "}" <<endl;
     }
     
@@ -1160,13 +1171,6 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/M00_ACLK]" <<endl;
     //write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/S00_ACLK]" <<endl;
     write_static_tcl << "endgroup" <<endl;
-
-    // connecting ILA's clk and reset
-    write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-    for(i=0; i < num_partitions; i++) {
-        write_static_tcl << "   apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk]" << endl;
-    }
-    write_static_tcl << "}" <<endl;
 
     for(j=0; j < num_partitions * 2; j+=2) { 
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<
@@ -1223,7 +1227,9 @@ void pr_tool::synthesize_static()
         fs::copy(src, dest);
     }catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what();
+        cerr << "ERROR: could not copy the DCP file" << endl;
+        exit(1);
     }
 }
 
