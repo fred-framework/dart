@@ -119,6 +119,7 @@ public:
                                                   unsigned long n_units,
                                                   unsigned long n_min,
                                                   unsigned long n_max);
+    // POSSIBLE BUG (AMORY): this part is not set when WITH_PARTITIONING, so this would be empty
     input_to_flora *flora_input;
     param_to_solver param;
     param_from_solver from_solver = {0, 0, &eng_x, &eng_y,

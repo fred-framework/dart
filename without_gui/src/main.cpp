@@ -45,44 +45,58 @@ vector<string> split(const string& text, char delimiter) {
 
 int main(int argc, char* argv[])
 {
-
-// checking arguments
-    if (argc != 3 && argc != 5){
-        cout << "ERROR: invalid usage\n\n";
+// checking the mandatory arguments
+    if (!has_only_digits(argv[1])){
+        cout << "ERROR: integer expected as the 1st parameter\n\n";
         usage();
         exit(1);
-    }else{
-        if (!has_only_digits(argv[1])){
-            cout << "ERROR: integer expected as the 1st parameter\n\n";
-            usage();
-            exit(1);
-        }
-        fs::path csv_filename(argv[2]);
-        if (!fs::exists(csv_filename)){
-            cout << "ERROR: CSV file '" << csv_filename.string() << "' not found\n\n";
-            usage();
-            exit(1);
-        }
-        if (!fs::is_empty(fs::current_path())){
-            cout << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
-            exit(1);
-        }
-        if (argc == 5){
-            // testing the static part DCP file
-            if (!fs::exists(argv[3])){
-                cout << "ERROR: DCP file '" << argv[3] << "' not found\n\n";
-                usage();
-                exit(1);
-            }
-            if (fs::path(argv[3]).extension() != ".dcp"){
-                cout << "ERROR: expecting DCP file extension but got '" << argv[3] << "'\n\n";
-                usage();
-                exit(1);
-            }
-        }
-        
-
     }
+    fs::path csv_filename(argv[2]);
+    if (!fs::exists(csv_filename)){
+        cout << "ERROR: CSV file '" << csv_filename.string() << "' not found\n\n";
+        usage();
+        exit(1);
+    }
+    if (!fs::is_empty(fs::current_path())){
+        cout << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
+        exit(1);
+    }
+
+    // checking the optional arguments
+    string static_top_module = "";
+    string static_dcp_file = "";
+    bool use_ila=false;
+    // the 1st 3 arguments are mandatory. start searching in the 4th argument
+    for (int i = 3; i < argc; ++i) {
+        // in case the static part is defined by the used
+        if (std::string(argv[i]) == "--static") {
+            if (i + 2 < argc) { // Make sure we aren't at the end of argv!
+                // Increment 'i' so we don't get the argument as the next argv[i].
+                static_top_module = argv[i++];
+                static_dcp_file = argv[i++];
+                // testing the static part DCP file
+                if (!fs::exists(static_dcp_file)){
+                    cout << "ERROR: DCP file '" << static_dcp_file << "' not found\n\n";
+                    usage();
+                    exit(1);
+                }
+                if (fs::path(static_dcp_file).extension() != ".dcp"){
+                    cout << "ERROR: expecting DCP file extension but got '" << static_dcp_file << "'\n\n";
+                    usage();
+                    exit(1);
+                }
+
+            } else {
+                std::cerr << "--static option requires two arguments: the static top name and the static dcp file" << std::endl;
+                usage();
+                exit(1);
+            }  
+        }
+        if (std::string(argv[i]) == "--ila") {
+            use_ila = true;
+        }
+    }
+
 // checking DART_HOME enrironment variables
     string dart_path = getEnvVar ("DART_HOME");
     if (dart_path.empty()){
@@ -169,19 +183,13 @@ int main(int argc, char* argv[])
 // start doing usefull stuff ...
 #ifdef RUN_FLORA
     input_to_flora in_flora;
+    // the mandatory arguments for flora
     in_flora.num_rm_modules = atol(argv[1]);
     //in_flora.type_of_fpga = (fpga_type) atol(argv[2]);
     in_flora.path_to_input = argv[2];
-    //TODO: improve this argument parsing
-    in_flora.use_ila = false;
-    if (argc>=4){
-        // the 1st 3 arguments are mandatory. start searching in the 4th argument
-        for (int i = 3; i < argc; ++i) {
-            if (std::string(argv[i]) == "--ila") {
-                in_flora.use_ila = true;
-            }
-        }
-    }
+    // set the optinal arguments
+    // TODO: that's BAD. attributes in input_to_flora and input_to_pr are duplicated 
+    in_flora.use_ila = use_ila;
 
     flora fl(&in_flora);
     fl.clear_vectors();
@@ -190,35 +198,23 @@ int main(int argc, char* argv[])
 //    fl.generate_xdc();
 #else
     input_to_pr pr_input;
-#ifdef WITH_PARTITIONING    
-    pr_input.num_rm_modules = atol(argv[1]); 
-#else
-    pr_input.num_rm_partitions = atol(argv[1]); 
-#endif
-    //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
-    pr_input.path_to_input = argv[2];
+    #ifdef WITH_PARTITIONING    
+        pr_input.num_rm_modules = atol(argv[1]); 
+    #else
+        pr_input.num_rm_partitions = atol(argv[1]); 
+    #endif
+        //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
+        pr_input.path_to_input = argv[2];
 
-    // in case the static part is defined by the used
-    if (argc>=4){
-        // the 1st 3 arguments are mandatory. start searching in the 4th argument
-        for (int i = 3; i < argc; ++i) {
-            if (std::string(argv[i]) == "--static") {
-                if (i + 2 < argc) { // Make sure we aren't at the end of argv!
-                    // Increment 'i' so we don't get the argument as the next argv[i].
-                    pr_input.static_top_module = argv[i++];
-                    pr_input.static_dcp_file = argv[i++];
-                } else {
-                    std::cerr << "--static option requires two arguments: the static top name and the static dcp file" << std::endl;
-                    return 1;
-                }  
-            }
-        }
-    }
+        // set the optional arguments for pr
+        pr_input.use_ila = use_ila;
+        pr_input.static_top_module = static_top_module;
+        pr_input.static_dcp_file = static_dcp_file;
 
-    // where the project will be created
-    pr_input.path_to_output = fs::current_path().string();
+        // where the project will be created
+        pr_input.path_to_output = fs::current_path().string();
 
-    pr_tool tool(&pr_input);
+        pr_tool tool(&pr_input);
 #endif    
     return 0;
 

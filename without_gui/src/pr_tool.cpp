@@ -10,6 +10,7 @@ using namespace std;
 
 pr_tool::pr_tool(input_to_pr *pr_input) 
 {
+    bool use_ila=false;
     input_pr = pr_input; 
     dart_path = getenv("DART_HOME");
     cout << "PR_TOOL: Starting PR_tool " <<endl;
@@ -68,8 +69,14 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         fl_inst->start_optimizer();
         fl_inst->generate_xdc(fplan_xdc_file);
 
+// TODO: that's BAD. I had to duplicate the attribute use ila here and in the main to support both part and flora modes
+#ifdef WITH_PARTITIONING
+        use_ila = input_pr->use_ila;
+#else
+        use_ila = in_flora.use_ila;
+#endif
         //generate static hardware
-        generate_static_part(fl_inst);
+        generate_static_part(fl_inst,use_ila);
 
         //synthesize static part
         synthesize_static();
@@ -90,7 +97,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
       
         //generate the run-time management files for FRED
         generate_fred_files(fl_inst);
-  }
+    }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
         exit(-1);
@@ -936,12 +943,11 @@ void pr_tool::init_dir_struct()
     static_dir = Project_dir + "/static_hw";
 }
 
-void pr_tool::generate_static_part(flora *fl_ptr) 
+void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila) 
 {
     int i, j, k;
     unsigned int num_partitions = 0;
     ofstream write_static_tcl;
-    bool use_ila = fl_ptr->flora_input->use_ila;
 
 #ifdef WITH_PARTITIONING
     num_partitions = fl_ptr->from_solver.num_partition;
@@ -1068,39 +1074,23 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         // add one ILA per reconfig region
         // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
         write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-        write_static_tcl << "    # Create instance: system_ila_"<< std::to_string(i) <<", and set properties "
-                            "    set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] "
-                            "    set_property -dict [ list \\ "
-                            "     CONFIG.C_BRAM_CNT {23.5} \\ "
-                            "     CONFIG.C_DATA_DEPTH {2048} \\ "
-                            "     CONFIG.C_MON_TYPE {MIX} \\ "
-                            "     CONFIG.C_NUM_MONITOR_SLOTS {2} \\ "
-                            "     CONFIG.C_SLOT_0_APC_EN {0} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_R_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_R_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_W_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_0_AXI_W_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_0_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0} \\ "
-                            "     CONFIG.C_SLOT_1_APC_EN {0} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_AR_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_AR_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_AW_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_AW_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_B_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_B_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_R_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_R_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_W_SEL_DATA {1} \\ "
-                            "     CONFIG.C_SLOT_1_AXI_W_SEL_TRIG {1} \\ "
-                            "     CONFIG.C_SLOT_1_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0} \\ "
-                            "    ] $system_ila_"<< std::to_string(i) << endl;
-            write_static_tcl << "}" <<endl;                            
+        write_static_tcl << "    # Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
+        write_static_tcl << "    set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] " <<endl;
+        write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {2048} "
+                            "     CONFIG.C_MON_TYPE {MIX} CONFIG.C_NUM_MONITOR_SLOTS {2} CONFIG.C_SLOT_0_APC_EN {0}"
+                            "     CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1}"
+                            "     CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1}"
+                            "     CONFIG.C_SLOT_0_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_W_SEL_DATA {1}"
+                            "     CONFIG.C_SLOT_0_AXI_W_SEL_TRIG {1}"
+                            "     CONFIG.C_SLOT_0_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
+                            "     CONFIG.C_SLOT_1_APC_EN {0}"
+                            "     CONFIG.C_SLOT_1_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_AW_SEL_DATA {1}"
+                            "     CONFIG.C_SLOT_1_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_B_SEL_TRIG {1}"
+                            "     CONFIG.C_SLOT_1_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_W_SEL_DATA {1}"
+                            "     CONFIG.C_SLOT_1_AXI_W_SEL_TRIG {1}"
+                            "     CONFIG.C_SLOT_1_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
+                            "    ] [get_bd_cells system_ila_"<< std::to_string(i) << "]" << endl;
+        write_static_tcl << "}" <<endl;                            
 
     }
   
@@ -1152,17 +1142,6 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         //WARNING: tapping the interrupt signal before the decouple. perhaps it would be better to tap it after the decoupler, but it would complicate a bit the interrupt connection with the concat
         write_static_tcl << "   connect_bd_net -net acc_"<<std::to_string(i)<<"_interrupt [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
         write_static_tcl << "}" <<endl;
-
-        //connect ILA clk and reset
-        if (!use_ila){
-            write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} "
-                                "[get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk]" <<endl;
-        } else{
-            write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} "
-                                "[get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk]"
-                                "[get_bd_pins system_ila_0/clk]" <<endl;
-            write_static_tcl << "connect_bd_net [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn]" <<endl;
-        }
     }
     
     //connect interconnects to master clock
@@ -1181,6 +1160,13 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/M00_ACLK]" <<endl;
     //write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/S00_ACLK]" <<endl;
     write_static_tcl << "endgroup" <<endl;
+
+    // connecting ILA's clk and reset
+    write_static_tcl << "if { $use_ila == 1 } {" <<endl;
+    for(i=0; i < num_partitions; i++) {
+        write_static_tcl << "   apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk]" << endl;
+    }
+    write_static_tcl << "}" <<endl;
 
     for(j=0; j < num_partitions * 2; j+=2) { 
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<
