@@ -281,7 +281,6 @@ void pr_tool::prep_proj_directory()
     try{
         cout << "PR_TOOL: creating project directory "<<endl;
         //TODO: check if directory exists
-        //fs::create_directories(Project_dir);
         fs::create_directories(Src_path);
         fs::create_directories(Src_path / fs::path("project"));
         fs::create_directories(Src_path / fs::path("constraints"));
@@ -315,27 +314,13 @@ void pr_tool::prep_proj_directory()
         fs::path dir_source(dart_path);
         dir_source /= fs::path("tools") / fs::path("Tcl");
         fs::copy(dir_source, tcl_project, fs::copy_options::recursive); 
-        //fs::copy("tools/load_prj.py", Src_path, fs::copy_options::recursive); 
         dir_source = dart_path / fs::path("tools") / fs::path("start_vivado");
         fs::copy(dir_source, Project_dir, fs::copy_options::recursive); 
-        dir_source = dart_path / fs::path("tools") / fs::path("synth_static");
-        fs::path dir_dest(Project_dir);
-        dir_dest /= fs::path("Synth") / fs::path("Static");
-        fs::copy(dir_source, dir_dest, fs::copy_options::recursive); 
         dir_source = dart_path / fs::path("tools") / fs::path("acc_bbox_ip");
         fs::copy(dir_source, ip_repo_path, fs::copy_options::recursive);
-/*
-        fs::copy(dir_source, dir_dest, fs::copy_options::recursive);
-        // copy the DCP provided by the user
-        // the dcp file must be renamed to <original_name>_synth.dcp
-        string dcp_filename = fs::path(input_pr->static_dcp_file).filename().replace_extension("");
-        // the following lines seems complex, but it's only dir_dest + orig_filename + _synth + orig_extension
-        dcp_filename = string(dir_dest) + string (fs::path("/")) + dcp_filename + "_synth" + string(fs::path(input_pr->static_dcp_file).extension());
-        fs::copy_file(input_pr->static_dcp_file, dcp_filename, fs::copy_options::overwrite_existing);
-*/
     }catch (std::system_error & e)
     {
-        cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not create the DART project" << endl;
         exit(1);
     } 
@@ -519,7 +504,7 @@ void pr_tool::create_vivado_project()
     }
     catch (std::system_error & e)
     {
-        cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not create Vivado project" << endl;
         exit(1);
 
@@ -550,7 +535,7 @@ void pr_tool::run_vivado(std::string synth_script)
     }
     catch (std::system_error & e)
     {
-        cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not run Vivado" << endl;
         exit(1);
     }   
@@ -1227,7 +1212,7 @@ void pr_tool::synthesize_static()
         fs::copy(src, dest);
     }catch (std::system_error & e)
     {
-        cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not copy the DCP file" << endl;
         exit(1);
     }

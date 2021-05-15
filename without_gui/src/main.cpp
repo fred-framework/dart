@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
     }
     catch (std::system_error & e)
     {
-        cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not check vivado version\n";
         exit(1);
     } 
