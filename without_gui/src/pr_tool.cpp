@@ -10,6 +10,7 @@ using namespace std;
 
 pr_tool::pr_tool(input_to_pr *pr_input) 
 {
+    bool use_ila=false;
     input_pr = pr_input; 
     dart_path = getenv("DART_HOME");
     cout << "PR_TOOL: Starting PR_tool " <<endl;
@@ -68,8 +69,14 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         fl_inst->start_optimizer();
         fl_inst->generate_xdc(fplan_xdc_file);
 
+// TODO: that's BAD. I had to duplicate the attribute use ila here and in the main to support both part and flora modes
+#ifdef WITH_PARTITIONING
+        use_ila = input_pr->use_ila;
+#else
+        use_ila = in_flora.use_ila;
+#endif
         //generate static hardware
-        generate_static_part(fl_inst);
+        generate_static_part(fl_inst,use_ila);
 
         //synthesize static part
         synthesize_static();
@@ -90,7 +97,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
       
         //generate the run-time management files for FRED
         generate_fred_files(fl_inst);
-  }
+    }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
         exit(-1);
@@ -107,13 +114,13 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     int k, i, bitstream_id = 100;
     unsigned long partitions;
     std::string str, src, dest;
+    // TODO: why these buffer sizes are hardcoded ? why using only 2 buffers ?
     unsigned long fred_input_buff_size = 1048576;
     unsigned long fred_output_buff_size = 32768;
 
-    ofstream write_fred_arch, write_fred_hw, write_ip_map;
+    ofstream write_fred_arch, write_fred_hw;
     write_fred_arch.open(fred_dir +"/arch.csv");
     write_fred_hw.open(fred_dir +"/hw_tasks.csv");
-    write_ip_map.open(fred_dir +"/ip_map.csv");
    
     cout << "PR_TOOL: creating FRED files "<<endl;
 
@@ -274,7 +281,6 @@ void pr_tool::prep_proj_directory()
     try{
         cout << "PR_TOOL: creating project directory "<<endl;
         //TODO: check if directory exists
-        //fs::create_directories(Project_dir);
         fs::create_directories(Src_path);
         fs::create_directories(Src_path / fs::path("project"));
         fs::create_directories(Src_path / fs::path("constraints"));
@@ -308,27 +314,15 @@ void pr_tool::prep_proj_directory()
         fs::path dir_source(dart_path);
         dir_source /= fs::path("tools") / fs::path("Tcl");
         fs::copy(dir_source, tcl_project, fs::copy_options::recursive); 
-        //fs::copy("tools/load_prj.py", Src_path, fs::copy_options::recursive); 
         dir_source = dart_path / fs::path("tools") / fs::path("start_vivado");
         fs::copy(dir_source, Project_dir, fs::copy_options::recursive); 
-        dir_source = dart_path / fs::path("tools") / fs::path("synth_static");
-        fs::path dir_dest(Project_dir);
-        dir_dest /= fs::path("Synth") / fs::path("Static");
-        fs::copy(dir_source, dir_dest, fs::copy_options::recursive); 
         dir_source = dart_path / fs::path("tools") / fs::path("acc_bbox_ip");
         fs::copy(dir_source, ip_repo_path, fs::copy_options::recursive);
-/*
-        fs::copy(dir_source, dir_dest, fs::copy_options::recursive);
-        // copy the DCP provided by the user
-        // the dcp file must be renamed to <original_name>_synth.dcp
-        string dcp_filename = fs::path(input_pr->static_dcp_file).filename().replace_extension("");
-        // the following lines seems complex, but it's only dir_dest + orig_filename + _synth + orig_extension
-        dcp_filename = string(dir_dest) + string (fs::path("/")) + dcp_filename + "_synth" + string(fs::path(input_pr->static_dcp_file).extension());
-        fs::copy_file(input_pr->static_dcp_file, dcp_filename, fs::copy_options::overwrite_existing);
-*/
     }catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
+        cerr << "ERROR: could not create the DART project" << endl;
+        exit(1);
     } 
 }
 
@@ -449,20 +443,20 @@ void pr_tool::create_vivado_project()
         // taking into account the dir separator
         fs::path  dir = fs::path("cores");
         if (!fs::exists(dir) || !fs::is_directory(dir)){
-            cout << "ERROR: '" << dir.string() << "' directory not found.\n";
+            cerr << "ERROR: '" << dir.string() << "' directory not found.\n";
             exit(1);
         }
         
         dir = fs::path("project");
         if (!fs::exists(dir) || !fs::is_directory(dir)){
-            cout << "ERROR: '" << dir.string() << "' directory not found.\n";
+            cerr << "ERROR: '" << dir.string() << "' directory not found.\n";
             exit(1);
         }
 
         // iterates over every dirs in 'cores'
         for (const auto & entry : fs::directory_iterator("cores")){
             if (!fs::is_directory(entry.path())){
-                cout << "ERROR: expecting only directories with IPs inside the 'cores' dir.\n";
+                cerr << "ERROR: expecting only directories with IPs inside the 'cores' dir.\n";
                 exit(1);
             }
 
@@ -482,7 +476,7 @@ void pr_tool::create_vivado_project()
             fs::path vhd_path("cores");
             vhd_path /= ip_name / fs::path("hdl") / fs::path("vhdl");
             if (!fs::exists(vhd_path) || !fs::is_directory(vhd_path)){
-                cout << "ERROR: '" << vhd_path.string() << "' directory not found.\n";
+                cerr << "ERROR: '" << vhd_path.string() << "' directory not found.\n";
                 exit(1);
             }
 
@@ -510,7 +504,10 @@ void pr_tool::create_vivado_project()
     }
     catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
+        cerr << "ERROR: could not create Vivado project" << endl;
+        exit(1);
+
     }      
 }
 
@@ -524,12 +521,12 @@ void pr_tool::run_vivado(std::string synth_script)
     fs::path bash_script(Project_dir);
     bash_script /= fs::path("start_vivado");
     if (!fs::is_regular_file(bash_script)){
-        cout << "ERROR: " << bash_script.string() << " not found\n";
+        cerr << "ERROR: " << bash_script.string() << " not found\n";
         exit(1);
     }
     fs::path vivado_script(synth_script);
     if (!fs::is_regular_file(vivado_script)){
-        cout << "ERROR: " << vivado_script.string() << " not found\n";
+        cerr << "ERROR: " << vivado_script.string() << " not found\n";
         exit(1);
     }
     // run vivado
@@ -538,7 +535,9 @@ void pr_tool::run_vivado(std::string synth_script)
     }
     catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
+        cerr << "ERROR: could not run Vivado" << endl;
+        exit(1);
     }   
 }
 
@@ -936,7 +935,7 @@ void pr_tool::init_dir_struct()
     static_dir = Project_dir + "/static_hw";
 }
 
-void pr_tool::generate_static_part(flora *fl_ptr) 
+void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila) 
 {
     int i, j, k;
     unsigned int num_partitions = 0;
@@ -968,7 +967,10 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "startgroup " <<endl;
     write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0" <<endl; //TODO: PS must be templated
     write_static_tcl << "endgroup " <<endl;
-    
+
+    // this TCL variable is used to decide whether ILA will be inserted in the design or not
+    write_static_tcl << "set use_ila "<< (use_ila ? "1" : "0") <<endl;
+   
     //create the bbox instance of the accelerator IPs and the decouplers (two decouplers for each acc)
     for(i=0, j=0; i < num_partitions; i++, j++) {
         write_static_tcl << "startgroup " <<endl;
@@ -1061,6 +1063,27 @@ void pr_tool::generate_static_part(flora *fl_ptr)
                             "CONFIG.GUI_SIGNAL_PRESENT_8 {false} CONFIG.GUI_SIGNAL_PRESENT_9 {false}] [get_bd_cells pr_decoupler_"<< std::to_string(j) << "]" <<endl;
 
     
+        // add one ILA per reconfig region
+        // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
+        write_static_tcl << "if { $use_ila == 1 } {" <<endl;
+        write_static_tcl << "    # Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
+        write_static_tcl << "    set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] " <<endl;
+        write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {2048} "
+                            "     CONFIG.C_MON_TYPE {MIX} CONFIG.C_NUM_MONITOR_SLOTS {2} CONFIG.C_SLOT_0_APC_EN {0}"
+                            "     CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1}"
+                            "     CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1}"
+                            "     CONFIG.C_SLOT_0_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_W_SEL_DATA {1}"
+                            "     CONFIG.C_SLOT_0_AXI_W_SEL_TRIG {1}"
+                            "     CONFIG.C_SLOT_0_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
+                            "     CONFIG.C_SLOT_1_APC_EN {0}"
+                            "     CONFIG.C_SLOT_1_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_AW_SEL_DATA {1}"
+                            "     CONFIG.C_SLOT_1_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_B_SEL_TRIG {1}"
+                            "     CONFIG.C_SLOT_1_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_W_SEL_DATA {1}"
+                            "     CONFIG.C_SLOT_1_AXI_W_SEL_TRIG {1}"
+                            "     CONFIG.C_SLOT_1_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
+                            "    ] [get_bd_cells system_ila_"<< std::to_string(i) << "]" << endl;
+        write_static_tcl << "}" <<endl;                            
+
     }
   
     //connect PS to DDR and Fixed IO
@@ -1094,6 +1117,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins processing_system7_0/M_AXI_GP0]" <<endl; 
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_rp_reset_RST]" <<endl;
+        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
         
         j++;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_data] [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
@@ -1102,10 +1126,18 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT]" <<endl; 
    
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
-        
-        //connect acc clk
-        write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} "
-                            "[get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk]" <<endl;
+
+        write_static_tcl << "if { $use_ila == 1 } {" <<endl;
+        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
+        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
+        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
+        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
+        //WARNING: tapping the interrupt signal before the decouple. perhaps it would be better to tap it after the decoupler, but it would complicate a bit the interrupt connection with the concat
+        //write_static_tcl << "   connect_bd_net -net acc_"<<std::to_string(i)<<"_interrupt [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+        write_static_tcl << "   connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+        write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
+        write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
+        write_static_tcl << "}" <<endl;
     }
     
     //connect interconnects to master clock
@@ -1180,7 +1212,9 @@ void pr_tool::synthesize_static()
         fs::copy(src, dest);
     }catch (std::system_error & e)
     {
-        std::cerr << "Exception :: " << e.what();
+        cerr << "Exception :: " << e.what() << endl;
+        cerr << "ERROR: could not copy the DCP file" << endl;
+        exit(1);
     }
 }
 
