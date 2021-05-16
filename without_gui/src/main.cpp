@@ -195,6 +195,13 @@ int main(int argc, char* argv[])
         exit(1);
     } 
 
+    // print the executed command
+    cout << "$> ";
+    for (int i=0;i<argc;i++){
+        cout << argv[i] << " ";
+    }
+    cout << "\n";
+
 // start doing usefull stuff ...
 #ifdef RUN_FLORA
     input_to_flora in_flora;
