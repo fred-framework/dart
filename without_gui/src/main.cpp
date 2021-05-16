@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
                     usage();
                     exit(1);
                 }
-
+                cout << "Using static part in file " << static_dcp_file << " with name " << static_top_module <<endl;
             } else {
                 cerr << "--static option requires two arguments: the static top name and the static dcp file" << std::endl;
                 usage();
@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
         }
         if (std::string(argv[i]) == "--ila") {
             use_ila = true;
+            cout << "Using ILA for hardware debuging" <<endl;
         }
     }
 
