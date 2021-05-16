@@ -92,14 +92,17 @@ int main(int argc, char* argv[])
                 }
                 cout << "Using static part in file " << static_dcp_file << " with name " << static_top_module <<endl;
             } else {
-                cerr << "--static option requires two arguments: the static top name and the static dcp file" << std::endl;
+                cerr << "ERROR: --static option requires two arguments: the static top name and the static dcp file" << std::endl;
                 usage();
                 exit(1);
             }  
-        }
-        if (std::string(argv[i]) == "--ila") {
+        }else if (std::string(argv[i]) == "--ila") {
             use_ila = true;
             cout << "Using ILA for hardware debuging" <<endl;
+        } else {
+            cerr << "ERROR: unrecognized argument " << argv[i] << std::endl;
+            usage();
+            exit(1);
         }
     }
 
