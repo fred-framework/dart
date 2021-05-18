@@ -16,7 +16,7 @@ void usage(){
     cout << "  The current directory must be empty to receive the pr_tool project.\n\n";
     cout << "Environment variables:\n";
     cout << " - XILINX_VIVADO: points to the Vivado directory;\n";
-    cout << " - DART_HOME: the source dir for DART;\n";
+    cout << " - DART_HOME: the source dir for DART. It must be gurobi version 8.1.1;\n";
     cout << " - DART_IP_PATH: the directory where the IPs are stored;\n";
     cout << " - GUROBI_HOME: the home dir for gurobi installation;\n";
     cout << " - GRB_LICENSE_FILE: Gurobi's license file.\n\n";
@@ -90,15 +90,19 @@ int main(int argc, char* argv[])
                     usage();
                     exit(1);
                 }
-
+                cout << "Using static part in file " << static_dcp_file << " with name " << static_top_module <<endl;
             } else {
-                cerr << "--static option requires two arguments: the static top name and the static dcp file" << std::endl;
+                cerr << "ERROR: --static option requires two arguments: the static top name and the static dcp file" << std::endl;
                 usage();
                 exit(1);
             }  
-        }
-        if (std::string(argv[i]) == "--ila") {
+        }else if (std::string(argv[i]) == "--ila") {
             use_ila = true;
+            cout << "Using ILA for hardware debuging" <<endl;
+        } else {
+            cerr << "ERROR: unrecognized argument " << argv[i] << std::endl;
+            usage();
+            exit(1);
         }
     }
 
@@ -143,6 +147,13 @@ int main(int argc, char* argv[])
         cerr << "ERROR: GRB_LICENSE_FILE points to an invalid file '" << gurobi_path << "'\n";
         exit(1);
     }  
+    int GRB_major,GRB_minor,GRB_tech;
+    // DART was tested with gurobi 911 but it didnt work. So far, it works only with version 811
+    GRBversion(&GRB_major,&GRB_minor,&GRB_tech);
+    if (GRB_major != 8 || GRB_minor != 1 || GRB_tech != 1){
+        cerr << "ERROR: The expected gurobi version is 811, but found '" << GRB_major << GRB_minor << GRB_tech << "'\n";
+        exit(1);
+    }
 
 // check vivado enrironment variable used by tools/start_vivado    
     string vivado_path = getEnvVar ("XILINX_VIVADO");
@@ -186,6 +197,13 @@ int main(int argc, char* argv[])
         cerr << "ERROR: could not check vivado version\n";
         exit(1);
     } 
+
+    // print the executed command
+    cout << "$> ";
+    for (int i=0;i<argc;i++){
+        cout << argv[i] << " ";
+    }
+    cout << "\n";
 
 // start doing usefull stuff ...
 #ifdef RUN_FLORA

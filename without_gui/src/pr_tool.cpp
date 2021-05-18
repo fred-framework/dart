@@ -57,6 +57,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         generate_synthesis_tcl(fl_inst);
 
         //syntehsize reconfigurable accelerators
+        //TODO (amory): this part could be executed in parallel for each IP
         run_vivado(synthesis_script);
 
         //extract resource consumption of accelerators
@@ -89,6 +90,10 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         run_vivado(synthesis_script);
 #endif
 
+        if (use_ila){
+            add_debug_probes();
+        }
+
         //generate implementation script
         generate_impl_tcl(fl_inst);
 
@@ -109,6 +114,23 @@ pr_tool::~pr_tool()
     cout << "PR_TOOL: destruction of PR_tool" <<endl;
 }
 
+void pr_tool::add_debug_probes()
+{
+    ofstream write_debug_tcl;
+    string debug_script = Project_dir + "/Tcl/debug_probes.tcl";
+     
+    cout << "PR_TOOL: creating debug probe script "<<endl;
+
+    write_debug_tcl.open(debug_script);
+
+    write_debug_tcl << "open_checkpoint " << Project_dir << "/Synth/Static/dart_wrapper_synth.dcp"<<endl;
+    write_debug_tcl << "write_debug_probes -force " << static_dir << "/debug_probes.ltx"<<endl;
+    write_debug_tcl << "exit "<<endl;
+    write_debug_tcl.close();
+
+    run_vivado(debug_script);   
+}
+
 void pr_tool::generate_fred_files(flora *fl_ptr)
 {
     int k, i, bitstream_id = 100;
@@ -118,110 +140,118 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     unsigned long fred_input_buff_size = 1048576;
     unsigned long fred_output_buff_size = 32768;
 
-    ofstream write_fred_arch, write_fred_hw;
-    write_fred_arch.open(fred_dir +"/arch.csv");
-    write_fred_hw.open(fred_dir +"/hw_tasks.csv");
-   
-    cout << "PR_TOOL: creating FRED files "<<endl;
+    try {
+    
+        ofstream write_fred_arch, write_fred_hw;
+        write_fred_arch.open(fred_dir +"/arch.csv");
+        write_fred_hw.open(fred_dir +"/hw_tasks.csv");
+    
+        cout << "PR_TOOL: creating FRED files "<<endl;
 
-    /*  FRED architectural description file header */
-    write_fred_arch <<"# FRED Architectural description file. \n";
-    write_fred_arch <<"# Warning: This file must match synthesized hardware! \n \n";
-    write_fred_arch <<"# Each line defines a partition, syntax: \n";
-    write_fred_arch <<"# <partition name>, <num slots> \n \n";
-    write_fred_arch <<"# example: \n";
-    write_fred_arch <<"# \"ex_partition, 3\" \n";
-    write_fred_arch <<"# defines a partion named \"ex_partition\" containing 3 slots\n";
+        /*  FRED architectural description file header */
+        write_fred_arch <<"# FRED Architectural description file. \n";
+        write_fred_arch <<"# Warning: This file must match synthesized hardware! \n \n";
+        write_fred_arch <<"# Each line defines a partition, syntax: \n";
+        write_fred_arch <<"# <partition name>, <num slots> \n \n";
+        write_fred_arch <<"# example: \n";
+        write_fred_arch <<"# \"ex_partition, 3\" \n";
+        write_fred_arch <<"# defines a partion named \"ex_partition\" containing 3 slots\n";
 
-    /*  HW_tasks description file header*/
-    write_fred_hw << "# FRED hw-tasks description file. \n ";
-    write_fred_hw << "# Warning: This file must match synthesized hardware! \n \n";
-    write_fred_hw << "# Each line defines a HW-Tasks: \n ";
-    write_fred_hw << "# <name>, <hw_id>, <partition>, <bistream_path>, <buff_0_size>, ... <buff_7_size> \n ";
-    write_fred_hw << "# Note: the association between a hw-task and its partition \n ";
-    write_fred_hw << "# it's defined during the synthesis flow! Here is specified only \n ";
-    write_fred_hw << "# to guess the number of bistreams and their length. \n \n ";
-    write_fred_hw << "# example: \n ";
-    write_fred_hw << "# \"ex_hw_task, 64, ex_partition, bits, 1024, 1024, 1024\" \n ";
-    write_fred_hw << "# defines a hw-task named \"ex_hw_task\", with id 64, allocated on a \n ";
-    write_fred_hw << "# partition named \"ex_partition\", whose bitstreams are located in \n ";
-    write_fred_hw << "# the \"/bits\" folder, and uses three input/output buffers of size 1024 bytes. \n \n ";
+        /*  HW_tasks description file header*/
+        write_fred_hw << "# FRED hw-tasks description file. \n ";
+        write_fred_hw << "# Warning: This file must match synthesized hardware! \n \n";
+        write_fred_hw << "# Each line defines a HW-Tasks: \n ";
+        write_fred_hw << "# <name>, <hw_id>, <partition>, <bistream_path>, <buff_0_size>, ... <buff_7_size> \n ";
+        write_fred_hw << "# Note: the association between a hw-task and its partition \n ";
+        write_fred_hw << "# it's defined during the synthesis flow! Here is specified only \n ";
+        write_fred_hw << "# to guess the number of bistreams and their length. \n \n ";
+        write_fred_hw << "# example: \n ";
+        write_fred_hw << "# \"ex_hw_task, 64, ex_partition, bits, 1024, 1024, 1024\" \n ";
+        write_fred_hw << "# defines a hw-task named \"ex_hw_task\", with id 64, allocated on a \n ";
+        write_fred_hw << "# partition named \"ex_partition\", whose bitstreams are located in \n ";
+        write_fred_hw << "# the \"/bits\" folder, and uses three input/output buffers of size 1024 bytes. \n \n ";
 
-#ifdef WITH_PARTITIONING
-        for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
-            write_fred_arch << "p"<<k << ", "  << fl_ptr->alloc[k].num_hw_tasks_in_part << "\n";
-        }
+        #ifdef WITH_PARTITIONING
+            for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+                write_fred_arch << "p"<<k << ", "  << fl_ptr->alloc[k].num_hw_tasks_in_part << "\n";
+            }
 
-        for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
-            for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
-                if (i < fl_ptr->alloc[k].num_hw_tasks_in_part) {
-                    write_fred_hw << rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
-                    bitstream_id++;
+            for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+                for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
+                    if (i < fl_ptr->alloc[k].num_hw_tasks_in_part) {
+                        write_fred_hw << rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                        bitstream_id++;
+                    }
                 }
             }
-        }
 
-    /* Create the FRED bitstream partition directories */
-    for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
-        str = "fred/dart_fred/bits/p"+ std::to_string(k);
-        fs::create_directories(str);
-    }
-
-    /* Copy the partial bitstreams */
-    for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
-        for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
-            if (i <  fl_ptr->alloc[k].num_hw_tasks_in_part) {
-                src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin";
-                dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(k) + ".bin";
-                fs::copy(src, dest);
+            /* Create the FRED bitstream partition directories */
+            for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+                str = "fred/dart_fred/bits/p"+ std::to_string(k);
+                fs::create_directories(str);
             }
-        }
-    }
 
-    /*Copy one of the static bitstreams to FRED*/
-    fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
-
-    write_fred_arch.close();
-    write_fred_hw.close();
-
-#else
-    /* Create the arch.csv and hw_tasks.csv files for FRED */
-    for(k = 0; k < num_rm_partitions; k++) {
-        write_fred_arch << "p"<<k << ", "  << alloc[k].num_hw_tasks_in_part << "\n";
-    }
-
-    for(k = 0; k < num_rm_partitions; k++) {
-        for(i = 0; i < max_modules_in_partition; i++) {
-            if (i < alloc[k].num_hw_tasks_in_part) {
-                write_fred_hw << rm_list[alloc[k].rm_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
-                bitstream_id++;
+            /* Copy the partial bitstreams */
+            for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
+                for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
+                    if (i <  fl_ptr->alloc[k].num_hw_tasks_in_part) {
+                        src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin";
+                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(k) + ".bin";
+                        fs::copy(src, dest);
+                    }
+                }
             }
-        }
-    }
-   
-    /* Create the FRED bitstream partition directories */
-    for(k = 0; k < num_rm_partitions; k++) {
-        str = "fred/dart_fred/bits/p"+ std::to_string(k);
-        fs::create_directories(str);
-    }
 
-    /* Copy the partial bitstreams */
-    for(k = 0; k < num_rm_partitions; k++) {
-        for(i = 0; i < max_modules_in_partition; i++) {
-            if (i < alloc[k].num_hw_tasks_in_part) {
-                src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
-                dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(k) + ".bin";
-                fs::copy(src, dest);
+            /*Copy one of the static bitstreams to FRED*/
+            fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+
+            write_fred_arch.close();
+            write_fred_hw.close();
+
+        #else
+            /* Create the arch.csv and hw_tasks.csv files for FRED */
+            for(k = 0; k < num_rm_partitions; k++) {
+                write_fred_arch << "p"<<k << ", "  << alloc[k].num_hw_tasks_in_part << "\n";
             }
-        }
-    }
 
-    /*Copy one of the static bitstreams to FRED*/
-    fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+            for(k = 0; k < num_rm_partitions; k++) {
+                for(i = 0; i < max_modules_in_partition; i++) {
+                    if (i < alloc[k].num_hw_tasks_in_part) {
+                        write_fred_hw << rm_list[alloc[k].rm_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                        bitstream_id++;
+                    }
+                }
+            }
+        
+            /* Create the FRED bitstream partition directories */
+            for(k = 0; k < num_rm_partitions; k++) {
+                str = "fred/dart_fred/bits/p"+ std::to_string(k);
+                fs::create_directories(str);
+            }
 
-    write_fred_arch.close();
-    write_fred_hw.close();
-#endif
+            /* Copy the partial bitstreams */
+            for(k = 0; k < num_rm_partitions; k++) {
+                for(i = 0; i < max_modules_in_partition; i++) {
+                    if (i < alloc[k].num_hw_tasks_in_part) {
+                        src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
+                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(k) + ".bin";
+                        fs::copy(src, dest);
+                    }
+                }
+            }
+
+            /*Copy one of the static bitstreams to FRED*/
+            fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+
+            write_fred_arch.close();
+            write_fred_hw.close();
+        #endif
+    }catch (std::system_error & e)
+    {
+        cerr << "Exception :: " << e.what() << endl;
+        cerr << "ERROR: could not create the FRED files" << endl;
+        exit(1);
+    } 
 }
 
 void pr_tool::prep_input()
@@ -288,6 +318,7 @@ void pr_tool::prep_proj_directory()
         fs::create_directories(Src_path / fs::path("netlist"));
         fs::create_directories(Src_path / fs::path("ip_repo"));
         fs::create_directories(Project_dir / fs::path("Synth"));
+        fs::create_directories(Project_dir / fs::path("Synth") / fs::path("Static"));
         fs::create_directories(Project_dir / fs::path("Implement"));
         fs::create_directories(Project_dir / fs::path("Checkpoint"));
         fs::create_directories(Project_dir / fs::path("Bitstreams"));
@@ -393,7 +424,7 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
 
      write_synth_tcl<<"####################################################################" <<endl;
      write_synth_tcl<<"### RP Module Definitions" <<endl;
-     write_synth_tcl<<" ####################################################################" <<endl;
+     write_synth_tcl<<"####################################################################" <<endl;
 
 #ifdef WITH_PARTITIONING
     if (re_synthesis_after_wrap == 1) {
@@ -1064,11 +1095,12 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
 
     
         // add one ILA per reconfig region
-        // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
         write_static_tcl << "if { $use_ila == 1 } {" <<endl;
         write_static_tcl << "    # Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
         write_static_tcl << "    set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] " <<endl;
-        write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {2048} "
+        // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
+        //write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {2048} "
+        write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {12} CONFIG.C_DATA_DEPTH {1024} "
                             "     CONFIG.C_MON_TYPE {MIX} CONFIG.C_NUM_MONITOR_SLOTS {2} CONFIG.C_SLOT_0_APC_EN {0}"
                             "     CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1}"
                             "     CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1}"
@@ -1128,13 +1160,11 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
 
         write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
+        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
         write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
         write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
         write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
-        //WARNING: tapping the interrupt signal before the decouple. perhaps it would be better to tap it after the decoupler, but it would complicate a bit the interrupt connection with the concat
-        //write_static_tcl << "   connect_bd_net -net acc_"<<std::to_string(i)<<"_interrupt [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
-        write_static_tcl << "   connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+        write_static_tcl << "   connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
         write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
         write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
         write_static_tcl << "}" <<endl;

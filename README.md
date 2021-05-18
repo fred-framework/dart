@@ -7,7 +7,7 @@ DART uses Gurobi 8.1, Vivado 2018.3, and C++ 2017.
 DART requires the following environment variables:
 
  - XILINX_VIVADO: points to the Vivado directory;
- - DART_HOME: the source dir for DART;
+ - DART_HOME: the source dir for DART. It must be gurobi version 8.1.1;
  - DART_IP_PATH: the directory where the IPs are stores;
  - GUROBI_HOME: the home dir for gurobi installation;
  - GRB_LICENSE_FILE: Gurobi's license file.
