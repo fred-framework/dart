@@ -57,6 +57,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         generate_synthesis_tcl(fl_inst);
 
         //syntehsize reconfigurable accelerators
+        //TODO (amory): this part could be executed in parallel for each IP
         run_vivado(synthesis_script);
 
         //extract resource consumption of accelerators
@@ -89,6 +90,10 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         run_vivado(synthesis_script);
 #endif
 
+        if (use_ila){
+            add_debug_probes();
+        }
+
         //generate implementation script
         generate_impl_tcl(fl_inst);
 
@@ -107,6 +112,23 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 pr_tool::~pr_tool()
 {
     cout << "PR_TOOL: destruction of PR_tool" <<endl;
+}
+
+void pr_tool::add_debug_probes()
+{
+    ofstream write_debug_tcl;
+    string debug_script = Project_dir + "/Tcl/debug_probes.tcl";
+     
+    cout << "PR_TOOL: creating debug probe script "<<endl;
+
+    write_debug_tcl.open(debug_script);
+
+    write_debug_tcl << "open_checkpoint " << Project_dir << "/Synth/Static/dart_wrapper_synth.dcp"<<endl;
+    write_debug_tcl << "write_debug_probes -force " << static_dir << "/debug_probes.ltx"<<endl;
+    write_debug_tcl << "exit "<<endl;
+    write_debug_tcl.close();
+
+    run_vivado(debug_script);   
 }
 
 void pr_tool::generate_fred_files(flora *fl_ptr)
@@ -402,7 +424,7 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
 
      write_synth_tcl<<"####################################################################" <<endl;
      write_synth_tcl<<"### RP Module Definitions" <<endl;
-     write_synth_tcl<<" ####################################################################" <<endl;
+     write_synth_tcl<<"####################################################################" <<endl;
 
 #ifdef WITH_PARTITIONING
     if (re_synthesis_after_wrap == 1) {
@@ -1073,11 +1095,12 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
 
     
         // add one ILA per reconfig region
-        // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
         write_static_tcl << "if { $use_ila == 1 } {" <<endl;
         write_static_tcl << "    # Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
         write_static_tcl << "    set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] " <<endl;
-        write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {2048} "
+        // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
+        //write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {2048} "
+        write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {12} CONFIG.C_DATA_DEPTH {1024} "
                             "     CONFIG.C_MON_TYPE {MIX} CONFIG.C_NUM_MONITOR_SLOTS {2} CONFIG.C_SLOT_0_APC_EN {0}"
                             "     CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1}"
                             "     CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1}"
@@ -1137,13 +1160,11 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
 
         write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
+        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
         write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
         write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
         write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
-        //WARNING: tapping the interrupt signal before the decouple. perhaps it would be better to tap it after the decoupler, but it would complicate a bit the interrupt connection with the concat
-        //write_static_tcl << "   connect_bd_net -net acc_"<<std::to_string(i)<<"_interrupt [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
-        write_static_tcl << "   connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+        write_static_tcl << "   connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
         write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
         write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
         write_static_tcl << "}" <<endl;

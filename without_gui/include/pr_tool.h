@@ -146,6 +146,7 @@ public:
     void create_vivado_project();
     void generate_synthesis_tcl(flora *fl);
     void run_vivado(std::string synth_script);
+    void add_debug_probes(void);
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
     void generate_fred_files(flora *fptr);
