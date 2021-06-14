@@ -543,7 +543,6 @@ Finally, customize the `design.tcl` script accordingly to the changes you made a
 
 ```console
 $ vivado -mode batch  -source design.tcl
-
 ```
 
 
@@ -565,7 +564,7 @@ Please consider that Fred-Linux is not a self-contained "download and run" piece
 
 ## Funding
 
-These tools have been partially developed in the context of the `AMPERE project <https://ampere-euproject.eu/>`_.
+These tools have been partially developed in the context of the [AMPERE project](<https://ampere-euproject.eu/>).
 This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 871669.
 
 ## References
