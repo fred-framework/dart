@@ -1,10 +1,7 @@
 
 ## Dependencies
 
-DART has been tested in Ubuntu 18.4 LTS.
-It uses Gurobi 8.1, Vivado 2018.3 or 2019.2, and C++ 2017 (GCC v8.4.0).
-
-If you dont have Gurobi, download and request an academic license [here](https://www.gurobi.com/downloads/).
+DART has been tested in Ubuntu 18.4 LTS. It uses Gurobi 8.1, Vivado 2018.3 or 2019.2, and C++ 2017 (GCC v8.4.0). If you dont have Gurobi, download and request an academic license [here](https://www.gurobi.com/downloads/).
 
 ## Supported FPGAs
 
@@ -77,11 +74,10 @@ DART requires the following environment variables:
 
 Moreover, *vivado* must be in the PATH. For convenience, it's also recommended to add DART_HOME/bin in the PATH.
 
-Before running DART, we need a set of DART compliant IPs. 
-[DART IPs](https://gitlab.retis.santannapisa.it/a.amory/dart_ips) is a set of 
-ready-to-use IPs in DART designs. Please refer to its documentation 
-for installation and usage procedure.
+Before running DART, we need a set of DART compliant IPs. [DART IPs](https://gitlab.retis.santannapisa.it/a.amory/dart_ips) is a set of ready-to-use IPs in DART designs. Please refer to its documentation for installation and usage procedure.
 
 ## Setting Up the FPGA
+
+**LINK HERE TO SOME READY TO USE FRED-ENABLED LINUX IMAGE**
 
 

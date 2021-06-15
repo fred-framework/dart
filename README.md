@@ -10,7 +10,7 @@ FRED manages the hw/sw interface, easing the software application design.
 [DART Introduction and Main Concepts](./docs/concepts.md)
 [DART Installation](./docs/install.md)
 [Running DART](./docs/running.md)
-[DART Tutorial](./docs/tutorial/index.md)
+[DART Tutorial](./docs/tutorial/ultra96v2-tutorial.md)
 
 ```mermaid
 graph TD;
@@ -21,16 +21,17 @@ graph TD;
 ```
 
 ```mermaid
-gantt
-dateFormat  YYYY-MM-DD
-title Adding GANTT diagram to mermaid
-excludes weekdays 2014-01-10
-
-section A section
-Completed task            :done,    des1, 2014-01-06,2014-01-08
-Active task               :active,  des2, 2014-01-09, 3d
-Future task               :         des3, after des2, 5d
-Future task2               :         des4, after des3, 5d
+sequenceDiagram
+    participant Alice
+    participant Bob
+    Alice->>John: Hello John, how are you?
+    loop Healthcheck
+        John->>John: Fight against hypochondria
+    end
+    Note right of John: Rational thoughts <br/>prevail!
+    John-->>Alice: Great!
+    John->>Bob: How about you?
+    Bob-->>John: Jolly good!
 ```
 
 ```wavedrom
@@ -76,7 +77,5 @@ Please cite this paper if you are using DART:
 
 ## Acknoledgments
 
-This tool was partially developed in the context of the [AMPERE project](https://ampere-euproject.eu/).
-This project has received funding from the European Union’s Horizon 2020 
-research and innovation programme under grant agreement No 871669.
+This tool was partially developed in the context of the [AMPERE project](https://ampere-euproject.eu/). This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 871669.
 
