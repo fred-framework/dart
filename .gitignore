@@ -1,4 +1,4 @@
-bin/run_pr_tool*
+bin/run_*
 
 #################################################
 # place your DART design under this directory 

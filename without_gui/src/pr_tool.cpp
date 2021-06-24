@@ -250,7 +250,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     {
         cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not create the FRED files" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     } 
 }
 
@@ -353,7 +353,7 @@ void pr_tool::prep_proj_directory()
     {
         cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not create the DART project" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     } 
 }
 
@@ -537,8 +537,7 @@ void pr_tool::create_vivado_project()
     {
         cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not create Vivado project" << endl;
-        exit(1);
-
+        exit(EXIT_FAILURE);
     }      
 }
 
@@ -568,7 +567,7 @@ void pr_tool::run_vivado(std::string synth_script)
     {
         cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not run Vivado" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     }   
 }
 
@@ -1244,7 +1243,7 @@ void pr_tool::synthesize_static()
     {
         cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not copy the DCP file" << endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 }
 

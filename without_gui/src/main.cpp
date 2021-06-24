@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
     {
         cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not check vivado version\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     } 
 
     // print the executed command

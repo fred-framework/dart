@@ -1867,13 +1867,12 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
     {
         cout << "Error code =" << e.getErrorCode() << endl;
         cout<< e.getMessage() << endl;
-
-        return 0;
+        exit(EXIT_FAILURE);
     }
     catch (...)
     {
         cout <<"exception while solving milp" << endl;
-        return 0;
+        exit(EXIT_FAILURE);
     }
 
    return status;

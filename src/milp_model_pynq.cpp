@@ -1629,13 +1629,12 @@ int solve_milp_pynq(param_from_solver *to_sim)
     {
         cout << "Error code =" << e.getErrorCode() << endl;
         cout<< e.getMessage() << endl;
-
-        return 0;
+        exit(EXIT_FAILURE);
     }
     catch (...)
     {
         cout <<"exception while solving milp" << endl;
-        return 0;
+        exit(EXIT_FAILURE);
     }
    return status;
 
