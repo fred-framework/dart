@@ -222,18 +222,17 @@ For this example with two partitions, the last lines of the **devicetree.dts** m
 			reg = <0x43c10000 0x10000>;
 		};
 
-                slot_p1_s0@43c20000 {
-                        compatible = "generic-uio";
-                        reg = <0x43c20000 0x10000>;
-                        interrupt-parent = <0x4>;
-                        interrupts = <0x0 0x1e 0x4>;
-                };
+        slot_p1_s0@43c20000 {
+                compatible = "generic-uio";
+                reg = <0x43c20000 0x10000>;
+                interrupt-parent = <0x4>;
+                interrupts = <0x0 0x1e 0x4>;
+        };
 
-                pr_decoupler_p1_s0@43c30000 {
-                        compatible = "generic-uio";
-                        reg = <0x43c30000 0x10000>;
-                };
-
+        pr_decoupler_p1_s0@43c30000 {
+                compatible = "generic-uio";
+                reg = <0x43c30000 0x10000>;
+        };
 	};
 };
 ```

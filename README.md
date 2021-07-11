@@ -10,6 +10,7 @@ FRED manages the hw/sw interface, easing the software application design.
 [DART Introduction and Main Concepts](./docs/concepts.md)
 [DART Installation](./docs/install.md)
 [Running DART](./docs/running.md)
+
 <!---
 [DART Tutorial](./docs/tutorial/ultra96v2-tutorial.md)
 
