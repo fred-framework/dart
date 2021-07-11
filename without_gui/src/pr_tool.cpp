@@ -563,6 +563,8 @@ void pr_tool::run_vivado(std::string synth_script)
     try{
         std::system((bash_script.string() + " " + vivado_script.string()).c_str());
     }
+    // TODO capture the output and parse for errors
+    // https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po
     catch (std::system_error & e)
     {
         cerr << "Exception :: " << e.what() << endl;

@@ -10,29 +10,9 @@ FRED manages the hw/sw interface, easing the software application design.
 [DART Introduction and Main Concepts](./docs/concepts.md)
 [DART Installation](./docs/install.md)
 [Running DART](./docs/running.md)
+<!---
 [DART Tutorial](./docs/tutorial/ultra96v2-tutorial.md)
 
-```mermaid
-graph TD;
-    A-->B;
-    A-->C;
-    B-->D2;
-    C-->D2;
-```
-
-```mermaid
-sequenceDiagram
-    participant Alice
-    participant Bob
-    Alice->>John: Hello John, how are you?
-    loop Healthcheck
-        John->>John: Fight against hypochondria
-    end
-    Note right of John: Rational thoughts <br/>prevail!
-    John-->>Alice: Great!
-    John->>Bob: How about you?
-    Bob-->>John: Jolly good!
-```
 
 ```wavedrom
 
@@ -50,11 +30,12 @@ sequenceDiagram
 - [x] list syntax required (any unordered or ordered list supported)
 - [x] this is a complete item
 - [ ] this is an incomplete item
+-->
 
 ## Authors
 
 - Biruk Belay Seyoum (June 2021), ReTiS Lab, Scuola Sant'Anna, Pisa, Italy. Main developer.
-- Alexandre Amory (June 2021), ReTiS Lab, Scuola Sant'Anna, Pisa, Italy. Tester and minor contributions.
+- Alexandre Amory (June 2021), ReTiS Lab, Scuola Sant'Anna, Pisa, Italy. Tester, documentation, DART IPs, and minor contributions to DART source code.
 
 
 ## Papers
@@ -70,7 +51,6 @@ Please cite this paper if you are using DART:
   year={2021}
 }
 ```
-
 
 ## License
 
