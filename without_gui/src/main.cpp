@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "flora.h"
 #include "pr_tool.h"
 
@@ -73,8 +74,11 @@ int main(int argc, char* argv[])
     bool use_ila=false;
     // the 1st 3 arguments are mandatory. start searching in the 4th argument
     for (int i = 3; i < argc; ++i) {
+        string arg = argv[i];
+        // remove white spaces. this happens when dart is called from the python flow
+        arg.erase(std::remove(arg.begin(), arg.end(), ' '), arg.end());
         // in case the static part is defined by the used
-        if (std::string(argv[i]) == "--static") {
+        if (arg == "--static") {
             if (i + 2 < argc) { // Make sure we aren't at the end of argv!
                 // Increment 'i' so we don't get the argument as the next argv[i].
                 static_top_module = argv[i++];
@@ -96,7 +100,7 @@ int main(int argc, char* argv[])
                 usage();
                 exit(1);
             }  
-        }else if (std::string(argv[i]) == "--ila") {
+        }else if (arg == "--ila") {
             use_ila = true;
             cout << "Using ILA for hardware debuging" <<endl;
         } else {
@@ -195,7 +199,7 @@ int main(int argc, char* argv[])
     {
         cerr << "Exception :: " << e.what() << endl;
         cerr << "ERROR: could not check vivado version\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     } 
 
     // print the executed command

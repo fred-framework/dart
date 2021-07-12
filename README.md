@@ -1,91 +1,62 @@
 # DART
 
-## Dependencies
+DART is a tool that fully automates the FPGA design flow for a real-time, dynamic partially reconfigurable (DPR) co-designed system that comprises both software and hardware components. DART fully automates the partitioning, floorplanning, and implementation (routing and bitstream generation) phases of the DPR flow. Besides, DART supports the Zynq 7-series and Ultrascale+ FPGA-based SoCs by Xilinx. 
 
-DART uses Gurobi 8.1, Vivado 2018.3, and C++ 2017.
+DART must be used with [FRED](http://fred.santannapisa.it/runtime/) runtime for a complete real-time FPGA offloading solution. While DART automates the hardware design,
+FRED manages the hw/sw interface, easing the software application design. 
 
-DART requires the following environment variables:
+[TOC]
 
- - XILINX_VIVADO: points to the Vivado directory;
- - DART_HOME: the source dir for DART. It must be gurobi version 8.1.1;
- - DART_IP_PATH: the directory where the IPs are stores;
- - GUROBI_HOME: the home dir for gurobi installation;
- - GRB_LICENSE_FILE: Gurobi's license file.
+[DART Introduction and Main Concepts](./docs/concepts.md)
+[DART Installation](./docs/install.md)
+[Running DART](./docs/running.md)
 
-Moreover, *vivado* must be in the PATH.
-
-If you dont have Gurobi, download and request a license [here](https://www.gurobi.com/downloads/).
-
-## DART Modes
-
-DART can be configured with four different ways:
-
- - flora_with_partitioning: floorplanner with partitioning
- - flora_without_partitioning: only floorplanner without partitioning
- - pr_tool_with_part: run the PR flow with including floorplanning and partitioning'
- - pr_tool_without_part: run the PR flow including only the floorplanning 
+<!---
+[DART Tutorial](./docs/tutorial/ultra96v2-tutorial.md)
 
 
-**Biruk, please detail each of them !!!**
+```wavedrom
 
-## Supported FPGAs
-
-The supported FPGAs are:
-
- - [PYNQ](https://www.xilinx.com/support/university/boards-portfolio/xup-boards/XUPPYNQ.html): with device XC7Z020-1CLG400C;
- - [Biruk, put here the board name and link]: with the device xc7z010clg400-1.
-
-## Compiling
-
-Go to DART_HOME and run:
-
-```
-make <dart_mode> FPGA=<fpga>
+{ signal : [
+  { name: "clk",  wave: "p......" },
+  { name: "bus",  wave: "x.34.5x",   data: "head body tail" },
+  { name: "wire", wave: "0.1..0." },
+]}
 ```
 
-where *dart_mode* is: flora_with_partitioning, flora_without_partitioning, pr_tool_with_part, or pr_tool_without_part.
 
-where *fpga* is: ZYNQ or PYNQ.
+## Tasks List
 
-Example:
+- [x] @mentions, #refs, [links](), **formatting**, and <del>tags</del> supported
+- [x] list syntax required (any unordered or ordered list supported)
+- [x] this is a complete item
+- [ ] this is an incomplete item
+-->
 
-```
-make pr_tool_with_part FPGA=PYNQ
-```
+## Authors
 
-## Input File
+- Biruk Belay Seyoum (June 2021), ReTiS Lab, Scuola Sant'Anna, Pisa, Italy. Main developer.
+- Alexandre Amory (June 2021), ReTiS Lab, Scuola Sant'Anna, Pisa, Italy. Tester, documentation, DART IPs, and minor contributions to DART source code.
 
-Biruk, write here the input format and an example for each mode.
-I suggest that each example is also available at the dir 'inputs'
-
-### Input File for Mode ABCDEF
-
-### Input File for Mode ABCDEFG
-
-### Input File for Mode ABCDEFGH
-
-### Input File for Mode ABCDEFGHI
-
-## Example IPs
-
-For the user convenience, there are ready-to-use IPs that can be downloaded from [here]()
-for testing purposes.
-
-Biruk, please point to the examples IPs
-
-## Running DART
-
-## Running in the FPGA
-
-## Analysing the Outputs
-
-## Feedback
 
 ## Papers
 
-Biruk, please point to the main papers related to DART/FLORA/FRED
+Please cite this paper if you are using DART:
+
+```bibtex
+@inproceedings{seyoum2021automating,
+  title={Automating the design flow under dynamic partial reconfiguration for hardware-software co-design in {FPGA SoC}},
+  author={Seyoum, Biruk and Pagani, Marco and Biondi, Alessandro and Buttazzo, Giorgio},
+  booktitle={Proceedings of the ACM Symposium on Applied Computing (SAC)},
+  pages={481--490},
+  year={2021}
+}
+```
+
+## License
+
 
 ## Acknoledgments
 
-put here the list of the brains behind it, contributors, funding projects.
+This tool was partially developed in the context of the [AMPERE project](https://ampere-euproject.eu/). This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 871669.
 

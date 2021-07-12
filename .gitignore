@@ -1,1 +1,64 @@
-bin/run_pr_tool*
+bin/run_*
+
+#################################################
+# place your DART design under this directory 
+# so they can be easily ignored by git
+#################################################
+designs/**
+
+#################################################
+#Visual Code studio
+#################################################
+.vscode/**
+*-workspace
+
+
+#################################################
+#
+# Vivado stuff
+#
+#################################################
+
+.Xil/**
+*.log
+*.jou
+
+
+#################################################
+#
+#  C++ RELATED DEFINITIONS
+#
+#################################################
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
