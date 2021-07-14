@@ -243,8 +243,8 @@ int main(int argc, char* argv[])
 
         // where the project will be created
         pr_input.path_to_output = fs::current_path().string();
-        
-        if (tokens[1] == "v2019.2" || "v2020.2" || "v2019.1" || "v2020.1" || "v2020.3" || "v2021.1" || "v2021.2")
+        tokens[1] == 
+        if (tokens[1] == "v2020.2" || tokens[1] == "v2020.1" || tokens[1] == "v2020.3" || tokens[1] == "v2021.1" || tokens[1] == "v2021.2")
             pr_input.vivado_version = 0;
         else
             pr_input.vivado_version = 1;
