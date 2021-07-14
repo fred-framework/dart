@@ -3,6 +3,14 @@
 # otherwise, it returns 1
 #proc check_ip_interface { ip_dcp_filename } {
 
+#file:///home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/designs/memcpy/no_part/usage_statistics_webtalk.html
+acc/1
+c_s_axi_ctrl_bus_addr_width=7
+c_m_axi_mem_bus_addr_width=32
+c_s_axi_ctrl_bus_data_width=32
+c_m_axi_mem_bus_data_width=64
+
+
 	# get the list of ports from the IP
 	#open_checkpoint  $ip_dcp_filename
 	open_checkpoint "/home/lsa/repos/ampere-git/fred/dart/pr_tool-fork/designs/sum_vec/wo_part/Synth/sum_vec/acc_0_synth.dcp"
