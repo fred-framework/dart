@@ -1225,7 +1225,7 @@ int solve_milp(param_from_solver *to_sim)
 }
 
         //model.setObjective((obj_x + obj_y), GRB_MINIMIZE);
-        model.setObjective(1 * obj_wasted_clb,  GRB_MINIMIZE);
+        //model.setObjective(1 * obj_wasted_clb,  GRB_MINIMIZE);
         //model.setObjective(0.1 * obj_wasted_bram, GRB_MINIMIZE);
        // model.setObjective(obj_wasted_dsp,  GRB_MINIMIZE);
 //#endif

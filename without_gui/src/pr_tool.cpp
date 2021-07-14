@@ -10,6 +10,7 @@ using namespace std;
 
 pr_tool::pr_tool(input_to_pr *pr_input) 
 {
+    int vivado_version = pr_input->vivado_version;
     bool use_ila=false;
     input_pr = pr_input; 
     dart_path = getenv("DART_HOME");
@@ -77,7 +78,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         use_ila = in_flora.use_ila;
 #endif
         //generate static hardware
-        generate_static_part(fl_inst,use_ila);
+        generate_static_part(fl_inst, use_ila, vivado_version);
 
         //synthesize static part
         synthesize_static();
@@ -967,7 +968,7 @@ void pr_tool::init_dir_struct()
     static_dir = Project_dir + "/static_hw";
 }
 
-void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila) 
+void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_version) 
 {
     int i, j, k;
     unsigned int num_partitions = 0;
@@ -1009,8 +1010,10 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
         write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:hls:acc:1.0 acc_" <<std::to_string(i) <<endl;
         write_static_tcl << "endgroup " <<endl;
         write_static_tcl << "startgroup " <<endl;
-        write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl; //for Vivado 2019.2 and below
-        //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl;
+        if (vivado_version == 1)
+            write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl; //for Vivado 2019.2 and below
+        else
+            write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl;
         write_static_tcl << "endgroup " <<endl;
         /*
         write_static_tcl << "set_property -dict [list CONFIG.ALL_PARAMS {HAS_AXI_LITE 1 HAS_SIGNAL_CONTROL 0 INTF {acc_ctrl "
@@ -1061,8 +1064,10 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila)
    
         j++; 
         write_static_tcl << "startgroup" << endl;
-        write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl; //for Vivado 2019.2 and below
-        //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl;
+        if (vivado_version == 1)
+            write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl; //for Vivado 2019.2 and below
+        else
+            write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl;
         write_static_tcl << "endgroup" << endl;
     /*
         write_static_tcl << " set_property -dict [list CONFIG.ALL_PARAMS {HAS_SIGNAL_CONTROL 1 HAS_SIGNAL_STATUS 0 INTF "

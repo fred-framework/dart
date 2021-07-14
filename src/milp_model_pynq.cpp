@@ -1469,7 +1469,7 @@ int solve_milp_pynq(param_from_solver *to_sim)
         cout<< "W H and wl max is " << W << " " << H * 20 << " "<< wl_max <<endl;
         }
         // model.setObjective((obj_x + obj_y ) / wl_max, GRB_MINIMIZE);
-         model.setObjective(obj_wasted_clb,  GRB_MINIMIZE);
+         //model.setObjective(obj_wasted_clb,  GRB_MINIMIZE);
         //model.setObjective(obj_wasted_bram, GRB_MINIMIZE);
         // model.setObjective(obj_wasted_dsp,  GRB_MINIMIZE);
 

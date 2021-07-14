@@ -64,6 +64,7 @@ typedef struct{
     std::string path_to_input;
     std::string path_to_output;
     bool use_ila;
+    int vivado_version;
 }input_to_pr;
 
 typedef struct {
@@ -150,7 +151,7 @@ public:
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
     void generate_fred_files(flora *fptr);
-    void generate_static_part(flora *fl, bool use_ila);
+    void generate_static_part(flora *fl, bool use_ila, int vivado_version);
     void synthesize_static(); 
     void generate_wrapper(flora *fptr);
 

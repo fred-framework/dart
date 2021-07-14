@@ -46,6 +46,7 @@ vector<string> split(const string& text, char delimiter) {
 
 int main(int argc, char* argv[])
 {
+    vector<string> tokens ;
     if (argc <3){
         cerr << "ERROR: mandatory arguments are missing\n\n";
         usage();
@@ -189,7 +190,7 @@ int main(int argc, char* argv[])
             cerr << "ERROR: vivado not found. please set it in the PATH environment variable\n";
             exit(1);        
         }
-        vector<string> tokens = split(line_with_vivado_version, ' ');
+        tokens = split(line_with_vivado_version, ' ');
         if (! (tokens[1] == "v2019.2" || tokens[1] == "v2018.3")){
             cerr << "WARNING: expecting vivado version 'v2018.3' or 'v2019.2' but found '" << tokens[1] << "'\n";
             cerr << "unexpected errors might occur with different Vivado versions\n";
@@ -242,6 +243,11 @@ int main(int argc, char* argv[])
 
         // where the project will be created
         pr_input.path_to_output = fs::current_path().string();
+        
+        if (tokens[1] == "v2019.2" || "v2020.2" || "v2019.1" || "v2020.1" || "v2020.3" || "v2021.1" || "v2021.2")
+            pr_input.vivado_version = 0;
+        else
+            pr_input.vivado_version = 1;
 
         pr_tool tool(&pr_input);
 #endif    
