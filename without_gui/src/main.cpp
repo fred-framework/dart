@@ -7,9 +7,15 @@
 void usage(){
     cout << "pr_tool <version>, 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Usage:\n";
-    cout << "  pr_tool <# IPs> <CSV file> <optional arguments>\n";
+    #ifdef WITH_PARTITIONING
+    cout << "  run_pr_tool_with_part_* <# IPs> <CSV file> <optional arguments>\n";
     cout << "     Mandatory arguments:\n";
     cout << "      * <# IPs>\n";
+    #else
+    cout << "  run_pr_tool_without_part_* <# reconf_regions> <CSV file> <optional arguments>\n";
+    cout << "     Mandatory arguments:\n";
+    cout << "      * <# reconf_regions>\n";
+    #endif
     cout << "      * <CSV file>\n";
     cout << "     Optional arguments:\n";
     cout << "      * --ila \n"; 
@@ -243,7 +249,6 @@ int main(int argc, char* argv[])
 
         // where the project will be created
         pr_input.path_to_output = fs::current_path().string();
-        tokens[1] == 
         if (tokens[1] == "v2020.2" || tokens[1] == "v2020.1" || tokens[1] == "v2020.3" || tokens[1] == "v2021.1" || tokens[1] == "v2021.2")
             pr_input.vivado_version = 0;
         else
