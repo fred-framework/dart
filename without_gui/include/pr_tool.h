@@ -145,7 +145,7 @@ public:
     void init_dir_struct();
     void prep_proj_directory();
     void create_vivado_project();
-    string add_internal_ips(string ip_name);
+    string module_attributes(string ip_name, string module_name);
     void generate_synthesis_tcl(flora *fl);
     void run_vivado(std::string synth_script);
     void add_debug_probes(void);

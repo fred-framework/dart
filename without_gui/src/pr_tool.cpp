@@ -359,57 +359,21 @@ void pr_tool::prep_proj_directory()
     } 
 }
 
-string pr_tool::add_internal_ips(string ip_name){
+string pr_tool::module_attributes(string ip_name, string module_name){
+    stringstream s;
+    s << "add_module " << ip_name <<endl;
+    s << "set_attribute module " <<ip_name << " moduleName\t" << module_name  <<endl;
+    s << "set_attribute module " <<ip_name << " prj \t" << "$prjDir/" << ip_name <<".prj" <<endl;                   
+    s << "set_attribute module " <<ip_name << " synth \t" << "${run.rmSynth}" <<endl;
     // complex IPs might internally use other IPs. This part checks whether this is the case for this IP and 
     // it adds the list of xci files into the output files
-    stringstream s;
-    try{
-        chdir(("cd " + Project_dir).c_str());
-        fs::current_path(Src_path);
-        // using the fs::path in order to have an, OS independent, safe path string
-        // taking into account the dir separator
-        fs::path  dir = fs::path("cores");
-        if (!fs::exists(dir) || !fs::is_directory(dir)){
-            cerr << "ERROR: '" << dir.string() << "' directory not found.\n";
-            exit(1);
-        }
+    s << "set xci_files [::fileutil::findByPattern ${coreDir}/" <<ip_name <<" -glob {*.xci}]" <<endl;
+    s << "if {[llength $xci_files] > 0} {" <<endl;
+    s << "    set_attribute module " << ip_name << " ip $xci_files" <<endl;
+    s << "}" <<endl;
+    s <<endl;
 
-        // check again for the IP directory
-        dir = fs::path("cores") / fs::path(ip_name);
-        if (!fs::exists(dir) || !fs::is_directory(dir)){
-            cerr << "ERROR: '" << dir.string() << "' directory not found.\n";
-            exit(1);
-        }
-
-        // search the xci files inside the IP directory
-        std::string ext(".xci");
-        std::vector<string> list_xci;
-        //std::cout << Project_dir << endl;
-        //std::cout << Src_path << endl;
-        for (auto &p : fs::recursive_directory_iterator(dir)){
-            if (p.path().extension() == ext){
-                //std::cout << (Src_path/p).string() << endl;
-                list_xci.push_back(p.path().string());
-            }
-        }
-
-        if (list_xci.size()>0){
-            for (auto const& e : std::as_const(list_xci)) {
-                //std::cout << Src_path << "/" << e << '\n';
-                s << "lappend " << ip_name << "_ip_list ${srcDir}/" << e <<endl;
-            }
-            s << "set_attribute module "<< ip_name << " ip " << "$"<< ip_name << "_ip_list" <<endl;
-            //s << "}" <<endl;
-        }
-
-    }
-    catch (std::system_error & e)
-    {
-        cerr << "Exception :: " << e.what() << endl;
-        cerr << "ERROR: error searching for internal IPs" << endl;
-        exit(EXIT_FAILURE);
-    }  
-    return s.str();    
+    return s.str();
 }
 
 void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
@@ -488,46 +452,19 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
         for(i = 0; i < fl_ptr->from_solver.num_partition; i++) {
             for(k = 0; k <  fl_ptr->alloc[i].num_hw_tasks_in_part; k++) {          
                 tag = rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag;
-                write_synth_tcl << "add_module " << tag <<endl;
-                write_synth_tcl << "set_attribute module " <<tag << " moduleName\t" << wrapper_top_name << "_" << i <<endl;
-                write_synth_tcl << "set_attribute module " <<tag << " prj \t" << "$prjDir/" << tag <<".prj" <<endl;
-                write_synth_tcl << "set_attribute module " <<tag << " synth \t" << "${run.rmSynth}" <<endl;
-                write_synth_tcl << "set xci_files [::fileutil::findByPattern ${coreDir}/" <<rm_list[i].rm_tag <<" -glob {*.xci}]" <<endl;
-                write_synth_tcl << "if {[llength $xci_files] > 0} {" <<endl;
-                write_synth_tcl << "    set_attribute module lenet ip $xci_files" <<endl;
-                write_synth_tcl << "}" <<endl;
-                //write_synth_tcl << add_internal_ips(tag);
-                write_synth_tcl <<endl;
+                write_synth_tcl << module_attributes(tag,string(wrapper_top_name + "_" + to_string(i)));
             }
         }
     }
     
     else {     
          for(i = 0; i < num_rm_modules; i++) {
-             write_synth_tcl << "add_module " << rm_list[i].rm_tag <<endl;
-             write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
-             write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;
-             write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
-             write_synth_tcl << "set xci_files [::fileutil::findByPattern ${coreDir}/" <<rm_list[i].rm_tag <<" -glob {*.xci}]" <<endl;
-             write_synth_tcl << "if {[llength $xci_files] > 0} {" <<endl;
-             write_synth_tcl << "    set_attribute module lenet ip $xci_files" <<endl;
-             write_synth_tcl << "}" <<endl;
-             //write_synth_tcl << add_internal_ips(rm_list[i].rm_tag);
-             write_synth_tcl <<endl;
+            write_synth_tcl << module_attributes(rm_list[i].rm_tag,rm_list[i].top_module);
          }
      }
 #else
      for(i = 0; i < num_rm_modules; i++) {
-         write_synth_tcl << "add_module " << rm_list[i].rm_tag <<endl;
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << wrapper_top_name << "_" << rm_list[i].partition_id  <<endl;
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;                   
-         write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
-         write_synth_tcl << "set xci_files [::fileutil::findByPattern ${coreDir}/" <<rm_list[i].rm_tag <<" -glob {*.xci}]" <<endl;
-         write_synth_tcl << "if {[llength $xci_files] > 0} {" <<endl;
-         write_synth_tcl << "    set_attribute module lenet ip $xci_files" <<endl;
-         write_synth_tcl << "}" <<endl;
-         //write_synth_tcl << add_internal_ips(rm_list[i].rm_tag);
-         write_synth_tcl <<endl;
+         write_synth_tcl << module_attributes(rm_list[i].rm_tag,string(wrapper_top_name + "_" + to_string(rm_list[i].partition_id)));
      }
 #endif
      write_synth_tcl << "source $tclDir/run.tcl" <<endl;
