@@ -1,8 +1,9 @@
 #include <iostream>
 #include <cstdlib>
 #include <unistd.h>
-#include "pr_tool.h"
 #include <fstream>
+#include <utility> // std::as_const
+#include "pr_tool.h"
 
 #undef RE_WRAP
 
@@ -358,6 +359,59 @@ void pr_tool::prep_proj_directory()
     } 
 }
 
+string pr_tool::add_internal_ips(string ip_name){
+    // complex IPs might internally use other IPs. This part checks whether this is the case for this IP and 
+    // it adds the list of xci files into the output files
+    stringstream s;
+    try{
+        chdir(("cd " + Project_dir).c_str());
+        fs::current_path(Src_path);
+        // using the fs::path in order to have an, OS independent, safe path string
+        // taking into account the dir separator
+        fs::path  dir = fs::path("cores");
+        if (!fs::exists(dir) || !fs::is_directory(dir)){
+            cerr << "ERROR: '" << dir.string() << "' directory not found.\n";
+            exit(1);
+        }
+
+        // check again for the IP directory
+        dir = fs::path("cores") / fs::path(ip_name);
+        if (!fs::exists(dir) || !fs::is_directory(dir)){
+            cerr << "ERROR: '" << dir.string() << "' directory not found.\n";
+            exit(1);
+        }
+
+        // search the xci files inside the IP directory
+        std::string ext(".xci");
+        std::vector<string> list_xci;
+        //std::cout << Project_dir << endl;
+        //std::cout << Src_path << endl;
+        for (auto &p : fs::recursive_directory_iterator(dir)){
+            if (p.path().extension() == ext){
+                //std::cout << (Src_path/p).string() << endl;
+                list_xci.push_back(p.path().string());
+            }
+        }
+
+        if (list_xci.size()>0){
+            for (auto const& e : std::as_const(list_xci)) {
+                //std::cout << Src_path << "/" << e << '\n';
+                s << "lappend " << ip_name << "_ip_list ${srcDir}/" << e <<endl;
+            }
+            s << "set_attribute module "<< ip_name << " ip " << "$"<< ip_name << "_ip_list" <<endl;
+            //s << "}" <<endl;
+        }
+
+    }
+    catch (std::system_error & e)
+    {
+        cerr << "Exception :: " << e.what() << endl;
+        cerr << "ERROR: error searching for internal IPs" << endl;
+        exit(EXIT_FAILURE);
+    }  
+    return s.str();    
+}
+
 void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
 {
      unsigned long i, j, k;
@@ -371,6 +425,8 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
      cout << "PR_TOOL: creating synthesis scripts "<<endl;
      write_synth_tcl.open(synthesis_script); 
 
+
+     write_synth_tcl << "package require fileutil" <<endl <<endl;
      write_synth_tcl << "set tclParams [list hd.visual 1]" <<endl;
      write_synth_tcl << "set tclHome " << "\"" << tcl_project << "\"" <<endl;
      write_synth_tcl << "set tclDir $tclHome" <<endl;
@@ -436,6 +492,11 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
                 write_synth_tcl << "set_attribute module " <<tag << " moduleName\t" << wrapper_top_name << "_" << i <<endl;
                 write_synth_tcl << "set_attribute module " <<tag << " prj \t" << "$prjDir/" << tag <<".prj" <<endl;
                 write_synth_tcl << "set_attribute module " <<tag << " synth \t" << "${run.rmSynth}" <<endl;
+                write_synth_tcl << "set xci_files [::fileutil::findByPattern ${coreDir}/" <<rm_list[i].rm_tag <<" -glob {*.xci}]" <<endl;
+                write_synth_tcl << "if {[llength $xci_files] > 0} {" <<endl;
+                write_synth_tcl << "    set_attribute module lenet ip $xci_files" <<endl;
+                write_synth_tcl << "}" <<endl;
+                //write_synth_tcl << add_internal_ips(tag);
                 write_synth_tcl <<endl;
             }
         }
@@ -447,6 +508,11 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
              write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << rm_list[i].top_module <<endl;
              write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;
              write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
+             write_synth_tcl << "set xci_files [::fileutil::findByPattern ${coreDir}/" <<rm_list[i].rm_tag <<" -glob {*.xci}]" <<endl;
+             write_synth_tcl << "if {[llength $xci_files] > 0} {" <<endl;
+             write_synth_tcl << "    set_attribute module lenet ip $xci_files" <<endl;
+             write_synth_tcl << "}" <<endl;
+             //write_synth_tcl << add_internal_ips(rm_list[i].rm_tag);
              write_synth_tcl <<endl;
          }
      }
@@ -456,6 +522,11 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
          write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " moduleName\t" << wrapper_top_name << "_" << rm_list[i].partition_id  <<endl;
          write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " prj \t" << "$prjDir/" << rm_list[i].rm_tag <<".prj" <<endl;                   
          write_synth_tcl << "set_attribute module " <<rm_list[i].rm_tag << " synth \t" << "${run.rmSynth}" <<endl;
+         write_synth_tcl << "set xci_files [::fileutil::findByPattern ${coreDir}/" <<rm_list[i].rm_tag <<" -glob {*.xci}]" <<endl;
+         write_synth_tcl << "if {[llength $xci_files] > 0} {" <<endl;
+         write_synth_tcl << "    set_attribute module lenet ip $xci_files" <<endl;
+         write_synth_tcl << "}" <<endl;
+         //write_synth_tcl << add_internal_ips(rm_list[i].rm_tag);
          write_synth_tcl <<endl;
      }
 #endif
@@ -518,6 +589,19 @@ void pr_tool::create_vivado_project()
                 if (fs::is_regular_file(entry2) && (fs::path(entry2).extension() == ".vhd")){
                     prj_file << "vhdl xil_defaultlib ./Sources/" + entry2.path().string() +"\n";
                     vhd_file_cnt++;
+                }
+            }
+
+            // some complex IPs use internal IPs themselves, but the dir is optional
+            vhd_path = fs::path("cores") / ip_name / fs::path("hdl") / fs::path("ip");
+            if (fs::exists(vhd_path) && fs::is_directory(vhd_path)){
+                // write all vhd file names into the prj file
+                int vhd_file_cnt=0;
+                for (const auto & entry2 : fs::directory_iterator(vhd_path)){
+                    if (fs::is_regular_file(entry2) && (fs::path(entry2).extension() == ".vhd")){
+                        prj_file << "vhdl xil_defaultlib ./Sources/" + entry2.path().string() +"\n";
+                        vhd_file_cnt++;
+                    }
                 }
             }
 
