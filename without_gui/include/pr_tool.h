@@ -154,6 +154,7 @@ public:
     void generate_static_part(flora *fl, bool use_ila, int vivado_version);
     void synthesize_static(); 
     void generate_wrapper(flora *fptr);
+    void generate_fred_device_tree(flora *fptr);
 
     explicit pr_tool(input_to_pr *);
 

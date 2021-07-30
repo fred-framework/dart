@@ -28,6 +28,8 @@ pr_tool::pr_tool(input_to_pr *pr_input)
     type = TYPE_ZYNQ;
 #elif FPGA_PYNQ 
     type = TYPE_PYNQ;
+#elif FPGA_US
+    type = TYPE_US;
 #else
     type = TYPE_ZYNQ;
 #endif
@@ -103,6 +105,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
       
         //generate the run-time management files for FRED
         generate_fred_files(fl_inst);
+        generate_fred_device_tree(fl_inst);
     }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
@@ -130,6 +133,122 @@ void pr_tool::add_debug_probes()
     write_debug_tcl.close();
 
     run_vivado(debug_script);   
+}
+
+void pr_tool::generate_fred_device_tree(flora *fl_ptr)
+{
+    int i, j, k;
+    unsigned int num_partitions = 0;
+    unsigned int first_interrupt = 0x1d;
+    unsigned int first_reg_addr = 0xc0;
+    ofstream write_dev_tree;
+
+#ifdef WITH_PARTITIONING
+    num_partitions = fl_ptr->from_solver.num_partition;
+#else
+    num_partitions = num_rm_partitions;
+#endif
+    
+    write_dev_tree.open(fred_dir + "/dart_dev_tree.dts");
+    
+    write_dev_tree << "/* DART genetaed device tree overlay */"<<endl;
+#if defined (FPGA_US)
+    write_dev_tree <<"/dts-v1/;" <<endl;
+    write_dev_tree <<"/plugin/;" <<endl;
+    write_dev_tree <<"/ { \n" <<endl;
+    write_dev_tree << "/* FRED static support design */ " <<endl;
+	write_dev_tree <<"\tfragment@0 { "<<endl;
+	write_dev_tree <<"\t\ttarget = <&fpga_full>;"<<endl;
+	write_dev_tree <<"\t\toverlay0: __overlay__ {"<<endl;
+	write_dev_tree <<"\t\t\t#address-cells = <2>;" <<endl;
+	write_dev_tree <<"\t\t\t#size-cells = <2>;" <<endl;
+	write_dev_tree <<"\t\t\tfirmware-name = \"static.bin\";" <<endl;
+	write_dev_tree <<"\t\t\tresets = <&zynqmp_reset 116>;"<<endl;
+    write_dev_tree <<"\t\t};" <<endl;
+	write_dev_tree <<"\t};" <<endl;
+    write_dev_tree <<endl;
+	
+    write_dev_tree <<"\t/* Disable PYNQ base */" <<endl;
+	write_dev_tree <<"\tfragment@1 {"<<endl;
+	write_dev_tree <<"\t\ttarget-path = \"/amba/fabric@A0000000\";" <<endl;
+	write_dev_tree <<"\t\t\toverlay1: __overlay__ {" <<endl;
+	write_dev_tree <<"\t\t\t\tstatus = \"disabled\";" <<endl;
+	write_dev_tree <<"\t\t\t};" <<endl;
+	write_dev_tree <<"\t\t};" <<endl;
+    write_dev_tree <<endl;
+	
+    write_dev_tree <<"\t/* PL base configuration */ " <<endl;
+	write_dev_tree <<"\tfragment@2 {" <<endl;
+	write_dev_tree <<"\t\ttarget = <&amba>;" <<endl;
+	write_dev_tree <<"\t\t\toverlay2: __overlay__ {" <<endl;
+	write_dev_tree <<"\t\t\t\tafi0: afi0 {" <<endl;
+	write_dev_tree <<"\t\t\t\t\tcompatible = \"xlnx,afi-fpga\";" <<endl;
+	write_dev_tree <<"\t\t\t\t\tconfig-afi = < 0 0>, <1 0>, <2 0>, <3 0>, <4 0>, <5 0>, <6 0>, <7 0>, <8 0>, <9 0>, <10 0>, <11 0>, <12 0>, <13 0>, <14 0xa00>, <15 0x000>;" <<endl;
+	write_dev_tree <<"\t\t\t\t};" <<endl;
+	write_dev_tree <<"\t\t\t\tclocking0: clocking0 {" <<endl;
+	write_dev_tree <<"\t\t\t\t\t#clock-cells = <0>;" <<endl;
+	write_dev_tree <<"\t\t\t\t\tassigned-clock-rates = <100000000>;" <<endl;
+	write_dev_tree <<"\t\t\t\t\tassigned-clocks = <&zynqmp_clk 71>;" <<endl;
+	write_dev_tree <<"\t\t\t\t\tclock-output-names = \"fabric_clk\"; " <<endl;
+	write_dev_tree <<"\t\t\t\t\tclocks = <&zynqmp_clk 71>;" <<endl;
+	write_dev_tree <<"\t\t\t\t\tcompatible = \"xlnx,fclk\"; "<< endl;
+	write_dev_tree <<"\t\t\t\t};" <<endl;
+	write_dev_tree <<"\t\t\t};" <<endl;
+	write_dev_tree <<"\t\t};" <<endl;
+    
+    
+    write_dev_tree <<"/* FRED slots layout */"<<endl;
+    write_dev_tree <<"fragment@3 {"<<endl;
+    write_dev_tree <<"\ttarget = <&amba>;" <<endl;
+    write_dev_tree <<"\t\toverlay3: __overlay__ {"<<endl;
+
+    //write_dev_tree <<"\tamba { \n" <<endl;
+    write_dev_tree <<"\t\t#address-cells = <1>;" <<endl;
+    write_dev_tree <<"\t\t#size-cells = <1>;" <<endl;
+#endif
+
+#if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
+    write_dev_tree <<"/ {"<<endl;
+    write_dev_tree <<"\tamba {"<<endl;
+    write_dev_tree << endl;
+#endif
+
+    for (i = 0; i < num_partitions * 2; i+=2) {
+#if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
+        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
+        write_dev_tree <<"\t\t\t\treg = <0x43" <<std::hex << first_reg_addr + i <<"0000 0x10000>;" <<endl; 
+        write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
+        write_dev_tree <<"\t\t\t\tinterrupts = <0x0 0x"<< std::hex << first_interrupt + i <<" 0x4>; " <<endl;
+        write_dev_tree <<"\t\t\t\t}; " <<endl;
+        write_dev_tree <<endl;
+
+        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
+        write_dev_tree <<"\t\t\t\treg =  <0x43" <<std::hex << first_reg_addr + i + 1 <<"0000 0x10000>;" <<endl; 
+        write_dev_tree <<"\t\t\t\t}; " <<endl;
+        write_dev_tree <<endl;
+
+#elif defined (FPGA_US)
+        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl; 
+        write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
+        write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i<<"0000 0x10000>;" <<endl;
+        write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
+        write_dev_tree <<"\t\t\t\tinterrupts = <0x0 0x"<< std::hex << first_interrupt + i <<" 0x4>; " <<endl;
+        write_dev_tree <<"\t\t\t\t}; " <<endl;
+        write_dev_tree <<endl;
+
+        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
+        write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i+1 <<"0000 0x10000>;" <<endl;
+        write_dev_tree <<"\t\t\t\t}; " <<endl;
+        write_dev_tree <<endl;
+        write_dev_tree <<"\t\t}; " <<endl;
+#endif    
+    }
+    write_dev_tree <<"\t}; " <<endl;
+    write_dev_tree <<"}; " <<endl;
+    
 }
 
 void pr_tool::generate_fred_files(flora *fl_ptr)
@@ -392,6 +511,8 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
      write_synth_tcl << "set part xc7z020clg400-1" <<endl;
 #elif FPGA_ZYNQ
      write_synth_tcl << "set part xc7z010clg400-1" <<endl;
+#elif FPGA_US
+    write_synth_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
 #else
      write_synth_tcl << "set part xc7z010clg400-1" <<endl;
 #endif
@@ -577,7 +698,11 @@ void pr_tool::run_vivado(std::string synth_script)
 void pr_tool::parse_synthesis_report()
 {
     unsigned long i, k, j = 0;
+#ifdef FPGA_US
+    string lut = "CLB LUTs*";
+#else
     string lut = "Slice LUTs*";
+#endif    
     string dsp = "DSPs";
     string bram = "Block RAM Tile    |";
     vector<slot> extracted_res = vector<slot>(num_rm_modules);
@@ -783,6 +908,8 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl << "set part xc7z020clg400-1" <<endl;
 #elif FPGA_ZYNQ
      write_impl_tcl << "set part xc7z010clg400-1" <<endl;
+#elif FPGA_US
+    write_impl_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
 #else
      write_impl_tcl << "set part xc7z010clg400-1" <<endl;
 #endif
@@ -986,20 +1113,31 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     //create the project
 #ifdef FPGA_PYNQ
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z020clg400-1 " <<endl;  
+    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
 #elif FPGA_ZYNQ
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
+    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
+#elif FPGA_US
+     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
+     write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.2 [current_project] " <<endl;
 #else
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
+    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
 #endif
 
-    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
     write_static_tcl << "set_property  ip_repo_paths "<<ip_repo_path<<" [current_project]" <<endl;
     write_static_tcl << "update_ip_catalog " <<endl;
     write_static_tcl << "create_bd_design \"dart\" " <<endl;
     write_static_tcl << "update_compile_order -fileset sources_1 " <<endl;
+#ifdef FPGA_PYNQ    
     write_static_tcl << "startgroup " <<endl;
     write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0" <<endl; //TODO: PS must be templated
     write_static_tcl << "endgroup " <<endl;
+#elif FPGA_US
+    write_static_tcl << "startgroup " <<endl;
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.2 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
+    write_static_tcl << "endgroup " <<endl;
+#endif
 
     // this TCL variable is used to decide whether ILA will be inserted in the design or not
     write_static_tcl << "set use_ila "<< (use_ila ? "1" : "0") <<endl;
@@ -1125,12 +1263,17 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     }
   
     //connect PS to DDR and Fixed IO
+#ifdef FPGA_PYNQ
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:processing_system7 -config {make_external \"FIXED_IO, DDR\" "
                         "apply_board_preset \"1\" Master \"Disable\" Slave \"Disable\" }  [get_bd_cells processing_system7_0]" <<endl;
-
     write_static_tcl << "startgroup " <<endl;
     write_static_tcl << "set_property -dict [list CONFIG.PCW_USE_S_AXI_HP0 {1}] [get_bd_cells processing_system7_0] " <<endl; //TODO: number of HPO should be changed based on number of acc
     write_static_tcl << "endgroup " <<endl;
+#elif FPGA_US
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:zynq_ultra_ps_e -config {apply_board_preset \"1\" }  [get_bd_cells zynq_ultra_ps_e_0]" <<endl;
+    write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__S_AXI_GP0 {1}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
+    write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__M_AXI_GP1 {0}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
+#endif
 
     //create AXI bars
     //For now we create two axi bars: one for the control registers and the other for memory access 
@@ -1153,18 +1296,28 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins acc_"<<std::to_string(i)<<"/s_axi_ctrl_bus] [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_ctrl]" <<endl;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_ctrl] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_AXI]" <<endl;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg] -boundary_type upper [get_bd_intf_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_AXI]" <<endl;
+#ifdef FPGA_PYNQ        
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins processing_system7_0/M_AXI_GP0]" <<endl; 
-        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_rp_reset_RST]" <<endl;
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
+#elif FPGA_US
+        write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXI_HPM0_FPD]" <<endl; 
+        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]" <<endl;
+#endif
+        write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_rp_reset_RST]" <<endl;
         
         j++;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_data] [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] -boundary_type upper [get_bd_intf_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_AXI]" <<endl;
+#ifdef FPGA_PYNQ
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]" <<endl;
+#elif FPGA_US        
+        write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/S_AXI_HPC0_FPD]" <<endl;
+#endif        
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT]" <<endl; 
    
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
-
+    //TODO: add ila for US 
+#ifdef FPGA_PYNQ
         write_static_tcl << "if { $use_ila == 1 } {" <<endl;
         write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
         write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
@@ -1174,29 +1327,46 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
         write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
         write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
         write_static_tcl << "}" <<endl;
+#endif
     }
     
     //connect interconnects to master clock
     write_static_tcl << "startgroup" <<endl;
     for(i=0, j=0; i < num_partitions; i++, j+=2) {
+#ifdef FPGA_PYNQ
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_ACLK]" <<endl;
+#elif FPGA_US
+        write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_ACLK]" <<endl;
+        write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_ACLK]" <<endl;
+        write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_ACLK]" <<endl;
+#endif
     }
-
+#ifdef FPGA_PYNQ
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/ACLK]" <<endl;
     //write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M00_ACLK]" <<endl;
     //write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M01_ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/S00_ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/M00_ACLK]" <<endl;
-    //write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/S00_ACLK]" <<endl;
+#elif FPGA_US
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/ACLK]" <<endl;
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/S00_ACLK]" <<endl;
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_1/ACLK]" <<endl;
+    write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_1/M00_ACLK]" <<endl;
+    //write_static_tcl <<"connect_bd_net [get_bd_pins zynq_ultra_ps_e_0/maxihpm0_fpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] " <<endl;
+#endif    
     write_static_tcl << "endgroup" <<endl;
 
     for(j=0; j < num_partitions * 2; j+=2) { 
-        write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<
-        "/s_axi_reg_aresetn] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] " <<endl;
+#ifdef FPGA_PYNQ
+        write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg_aresetn] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] " <<endl;
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_rp_reset_RST] [get_bd_pins rst_ps7_0_100M/interconnect_aresetn]" <<endl;
+#elif FPGA_US
+        write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg_aresetn] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn] " <<endl;
+        write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_rp_reset_RST] [get_bd_pins rst_ps8_0_99M/interconnect_aresetn]" <<endl;
+#endif
     }
     
     //Address map for accelerators
@@ -1204,7 +1374,9 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     for(i=0, j=0; i < num_partitions; i++, j+=2) {
         write_static_tcl << "assign_bd_address [get_bd_addr_segs {acc_"<<std::to_string(i)<<"/s_axi_ctrl_bus/Reg }]" <<endl;
         write_static_tcl << "assign_bd_address [get_bd_addr_segs {pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg/Reg }]" <<endl;
+#ifdef FPGA_PYNQ
         write_static_tcl << "assign_bd_address [get_bd_addr_segs {processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM }]" <<endl;
+#endif
     }
 
     //connect interrupts
@@ -1213,9 +1385,17 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     write_static_tcl << "endgroup " <<endl;
     write_static_tcl << "set_property -dict [list CONFIG.NUM_PORTS {"<<num_partitions<<"}] [get_bd_cells xlconcat_0]" <<endl;
     write_static_tcl << "startgroup" <<endl;
+#ifdef FPGA_PYNQ
     write_static_tcl << "set_property -dict [list CONFIG.PCW_USE_FABRIC_INTERRUPT {1} CONFIG.PCW_IRQ_F2P_INTR {1}] [get_bd_cells processing_system7_0]" <<endl;
+#elif FPGA_US
+    write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__IRQ0 {1}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
+#endif    
     write_static_tcl << "endgroup" <<endl;
+#ifdef FPGA_PYNQ    
     write_static_tcl << "connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins processing_system7_0/IRQ_F2P]" <<endl;
+#elif FPGA_US
+    write_static_tcl << "connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins zynq_ultra_ps_e_0/pl_ps_irq0]" <<endl;
+#endif
 
     for(i=0, j=1; i < num_partitions; i++, j+=2) {
        // write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<i<<"/interrupt] [get_bd_pins xlconcat_0/In"<<i<<"] " <<endl;
