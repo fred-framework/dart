@@ -30,6 +30,8 @@
 #elif FPGA_PYNQ
     #include "pynq_fine_grained.h"
 //    #include "pynq.h"
+#elif FPGA_US
+    #include "ultrascale_fine_grained.h"
 #endif
 
 namespace Ui {
@@ -40,7 +42,8 @@ enum fpga_type {
     TYPE_ZYNQ = 0,
     TYPE_VIRTEX,
     TYPE_VIRTEX_5,
-    TYPE_PYNQ
+    TYPE_PYNQ,
+    TYPE_US
 };
 
 typedef std::vector<pos> position_vec;
@@ -76,6 +79,8 @@ public:
     zynq_7010 *zynq;
 #elif FPGA_PYNQ
     pynq *pynq_inst;
+#elif FPGA_US
+    ultrascale *us_inst;
 #endif
 
 #ifdef WITH_PARTITIONING
@@ -141,7 +146,7 @@ public:
     void clear_vectors();
     void prep_input();
     void start_optimizer();
-void generate_cell_name(unsigned long num_part, vector<std::string> *cell);
+    void generate_cell_name(unsigned long num_part, vector<std::string> *cell);
     void generate_xdc(std::string fplan_file_name);
 
 //    void init_fpga(enum fpga_type);

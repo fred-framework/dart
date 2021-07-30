@@ -63,6 +63,9 @@ CFLAGS += -DFPGA_ZYNQ
 #else 
 #SOURCES_SHARED += include/zynq.h src/zynq.cpp include/zynq_fine_grained.h src/zynq_fine_grained.cpp
 #CFLAGS += -DFPGA_ZYNQ
+else ifeq ($(FPGA),US)
+SOURCES_SHARED += include/ultrascale.h src/us.cpp include/ultrascale_fine_grained.h src/us_fine_grained.cpp
+CFLAGS += -DFPGA_US
 endif
 
 LOWER_FPGA  = $(shell echo $(FPGA) | tr A-Z a-z)
@@ -77,6 +80,11 @@ flora_with_partitioning: SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
 flora_without_partitioning: SOURCES_MILP = src/milp_model_zynq.cpp
 pr_tool_without_part: SOURCES_MILP = src/milp_model_zynq.cpp
 pr_tool_with_part: SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
+else ifeq ($(FPGA),US)
+#flora_with_partitioning: SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
+flora_without_partitioning: SOURCES_MILP = src/milp_model_us.cpp
+pr_tool_without_part: SOURCES_MILP = src/milp_model_us.cpp
+#pr_tool_with_part: SOURCES_MILP = src/milp_model_zynq_with_partition.cpp
 endif
 
 flora_with_partitioning: SOURCES += src/partition.cpp
