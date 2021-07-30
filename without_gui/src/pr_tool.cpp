@@ -198,7 +198,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                 for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
                     if (i <  fl_ptr->alloc[k].num_hw_tasks_in_part) {
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin";
-                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(k) + ".bin";
+                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
                         fs::copy(src, dest);
                     }
                 }
@@ -236,7 +236,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                 for(i = 0; i < max_modules_in_partition; i++) {
                     if (i < alloc[k].num_hw_tasks_in_part) {
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
-                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(k) + ".bin";
+                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
                         fs::copy(src, dest);
                     }
                 }
