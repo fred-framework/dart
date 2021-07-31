@@ -34,13 +34,13 @@ static vector<unsigned long> clb_req_us(MAX_SLOTS);
 static vector<unsigned long> bram_req_us(MAX_SLOTS);
 static vector<unsigned long> dsp_req_us(MAX_SLOTS);
 
-const unsigned long num_fbdn_edge = 31;
+const unsigned long num_fbdn_edge = 11;
 unsigned int beta_fbdn[7] = {1, 1, 1, 0, 0, 0, 0};
-unsigned forbidden_boundaries_right[num_fbdn_edge] = {3, 6, 11, 14, 18, 23, 26, 31, 34, 38, 43, 46, 51, 54, 58, 63, 66, 70, 74, 79, 82, 87, 90, 95, 98, 102, 107, 111, 116, 120, 125};
-unsigned forbidden_boundaries_left[num_fbdn_edge] =  {2, 5, 10, 13, 17, 22, 25, 30, 33, 37, 42, 45, 50, 53, 57, 62, 65, 69, 73, 78, 81, 86, 89, 94, 97, 101, 106, 110, 115, 119, 124};
+unsigned forbidden_boundaries_right[num_fbdn_edge] = {3, 6, 15, 21, 24, 34, 39, 43, 48, 52, 57};
+unsigned forbidden_boundaries_left[num_fbdn_edge] =  {2, 5, 14, 20, 23, 33, 38, 42, 47, 51, 56};
 static Vecpos fs_us(MAX_SLOTS);
 
-int solve_milp_us(param_from_solver *to_sim)
+int solve_milp_us_96(param_from_solver *to_sim)
 {
     int status;
     unsigned long i ,k, j, l, m;
@@ -95,6 +95,7 @@ int solve_milp_us(param_from_solver *to_sim)
         for(i = 0; i < num_slots; i++) {
             w[i] = model.addVar(0.0, W, 0.0, GRB_INTEGER);
         }
+
 
         /**********************************************************************
          name: h
@@ -158,7 +159,7 @@ int solve_milp_us(param_from_solver *to_sim)
                 clb[i][k] = model.addVar(0.0, clb_max, 0.0, GRB_INTEGER);
         }
 
-       /**********************************************************************
+      /**********************************************************************
          name: bram
          type: integer
          func: bram[i][k] represents the number of brams in (0, x_1) & (0, x_2)
@@ -225,8 +226,9 @@ int solve_milp_us(param_from_solver *to_sim)
             }
         }
 
+
         /**********************************************************************
-        The following 3 variables record the total number of CLB, BRAM and DSP 
+        The following 3 variables record the total number of CLB, BRAM and DSP
         in forbidden regions.
         ***********************************************************************/
 
@@ -293,7 +295,6 @@ int solve_milp_us(param_from_solver *to_sim)
                     dsp_fbdn[j][i][k] = model.addVar(0.0, dsp_max, 0.0, GRB_INTEGER);
             }
         }
-
 
 //#endif
         /**********************************************************************
@@ -363,6 +364,7 @@ int solve_milp_us(param_from_solver *to_sim)
                 }
             }
         }
+
 
         /**********************************************************************
          name: gamma
@@ -562,8 +564,7 @@ int solve_milp_us(param_from_solver *to_sim)
             for(k = 0; k < num_slots; k++)
                 fbdn_3[i][k] = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
         }
-
-        /**********************************************************************
+       /**********************************************************************
          name: fbdn_4
          type: binary
          func: fbdn_4[i][k] = 1 iff forbidden slot 'i' x variable interferes
@@ -635,7 +636,6 @@ int solve_milp_us(param_from_solver *to_sim)
               for(k = 0; k < 3; k++)
                   wasted[i][k] = model.addVar(0,  GRB_INFINITY, 0.0, GRB_INTEGER);
           }
-
           /**********************************************************************
            name: kappa
            type: binary
@@ -699,7 +699,7 @@ int solve_milp_us(param_from_solver *to_sim)
                 model.addConstr(y[i] <= (H - beta[i][j] * (H - j)), "99");
             model.addConstr(y[i] + h[i] <= H, "100");
         }
-        
+
         for(i = 0; i < num_slots; i++) {
             GRBLinExpr exp_y;
             for(j = 0; j < num_clk_regs; j++)
@@ -734,64 +734,24 @@ int solve_milp_us(param_from_solver *to_sim)
                 model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 2, "2");
                 model.addConstr(BIG_M * z[0][i][k][l++]  >= 6 - x[i][k], "3");
                 model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 5, "4");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 11 - x[i][k], "5");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 10,  "6");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 14 - x[i][k], "7");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 13, "8");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 18 - x[i][k], "9");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 17, "10");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 23 - x[i][k], "11");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 22, "12");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 26 - x[i][k], "13");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 25, "14");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 31 - x[i][k], "7");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 30, "8");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 34 - x[i][k], "9");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 33, "10");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 38 - x[i][k], "11");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 37, "12");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 43 - x[i][k], "13");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 42, "14");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 46 - x[i][k], "5");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 45,  "6");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 51 - x[i][k], "7");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 50, "8");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 54 - x[i][k], "9");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 53, "10");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 58 - x[i][k], "11");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 57, "12");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 63 - x[i][k], "13");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 62, "14");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 66 - x[i][k], "7");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 65, "8");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 70 - x[i][k], "9");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 69, "10");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 74 - x[i][k], "11");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 73, "12");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 79 - x[i][k], "13");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 78, "14");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 82 - x[i][k], "5");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 81,  "6");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 87 - x[i][k], "7");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 86, "8");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 90 - x[i][k], "9");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 89, "10");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 95 - x[i][k], "11");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 94, "12");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 98 - x[i][k], "13");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 97, "14");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 102 - x[i][k], "7");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 101, "8");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 107 - x[i][k], "9");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 106, "10");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 111 - x[i][k], "11");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 110, "12");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 116 - x[i][k], "13");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 115, "14");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 120 - x[i][k], "5");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 119,  "6");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= 125 - x[i][k], "7");
-                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 124, "14");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 15 - x[i][k], "5");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 14,  "6");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 21 - x[i][k], "7");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 20, "8");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 24 - x[i][k], "9");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 23, "10");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 34 - x[i][k], "11");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 33, "12");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 39 - x[i][k], "13");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 38, "14");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 43 - x[i][k], "7");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 42, "8");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 48 - x[i][k], "9");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 47, "10");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 52 - x[i][k], "11");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 51, "12");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= 57 - x[i][k], "13");
+                model.addConstr(BIG_M * z[0][i][k][l++]  >= x[i][k] - 56, "14");
                 model.addConstr(BIG_M * z[0][i][k][l++]  >= W + 1 - x[i][k],  "15");
 
                 for(m = 0; m < l; m++)
@@ -840,66 +800,6 @@ int solve_milp_us(param_from_solver *to_sim)
                 model.addConstr(clb[i][k] >= (x[i][k] - 11)  - BIG_M * (1 - z[0][i][k][l++]) -
                                                            BIG_M * (1 - z[0][i][k][l++]), "15");
 
-                model.addConstr(clb[i][k] >= (x[i][k] - 12)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "10");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 13)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "11");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 14)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "12");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 15)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "13");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 16)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "14");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 17)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "15");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 18)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "12");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 19)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "13");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 20)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "14");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 21)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "15");
-                
-                model.addConstr(clb[i][k] >= (x[i][k] - 22)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "10");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 23)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "11");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 24)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "12");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 25)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "13");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 26)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "14");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 27)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "15");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 28)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "12");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 29)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "13");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 30)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "14");
-
-                model.addConstr(clb[i][k] >= (x[i][k] - 31)  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                           BIG_M * (1 - z[0][i][k][l++]), "15");
-
             }
 
             for( k = 0; k < 2; k++) {
@@ -937,67 +837,8 @@ int solve_milp_us(param_from_solver *to_sim)
                                                        BIG_M * (1 - z[0][i][k][l++]), "22");
 
                 model.addConstr(x[i][k] - 11 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "23"); 
-               
-                model.addConstr(x[i][k] - 12 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "18");
-
-                model.addConstr(x[i][k] - 13 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "19");
-
-                model.addConstr(x[i][k] - 14 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "20");
-
-                model.addConstr(x[i][k] - 15 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "21");
-
-                model.addConstr(x[i][k] - 16 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "22");
-
-                model.addConstr(x[i][k] - 17 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
                                                        BIG_M * (1 - z[0][i][k][l++]), "23");
 
-                model.addConstr(x[i][k] - 18 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "20");
-
-                model.addConstr(x[i][k] - 19 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "21");
-
-                model.addConstr(x[i][k] - 20 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "22");
-
-                model.addConstr(x[i][k] - 21 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "23");
-                
-                model.addConstr(x[i][k] - 22 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "18");
-
-                model.addConstr(x[i][k] - 23 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "19");
-
-                model.addConstr(x[i][k] - 24 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "20");
-
-                model.addConstr(x[i][k] - 25 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "21");
-
-                model.addConstr(x[i][k] - 26 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "22");
-
-                model.addConstr(x[i][k] - 27 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "23");
-
-                model.addConstr(x[i][k] - 28 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "20");
-
-                model.addConstr(x[i][k] - 29 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "21");
-
-                model.addConstr(x[i][k] - 30 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "22");
-
-                model.addConstr(x[i][k] - 31 >= (clb[i][k])  - BIG_M * (1 - z[0][i][k][l++]) -
-                                                       BIG_M * (1 - z[0][i][k][l++]), "23");
             }
         }
 
@@ -1013,6 +854,7 @@ int solve_milp_us(param_from_solver *to_sim)
                    The piecewise function is then transformed into a set
                     of MILP constraints using the intermediate variable z
         ******************************************************************/
+/*
         for(i =0; i < num_slots; i++) {
             for(k = 0; k < 2; k++) {
                 l = 0;
@@ -1035,7 +877,7 @@ int solve_milp_us(param_from_solver *to_sim)
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= 31 - x[i][k], "7");
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 30, "8");
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= 34 - x[i][k], "9");
-                model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 33, "10");               
+                model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 33, "10");
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= 38 - x[i][k], "11");
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 37, "12");
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= 43 - x[i][k], "13");
@@ -1043,14 +885,14 @@ int solve_milp_us(param_from_solver *to_sim)
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= 46 - x[i][k], "5");
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= x[i][k] - 45,  "6");
                 model.addConstr(BIG_M * z[3][i][k][l++]  >= W + 1 - x[i][k], "9");
-                
+
                 for(m = 0; m < l; m++)
                     exp += z[3][i][k][m];
 
                 model.addConstr(exp <= (l + 1) /2);
         }
    }
-        
+
         //constr for clbs
         for(i = 0; i < num_slots; i++) {
             for(k = 0; k < 2; k++) {
@@ -1092,11 +934,11 @@ int solve_milp_us(param_from_solver *to_sim)
                 model.addConstr(clb_fbdn[0][i][k] >= 23 - BIG_M * (1 - z[3][i][k][l++]) -
                                                            BIG_M * (1 - z[3][i][k][l++]), "9");
             }
-        
+
             for( k = 0; k < 2; k++) {
                 l = 0;
 
-                //FBDN region one 
+                //FBDN region one
                 model.addConstr(x[i][k] >= clb_fbdn[0][i][k] - BIG_M * (1 - z[3][i][k][l++]), "16");
 
                 model.addConstr(x[i][k] - 1 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
@@ -1107,14 +949,13 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(x[i][k] - 3 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
                                                        BIG_M * (1 - z[3][i][k][l++]), "19");
-                
+
                 model.addConstr(x[i][k] - 4 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
                                                        BIG_M * (1 - z[3][i][k][l++]), "17");
 
                 model.addConstr(x[i][k] - 5 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
                                                        BIG_M * (1 - z[3][i][k][l++]), "18");
-
-                model.addConstr(x[i][k] - 6 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
+               model.addConstr(x[i][k] - 6 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
                                                        BIG_M * (1 - z[3][i][k][l++]), "19");
 
                 model.addConstr(x[i][k] - 7 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
@@ -1131,9 +972,9 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(23 >= (clb_fbdn[0][i][k])  - BIG_M * (1 - z[3][i][k][l++]) -
                                                        BIG_M * (1 - z[3][i][k][l++]), "19");
-            } 
+            }
         }
-        
+*/
         /******************************************************************
         Constr 2.1: The same thing as constr 1.0.0 is done for the bram
                       which has the following piecewise distribution on
@@ -1152,30 +993,16 @@ int solve_milp_us(param_from_solver *to_sim)
                 GRBLinExpr exp;
                 model.addConstr(BIG_M * z[1][i][k][l++]  >= 3 - x[i][k], "32");
                 model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 2, "33");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 11 - x[i][k], "34");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 10, "35");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 23 - x[i][k], "36");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 22, "37");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 31 - x[i][k], "34");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 30, "35");
+                model.addConstr(BIG_M * z[1][i][k][l++]  >= 15 - x[i][k], "34");
+                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 14, "35");
+                model.addConstr(BIG_M * z[1][i][k][l++]  >= 21 - x[i][k], "36");
+                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 20, "37");
+                model.addConstr(BIG_M * z[1][i][k][l++]  >= 39 - x[i][k], "34");
+                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 38, "35");
                 model.addConstr(BIG_M * z[1][i][k][l++]  >= 43 - x[i][k], "36");
                 model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 42, "37");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 51 - x[i][k], "34");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 50, "35"); 
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 63 - x[i][k], "34");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 62, "35");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 75 - x[i][k], "36");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 74, "37");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 87 - x[i][k], "34");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 86, "35");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 95 - x[i][k], "36");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 94, "37");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 107 - x[i][k], "34");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 106, "35");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 111 - x[i][k], "36");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 110, "37");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= 125 - x[i][k], "34");
-                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 124, "35");
+                model.addConstr(BIG_M * z[1][i][k][l++]  >= 57 - x[i][k], "34");
+                model.addConstr(BIG_M * z[1][i][k][l++]  >= x[i][k] - 56, "35");
                 model.addConstr(BIG_M * z[1][i][k][l++]  >= W + 1 - x[i][k], "38");
 
                 for(m = 0; m < l; m++)
@@ -1195,8 +1022,7 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(bram[i][k] >= 2  - BIG_M * (1 - z[1][i][k][l++]) -
                                                            BIG_M * (1 - z[1][i][k][l++]), "41");
-
-                model.addConstr(bram[i][k] >= 3  - BIG_M * (1 - z[1][i][k][l++]) -
+               model.addConstr(bram[i][k] >= 3  - BIG_M * (1 - z[1][i][k][l++]) -
                                                            BIG_M * (1 - z[1][i][k][l++]), "42");
 
                 model.addConstr(bram[i][k] >= 4  - BIG_M * (1 - z[1][i][k][l++]) -
@@ -1206,24 +1032,6 @@ int solve_milp_us(param_from_solver *to_sim)
                                                            BIG_M * (1 - z[1][i][k][l++]), "42");
 
                 model.addConstr(bram[i][k] >= 6  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                           BIG_M * (1 - z[1][i][k][l++]), "42");
-
-                model.addConstr(bram[i][k] >= 7  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                           BIG_M * (1 - z[1][i][k][l++]), "40");
-
-                model.addConstr(bram[i][k] >= 8  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                           BIG_M * (1 - z[1][i][k][l++]), "41");
-
-                model.addConstr(bram[i][k] >= 9  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                           BIG_M * (1 - z[1][i][k][l++]), "42");
-
-                model.addConstr(bram[i][k] >= 10  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                           BIG_M * (1 - z[1][i][k][l++]), "41");
-
-                model.addConstr(bram[i][k] >= 11  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                           BIG_M * (1 - z[1][i][k][l++]), "42");
-
-                model.addConstr(bram[i][k] >= 12  - BIG_M * (1 - z[1][i][k][l++]) -
                                                            BIG_M * (1 - z[1][i][k][l++]), "42");
             }
 
@@ -1248,27 +1056,10 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(6 >= (bram[i][k])  - BIG_M * (1 - z[1][i][k][l++]) -
                                                        BIG_M * (1 - z[1][i][k][l++]), "46");
-                model.addConstr(7 >= (bram[i][k])  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                       BIG_M * (1 - z[1][i][k][l++]), "44");
-
-                model.addConstr(8 >= (bram[i][k])  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                       BIG_M * (1 - z[1][i][k][l++]), "45");
-
-                model.addConstr(9 >= (bram[i][k])  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                       BIG_M * (1 - z[1][i][k][l++]), "46");
-
-                model.addConstr(10 >= (bram[i][k])  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                       BIG_M * (1 - z[1][i][k][l++]), "44");
-
-                model.addConstr(11 >= (bram[i][k])  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                       BIG_M * (1 - z[1][i][k][l++]), "45");
-
-                model.addConstr(12 >= (bram[i][k])  - BIG_M * (1 - z[1][i][k][l++]) -
-                                                       BIG_M * (1 - z[1][i][k][l++]), "46");
             }
         }
 
-        /******************************************************************
+       /******************************************************************
         Constr 2.1.1: The same thing as constr 2.0.1 is done for the bram
                       which has the following piecewise distribution on
                       the fpga fabric
@@ -1276,7 +1067,7 @@ int solve_milp_us(param_from_solver *to_sim)
                     1     5  <=  x  < 16
                     2     16  <=  x  < 17
         ******************************************************************/
-        for(i =0; i < num_slots; i++) {
+/*        for(i =0; i < num_slots; i++) {
             for(k = 0; k < 2; k++) {
                 l = 0;
                 GRBLinExpr exp;
@@ -1330,17 +1121,17 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(2 >= (bram_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "45");
-                
+
                 model.addConstr(3 >= (bram_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "44");
 
                 model.addConstr(4 >= (bram_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "45");
-                
+
                 model.addConstr(5 >= (bram_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "45");
             }
-        }
+        }*/
 
         /******************************************************************
         Constr 2.2: Same thing is done for the dsp on the FPGA
@@ -1357,42 +1148,14 @@ int solve_milp_us(param_from_solver *to_sim)
                 GRBLinExpr exp;
                 model.addConstr(BIG_M * z[2][i][k][l++]  >= 6 - x[i][k], "47");
                 model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 5, "48");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 14 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 13, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 18 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 17, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 26 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 25, "50");
+                model.addConstr(BIG_M * z[2][i][k][l++]  >= 24 - x[i][k], "49");
+                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 23, "50");
                 model.addConstr(BIG_M * z[2][i][k][l++]  >= 34 - x[i][k], "49");
                 model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 33, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 38 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 37, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 46 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 45, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 54 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 53, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 58 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 57, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 66 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 65, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 70 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 69, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 74 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 73, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 82 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 81, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 90 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 89, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 98 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 97, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 102 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 101, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 116 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 115, "50");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= 120 - x[i][k], "49");
-                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 119, "50");
-               
-
+                model.addConstr(BIG_M * z[2][i][k][l++]  >= 48 - x[i][k], "49");
+                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 47, "50");
+                model.addConstr(BIG_M * z[2][i][k][l++]  >= 52 - x[i][k], "49");
+                model.addConstr(BIG_M * z[2][i][k][l++]  >= x[i][k] - 51, "50"); 
                 model.addConstr(BIG_M * z[2][i][k][l++]  >= W + 1 - x[i][k], "51");
 
                 for(m = 0; m < l; m++)
@@ -1421,42 +1184,6 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(dsp[i][k] >= (5  - BIG_M * (1 - z[2][i][k][l++]) -
                                                   BIG_M * (1 - z[2][i][k][l++])), "53");
-
-                model.addConstr(dsp[i][k] >= (6  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "53");
-
-                model.addConstr(dsp[i][k] >= (7  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "54");
-
-                model.addConstr(dsp[i][k] >= (8  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "53");
-
-                model.addConstr(dsp[i][k] >= (9  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "54");
-
-                model.addConstr(dsp[i][k] >= (10  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "53");
-                
-                model.addConstr(dsp[i][k] >= (11  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "53");
-
-                model.addConstr(dsp[i][k] >= (12  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "54");
-
-                model.addConstr(dsp[i][k] >= (13  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "53");
-
-                model.addConstr(dsp[i][k] >= (14  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "54");
-
-                model.addConstr(dsp[i][k] >= (15  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "53");
-                
-                model.addConstr(dsp[i][k] >= (16  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "54");
-
-                model.addConstr(dsp[i][k] >= (17  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                  BIG_M * (1 - z[2][i][k][l++])), "53");
         }
 
             for( k = 0; k < 2; k++) {
@@ -1468,45 +1195,14 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(2 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
                                                     BIG_M * (1 - z[2][i][k][l++]), "57");
-                
+
                 model.addConstr(3 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
                                                     BIG_M * (1 - z[2][i][k][l++]), "56");
 
                 model.addConstr(4 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
                                                     BIG_M * (1 - z[2][i][k][l++]), "57");
-                
+
                 model.addConstr(5 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "56");
-
-                model.addConstr(6 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "56");
-
-                model.addConstr(7 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "57");
-                model.addConstr(8 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "56");
-
-                model.addConstr(9 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "57");
-                model.addConstr(10 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "56");
-                
-                model.addConstr(11 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "56");
-
-                model.addConstr(12 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "57");
-                model.addConstr(13 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "56");
-
-                model.addConstr(14 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "57");
-                model.addConstr(15 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "56");
-
-                model.addConstr(16 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
-                                                    BIG_M * (1 - z[2][i][k][l++]), "57");
-                model.addConstr(17 >= (dsp[i][k])  - BIG_M * (1 - z[2][i][k][l++]) -
                                                     BIG_M * (1 - z[2][i][k][l++]), "56");
 
             }
@@ -1518,7 +1214,7 @@ int solve_milp_us(param_from_solver *to_sim)
                     1     7  <=  x  < 13
                     2     13  <=  x  < 17
         ******************************************************************/
-        for(i =0; i < num_slots; i++) {
+/*        for(i =0; i < num_slots; i++) {
             for(k = 0; k < 2; k++) {
                 l = 0;
                 GRBLinExpr exp;
@@ -1538,7 +1234,7 @@ int solve_milp_us(param_from_solver *to_sim)
                 model.addConstr(BIG_M * z[5][i][k][l++]  >= x[i][k] - 45, "50");
                 model.addConstr(BIG_M * z[5][i][k][l++]  >= W + 1 - x[i][k], "49");
 
-        
+
                 for(m = 0; m < l; m++)
                     exp += z[5][i][k][m];
 
@@ -1556,13 +1252,13 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(dsp_fbdn[0][i][k] >= (2  - BIG_M * (1 - z[5][i][k][l++]) -
                                                   BIG_M * (1 - z[5][i][k][l++])), "54");
-            
+
                 model.addConstr(dsp_fbdn[0][i][k] >= (3  - BIG_M * (1 - z[5][i][k][l++]) -
                                                   BIG_M * (1 - z[5][i][k][l++])), "53");
 
                 model.addConstr(dsp_fbdn[0][i][k] >= (4  - BIG_M * (1 - z[5][i][k][l++]) -
                                                   BIG_M * (1 - z[5][i][k][l++])), "54");
-                
+
                 model.addConstr(dsp_fbdn[0][i][k] >= (5  - BIG_M * (1 - z[5][i][k][l++]) -
                                                   BIG_M * (1 - z[5][i][k][l++])), "53");
 
@@ -1571,7 +1267,7 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(dsp_fbdn[0][i][k] >= (7  - BIG_M * (1 - z[5][i][k][l++]) -
                                                   BIG_M * (1 - z[5][i][k][l++])), "53");
-          
+
           }
 
             for( k = 0; k < 2; k++) {
@@ -1583,13 +1279,12 @@ int solve_milp_us(param_from_solver *to_sim)
 
                 model.addConstr(2 >= (dsp_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "45");
-            
                 model.addConstr(3 >= (dsp_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "44");
 
                 model.addConstr(4 >= (dsp_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "45");
-                
+
                 model.addConstr(5 >= (dsp_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "44");
 
@@ -1599,10 +1294,10 @@ int solve_milp_us(param_from_solver *to_sim)
                 model.addConstr(7 >= (dsp_fbdn[0][i][k])  - BIG_M * (1 - z[4][i][k][l++]) -
                                                        BIG_M * (1 - z[4][i][k][l++]), "45");
 
-            
+
             }
         }
-
+*/
       //constr for res
       /*********************************************************************
         Constr 2.3: There must be enough clb, bram and dsp inside the slot
@@ -1657,25 +1352,24 @@ int solve_milp_us(param_from_solver *to_sim)
                 exp_dsp_fbdn  += tau_fbdn[0][2][i][j];
             }
 
-            model.addConstr(clb_per_tile * (exp_clb - exp_clb_fbdn) >= clb_req_us[i],"68");
-            model.addConstr(wasted[i][0] == clb_per_tile * (exp_clb - exp_clb_fbdn) - clb_req_us[i],"168"); //wasted clbs
+            model.addConstr(clb_per_tile * (exp_clb /*- exp_clb_fbdn*/) >= clb_req_us[i],"68");
+            model.addConstr(wasted[i][0] == clb_per_tile * (exp_clb /*- exp_clb_fbdn*/) - clb_req_us[i],"168"); //wasted clbs
 
-            model.addConstr(clb_fbdn_tot[i] == exp_clb_fbdn, "169");
+            //model.addConstr(clb_fbdn_tot[i] == exp_clb_fbdn, "169");
 
-            model.addConstr(bram_per_tile * (exp_bram - exp_bram_fbdn) >= bram_req_us[i],"69");
-            model.addConstr(wasted[i][1] == bram_per_tile * (exp_bram - exp_bram_fbdn) - bram_req_us[i],"169"); //wasted brams
+            model.addConstr(bram_per_tile * (exp_bram /*- exp_bram_fbdn*/) >= bram_req_us[i],"69");
+            model.addConstr(wasted[i][1] == bram_per_tile * (exp_bram /*- exp_bram_fbdn*/) - bram_req_us[i],"169"); //wasted brams
+            //model.addConstr(bram_fbdn_tot[i] == exp_bram_fbdn, "169");
 
-            model.addConstr(bram_fbdn_tot[i] == exp_bram_fbdn, "169");
-
-            model.addConstr(dsp_per_tile * (exp_dsp - exp_dsp_fbdn) >= dsp_req_us[i],"70");
-            model.addConstr(wasted[i][2] == dsp_per_tile * (exp_dsp - exp_dsp_fbdn) - dsp_req_us[i], "170");
-
-            model.addConstr(dsp_fbdn_tot[i] == exp_dsp_fbdn, "169");
+            model.addConstr(dsp_per_tile * (exp_dsp /*- exp_dsp_fbdn*/) >= dsp_req_us[i],"70");
+            model.addConstr(wasted[i][2] == dsp_per_tile * (exp_dsp /*- exp_dsp_fbdn*/) - dsp_req_us[i], "170");
+            //model.addConstr(dsp_fbdn_tot[i] == exp_dsp_fbdn, "169");
         }
 
                 //Interference constraints
         /***********************************************************************
-        Constraint 3.0: The semantics of Gamma, Alpha, Omega                 for(l = 0; l < 10; l++)
+        Constraint 3.0: The semantics of Gamma, Alpha, Omega
+                for(l = 0; l < 10; l++)
                     exp += z[1][i][k][l];
 
                 model.addConstr(exp <= 6, "49000");& Psi must be fixed
@@ -1744,7 +1438,6 @@ int solve_milp_us(param_from_solver *to_sim)
             }
         }
 
-
         /*************************************************************************
         Constriant 5.0: The centroids of each slot and the distance between each
                         of them (the wirelength) is defined in these constraints.
@@ -1810,7 +1503,7 @@ int solve_milp_us(param_from_solver *to_sim)
         //model.setObjective(obj_wasted_bram, GRB_MINIMIZE);
         // model.setObjective(obj_wasted_dsp,  GRB_MINIMIZE);
 
-        //Optimize
+       //Optimize
         /****************************************************************************
         Optimize
         *****************************************************************************/
@@ -1860,7 +1553,7 @@ int solve_milp_us(param_from_solver *to_sim)
                         (*to_sim->clb_from_solver)[i] = (int) ((clb[i][1].get(GRB_DoubleAttr_X) - clb[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * clb_per_tile);
                         (*to_sim->bram_from_solver)[i] = (int) ((bram[i][1].get(GRB_DoubleAttr_X) - bram[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * bram_per_tile);
                         (*to_sim->dsp_from_solver)[i] = (int) ((dsp[i][1].get(GRB_DoubleAttr_X) - dsp[i][0].get(GRB_DoubleAttr_X)) * h[i].get(GRB_DoubleAttr_X) * dsp_per_tile);
-/*
+
                         for(k=0; k < 2; k++) {
                             for(l = 0; l < 16; l++)
                                 cout <<"z" << l << " " << z[0][i][k][l].get(GRB_DoubleAttr_X) << "\t";
@@ -1872,7 +1565,7 @@ int solve_milp_us(param_from_solver *to_sim)
                                 cout <<"b" << k << " " << beta[i][k].get(GRB_DoubleAttr_X) << "\t";
                                 cout<<endl;
                         }
-*/
+
 
                 }
 /*
@@ -1888,7 +1581,6 @@ int solve_milp_us(param_from_solver *to_sim)
                 wasted_clb_us  +=  wasted[i][0].get(GRB_DoubleAttr_X);
                 wasted_bram_us +=  wasted[i][1].get(GRB_DoubleAttr_X);
                 wasted_dsp_us  +=  wasted[i][2].get(GRB_DoubleAttr_X);
-
                 cout << "wasted clb " << wasted[i][0].get(GRB_DoubleAttr_X) <<
                         " wasted bram " << wasted[i][1].get(GRB_DoubleAttr_X) <<
                         " wasted dsp " << wasted[i][2].get(GRB_DoubleAttr_X) <<endl;
@@ -1940,8 +1632,8 @@ int solve_milp_us(param_from_solver *to_sim)
                 cout << "num dsp 1 in forbidden slot " << i << " is " << dsp_fbdn[0][i][1].get(GRB_DoubleAttr_X) <<endl;
                 cout <<endl;
 
-        }
-*/
+        } */
+
     }
     else {
 
@@ -1970,9 +1662,10 @@ int solve_milp_us(param_from_solver *to_sim)
     }
    return status;
 
+
 }
 
-int us_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
+int us_96_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
 {
     int m = 0;
     int k = 0;
@@ -2005,7 +1698,7 @@ int us_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
             conn_matrix_pynq[i][k] = (*(param->conn_vector)) [i][k];
     }
 */
- 
+
 //    m =0;
 //    for(i = 0; i < num_conn_slots_us; i++) {
 //        m =0;
@@ -2028,10 +1721,10 @@ int us_start_optimizer(param_to_solver *param, param_from_solver *to_sim)
                fs_us[i].x << " " << fs_us[i].y << " " <<
                fs_us[i].h << " " << fs_us[i].w <<endl;
     }
-    
+
     //cout << "finished copying" << endl;
 
-    status = solve_milp_us(to_sim);
+    status = solve_milp_us_96(to_sim);
 
     return status;
 }

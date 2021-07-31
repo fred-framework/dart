@@ -32,6 +32,8 @@
 //    #include "pynq.h"
 #elif FPGA_US
     #include "ultrascale_fine_grained.h"
+#elif FPGA_US_96
+    #include "ultrascale_96_fine_grained.h"
 #endif
 
 namespace Ui {
@@ -43,7 +45,8 @@ enum fpga_type {
     TYPE_VIRTEX,
     TYPE_VIRTEX_5,
     TYPE_PYNQ,
-    TYPE_US
+    TYPE_US,
+    TYPE_US_96
 };
 
 typedef std::vector<pos> position_vec;
@@ -81,6 +84,8 @@ public:
     pynq *pynq_inst;
 #elif FPGA_US
     ultrascale *us_inst;
+#elif FPGA_US_96
+    ultrascale_96 *us_96_inst;
 #endif
 
 #ifdef WITH_PARTITIONING

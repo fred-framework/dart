@@ -1,0 +1,72 @@
+#include "fine_grained.h"
+#include "ultrascale_96.h"
+
+class us_96_fine_grained{
+
+public:
+    finegrained_res_description fg[US96_WIDTH] = {{CLB, 0, 0},
+                                                  {CLB, 1, 1},
+                                                  {CLB, 2, 2},
+                                                  {BRAM, 0, 0},
+                                                  {CLB, 3, 3},
+                                                  {CLB, 4, 4},
+                                                  {DSP, 0, 0},
+                                                  {CLB, 5, 5},
+                                                  {CLB, 6, 6},
+                                                  {CLB, 7, 7},
+                                                  {CLB, 8, 8},
+                                                  {CLB, 9, 9},
+                                                  {CLB, 10, 10},
+                                                  {CLB, 11, 11},
+                                                  {CLB, 12, 12},
+                                                  {BRAM, 1, 1},
+                                                  {CLB, 13, 13},
+                                                  {CLB, 14, 14},
+                                                  {CLB, 15, 15},
+                                                  {CLB, 16, 16},
+                                                  {CLB, 17, 17},
+                                                  {BRAM, 2, 2},
+                                                  {CLB, 18, 18},
+                                                  {CLB, 19, 19},
+                                                  {DSP, 1, 1},
+                                                  {CLB, 20, 20},
+                                                  {CLB, 21, 21},
+                                                  {CLB, 22, 22},
+                                                  {CLB, 23, 23},
+                                                  {CLB, 24, 24},
+                                                  {CLB, 25, 25},
+                                                  {CLB, 26, 26},
+                                                  {CLB, 27, 27},
+                                                  {CLB, 28, 28},
+                                                  {DSP, 2, 2},
+                                                  {CLB, 29, 29},
+                                                  {CLB, 30, 30},
+                                                  {CLB, 31, 31},
+                                                  {CLB, 32, 32},
+                                                  {BRAM, 3, 3},
+                                                  {CLB, 33, 33},
+                                                  {CLB, 34, 34},
+                                                  {CLB, 35, 35},
+                                                  {BRAM, 4, 4},
+                                                  {CLB, 36, 36},
+                                                  {CLB, 37, 37},
+                                                  {CLB, 38, 38},
+                                                  {CLB, 39, 39},
+                                                  {DSP, 3, 3},
+                                                  {CLB, 40, 40},
+                                                  {CLB, 41, 41},
+                                                  {CLB, 42, 42},
+                                                  {DSP, 4, 4},
+                                                  {CLB, 43, 43},
+                                                  {CLB, 44, 44},
+                                                  {CLB, 45, 145},
+                                                  {CLB, 46, 46},
+                                                  {BRAM, 5, 5},
+                                                  {CLB, 47, 47},
+                                                  {CLB, 48, 48}};
+
+
+  void init_fine_grained();
+  us_96_fine_grained();
+
+};

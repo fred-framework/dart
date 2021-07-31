@@ -233,6 +233,36 @@ void flora::start_optimizer()
     us_start_optimizer(&param, &from_solver);
     cout <<"FLORA: finished MILP optimizer " <<endl;
 
+#elif FPGA_US_96
+    us_96_inst = new ultrascale_96();
+/*
+    for(i = 0; i < us_96_inst->num_forbidden_slots; i++) {
+        forbidden_region[i] = us_inst->forbidden_pos[i];
+    //cout<< " fbdn" << forbidden_region[i].x << endl;
+    }
+*/
+    param.num_forbidden_slots = us_96_inst->num_forbidden_slots;
+    param.num_rows = us_96_inst->num_rows;
+    param.width = us_96_inst->width;
+    param.fbdn_slot = &forbidden_region;
+    param.num_clk_regs  = us_96_inst->num_clk_reg /2;
+    param.clb_per_tile  = US96_CLB_PER_TILE;
+    param.bram_per_tile = US96_BRAM_PER_TILE;
+    param.dsp_per_tile  = US96_DSP_PER_TILE;
+
+#ifdef WITH_PARTITIONING      
+    platform->maxFPGAResources[CLB]  = US_CLB_TOT;
+    platform->maxFPGAResources[BRAM] = US_BRAM_TOT;
+    platform->maxFPGAResources[DSP]  = US_DSP_TOT;
+
+    platform->recTimePerUnit[CLB]  = 1.0/4500.0;
+    platform->recTimePerUnit[BRAM] = 1.0/4500.0;
+    platform->recTimePerUnit[DSP]  = 1.0/4000.0;
+#endif
+    cout <<"FLORA: starting ULTRASCALE 96 MILP optimizer " <<endl;
+    us_96_start_optimizer(&param, &from_solver);
+    cout <<"FLORA: finished MILP optimizer " <<endl;
+
 #endif  
 }
 
@@ -276,6 +306,16 @@ void flora::generate_xdc(std::string fplan_xdc_file)
 #else
     generate_cell_name(num_rm_partitions, &cell_name);
     generate_xdc_file(fg_us_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
+#endif
+
+#elif FPGA_US_96
+    us_96_fine_grained *fg_us_96_instance = new us_96_fine_grained();
+#ifdef WITH_PARTITIONING
+    generate_cell_name(from_solver.num_partition, &cell_name);
+    generate_xdc_file(fg_us_96_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
+#else
+    generate_cell_name(num_rm_partitions, &cell_name);
+    generate_xdc_file(fg_us_96_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
 #endif
 
 #endif
