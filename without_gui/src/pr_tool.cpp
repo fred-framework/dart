@@ -140,7 +140,7 @@ void pr_tool::add_debug_probes()
 
 void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 {
-    int i, j, k;
+    int i, j, k, p=0;
     unsigned int num_partitions = 0;
     unsigned int first_interrupt = 0x1d;
     unsigned int first_reg_addr = 0xc0;
@@ -154,7 +154,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     
     write_dev_tree.open(fred_dir + "/dart_dev_tree.dts");
     
-    write_dev_tree << "/* DART genetaed device tree overlay */"<<endl;
+    write_dev_tree << "/* DART generated device tree overlay */"<<endl;
 #if defined (FPGA_US) || defined (FPGA_US_96)
     write_dev_tree <<"/dts-v1/;" <<endl;
     write_dev_tree <<"/plugin/;" <<endl;
@@ -216,9 +216,10 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     write_dev_tree << endl;
 #endif
 
+    p=0;
     for (i = 0; i < num_partitions * 2; i+=2) {
 #if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
-        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tslot_p"<<p<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg = <0x43" <<std::hex << first_reg_addr + i <<"0000 0x10000>;" <<endl; 
         write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
@@ -226,14 +227,14 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
 
-        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tpr_decoupler_p"<<p<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg =  <0x43" <<std::hex << first_reg_addr + i + 1 <<"0000 0x10000>;" <<endl; 
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
 
 #elif defined (FPGA_US) || defined (FPGA_US_96)
-        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl; 
+        write_dev_tree <<"\t\t\tslot_p"<<p<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl; 
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i<<"0000 0x10000>;" <<endl;
         write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
@@ -241,13 +242,14 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
 
-        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tpr_decoupler_p"<<p<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i+1 <<"0000 0x10000>;" <<endl;
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
         write_dev_tree <<"\t\t}; " <<endl;
 #endif    
+        p++;
     }
     write_dev_tree <<"\t}; " <<endl;
     write_dev_tree <<"}; " <<endl;
