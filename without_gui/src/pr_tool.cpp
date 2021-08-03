@@ -52,7 +52,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         //pre-process the design
         prep_input(); 
     	init_dir_struct();
-/*
+
         prep_proj_directory();
 
 #ifdef WITHOUT_PARTITIONING
@@ -108,7 +108,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
       
         //generate the run-time management files for FRED
         generate_fred_files(fl_inst);
-       */ generate_fred_device_tree(fl_inst);
+        generate_fred_device_tree(fl_inst);
     }
     else {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
