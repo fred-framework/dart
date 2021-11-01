@@ -394,24 +394,33 @@ void pr_tool::prep_input()
 
     cout << endl << "PR_TOOL: reading inputs " << row << " " << col <<endl;
     num_rm_modules = row;
-    for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
+    try {
+        for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
 
 #ifdef WITH_PARTITIONING
-        str = csv_data.get_value(i, k++);
-        HW_WCET.push_back(std::stod(str));
-        str = csv_data.get_value(i, k++);
-        slacks.push_back(std::stod(str));
+            str = csv_data.get_value(i, k++);
+            HW_WCET.push_back(std::stod(str));
+            str = csv_data.get_value(i, k++);
+            slacks.push_back(std::stod(str));
 #else
-        str = csv_data.get_value(i, k++);
-        rm.partition_id = std::stoul(str);
+            str = csv_data.get_value(i, k++);
+            rm.partition_id = std::stoi(str);
+            //rm.partition_id = std::stoi(str.c_str());
 #endif
-        rm.rm_tag = csv_data.get_value(i, k++);
-        //rm.source_path = csv_data.get_value(i, k++);
-        rm.top_module = csv_data.get_value(i, k++);
-        
-        rm_list.push_back(rm);
-        k = 0;
+            rm.rm_tag = csv_data.get_value(i, k++);
+            //rm.source_path = csv_data.get_value(i, k++);
+            rm.top_module = csv_data.get_value(i, k++);
+            
+            rm_list.push_back(rm);
+            k = 0;
+        }
     }
+    catch (std::invalid_argument & e)
+    {
+        cerr << "Exception :: " << e.what() << endl;
+        cerr << "ERROR: invalid data in the input CSV file\n";
+        exit(EXIT_FAILURE);        
+    }    
 
 #ifndef WITH_PARTITIONING 
     for(k = 0; k < num_rm_partitions; k++) {
