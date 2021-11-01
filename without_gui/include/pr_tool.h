@@ -59,12 +59,10 @@ typedef struct{
 #else
     unsigned long num_rm_partitions;
 #endif
-    std::string static_dcp_file;
-    std::string static_top_module;
-    std::string path_to_input;
+    //std::string static_dcp_file;
+    //std::string static_top_module;
+    //std::string path_to_input;
     std::string path_to_output;
-    bool use_ila;
-    int vivado_version;
 }input_to_pr;
 
 typedef struct {
@@ -152,7 +150,7 @@ public:
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
     void generate_fred_files(flora *fptr);
-    void generate_static_part(flora *fl, bool use_ila, int vivado_version);
+    void generate_static_part(flora *fl);
     void synthesize_static(); 
     void generate_wrapper(flora *fptr);
     void generate_fred_device_tree(flora *fptr);

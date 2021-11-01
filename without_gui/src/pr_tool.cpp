@@ -4,25 +4,32 @@
 #include <fstream>
 #include <utility> // std::as_const
 #include "pr_tool.h"
+#include "version.h"
+#include <yaml-cpp/yaml.h>
 
 #undef RE_WRAP
 
 using namespace std;
 
+extern YAML::Node config;
+
 pr_tool::pr_tool(input_to_pr *pr_input) 
 {
-    int vivado_version = pr_input->vivado_version;
-    bool use_ila=false;
     input_pr = pr_input; 
     dart_path = getenv("DART_HOME");
-    cout << "PR_TOOL: Starting PR_tool " <<endl;
+    std::cout << "PR_TOOL: Starting PR_tool " <<endl;
 
 #ifdef WITH_PARTITIONING
     if(input_pr->num_rm_modules > 0){
         num_rm_modules = pr_input->num_rm_modules;
 #else
-    if(input_pr->num_rm_partitions > 0){
-        num_rm_partitions = pr_input->num_rm_partitions;
+    //if(input_pr->num_rm_partitions > 0){
+        //num_rm_partitions = pr_input->num_rm_partitions;
+    num_rm_partitions = config["flora"].size();
+    if (num_rm_partitions <= 0) {
+        cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
+        exit(EXIT_FAILURE);
+    }      
 #endif
 
 #ifdef FPGA_ZYNQ
@@ -43,7 +50,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         cout << "PR_TOOL: num of partitions **** " << num_rm_partitions <<endl;
 #endif        
         cout << "PR_TOOL: type of FPGA pr_tool **** " << type <<endl;
-        cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
+        //cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
         cout << "PR_TOOL: path for output pr_tool **** " << pr_input->path_to_output <<endl;
         
         //Instantiate flora
@@ -77,13 +84,13 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         fl_inst->generate_xdc(fplan_xdc_file);
 
 // TODO: that's BAD. I had to duplicate the attribute use ila here and in the main to support both part and flora modes
-#ifdef WITH_PARTITIONING
-        use_ila = input_pr->use_ila;
-#else
-        use_ila = in_flora.use_ila;
-#endif
+// #ifdef WITH_PARTITIONING
+//         use_ila = input_pr->use_ila;
+// #else
+//         use_ila = in_flora.use_ila;
+// #endif
         //generate static hardware
-        generate_static_part(fl_inst, use_ila, vivado_version);
+        generate_static_part(fl_inst);
 
         //synthesize static part
         synthesize_static();
@@ -96,6 +103,17 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         run_vivado(synthesis_script);
 #endif
 
+        // TODO: If one partition uses ILA, then debug probes must be generated 
+        bool use_ila = false;
+        //for(YAML::const_iterator it=config["flora"].begin();it!=config["flora"].end();++it) {
+        for (std::size_t i=0;i<config["flora"].size();i++) {
+            if(config["flora"][i]["debug"]){
+                std::cout << config["flora"][i]["debug"].as<bool>() << "\n";
+                use_ila = config["flora"][i]["debug"].as<bool>();
+                if (use_ila)
+                    break;
+            }
+        }           
         if (use_ila){
             add_debug_probes();
         }
@@ -108,12 +126,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
       
         //generate the run-time management files for FRED
         generate_fred_files(fl_inst);
-        generate_fred_device_tree(fl_inst);
-    }
-    else {
-        cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
-        exit(-1);
-    }    
+        generate_fred_device_tree(fl_inst);  
 }
 
 pr_tool::~pr_tool()
@@ -382,37 +395,47 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
 void pr_tool::prep_input()
 {
     std::string str;
-    unsigned long row, col;
-    int i , k;
+    unsigned long row;
+    int i, j, k;
     unsigned int ptr;
     reconfigurable_module rm;
 
-    CSVData csv_data(input_pr->path_to_input);
+    //CSVData csv_data(input_pr->path_to_input);
 
-    row = csv_data.rows();
-    col = csv_data.columns();
+    //row = csv_data.rows();
+    //col = csv_data.columns();
 
-    cout << endl << "PR_TOOL: reading inputs " << row << " " << col <<endl;
-    num_rm_modules = row;
+    // count the number of IPs in all partitions
+    int ips=0;
+    for (i=0;i<config["flora"].size();i++) {
+        ips += config["flora"][i]["partition"].size();
+    } 
+
+    cout << endl << "PR_TOOL: reading inputs " << ips << <<endl;
+    num_rm_modules = ips;
     try {
         for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
+            for(j = 0; j < config["flora"][i]["partition"].size(); j++) {
 
 #ifdef WITH_PARTITIONING
-            str = csv_data.get_value(i, k++);
-            HW_WCET.push_back(std::stod(str));
-            str = csv_data.get_value(i, k++);
-            slacks.push_back(std::stod(str));
+                str = csv_data.get_value(i, k++);
+                HW_WCET.push_back(std::stod(str));
+                str = csv_data.get_value(i, k++);
+                slacks.push_back(std::stod(str));
 #else
-            str = csv_data.get_value(i, k++);
-            rm.partition_id = std::stoi(str);
-            //rm.partition_id = std::stoi(str.c_str());
+                //str = csv_data.get_value(i, k++);
+                //rm.partition_id = std::stoi(str);
+                rm.partition_id = i;
 #endif
-            rm.rm_tag = csv_data.get_value(i, k++);
-            //rm.source_path = csv_data.get_value(i, k++);
-            rm.top_module = csv_data.get_value(i, k++);
-            
-            rm_list.push_back(rm);
-            k = 0;
+                //rm.rm_tag = csv_data.get_value(i, k++);
+                rm.rm_tag = config["flora"][i]["partition"][j]["ip_name"].as<std::string>();
+                //rm.source_path = csv_data.get_value(i, k++);
+                //rm.top_module = csv_data.get_value(i, k++);
+                rm.top_module = config["flora"][i]["partition"][j]["top_name"].as<std::string>();
+                
+                rm_list.push_back(rm);
+                k = 0;
+            }
         }
     }
     catch (std::invalid_argument & e)
@@ -904,7 +927,7 @@ void pr_tool::parse_synthesis_report()
         
         write_flora_input.close();        
 #ifdef WITH_PARTITIONING 
-        in_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
+        i//n_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
 #else
         //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv", input_pr->static_top_modul};
         in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv"};
@@ -1133,7 +1156,7 @@ void pr_tool::init_dir_struct()
     static_dir = Project_dir + "/static_hw";
 }
 
-void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_version) 
+void pr_tool::generate_static_part(flora *fl_ptr) 
 {
     int i, j, k;
     unsigned int num_partitions = 0;
@@ -1184,16 +1207,20 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     write_static_tcl << "endgroup " <<endl;
 #endif
 
-    // this TCL variable is used to decide whether ILA will be inserted in the design or not
-    write_static_tcl << "set use_ila "<< (use_ila ? "1" : "0") <<endl;
+    // TODO: apply ILA per partition and read it from the YAML
+    bool use_ila = false;
    
     //create the bbox instance of the accelerator IPs and the decouplers (two decouplers for each acc)
+    string vivado_version_str(config["vivado_version_str"].as<std::string>());
+    Version vivado_version(vivado_version_str);
+    Version min_vivado_version("2020.1.0.0");
     for(i=0, j=0; i < num_partitions; i++, j++) {
         write_static_tcl << "startgroup " <<endl;
         write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:hls:acc:1.0 acc_" <<std::to_string(i) <<endl;
         write_static_tcl << "endgroup " <<endl;
         write_static_tcl << "startgroup " <<endl;
-        if (vivado_version == 1)
+        //if (vivado_version == 1)
+        if (vivado_version<min_vivado_version)
             write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl; //for Vivado 2019.2 and below
         else
             write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl;
@@ -1247,7 +1274,8 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
    
         j++; 
         write_static_tcl << "startgroup" << endl;
-        if (vivado_version == 1)
+        if (vivado_version<min_vivado_version)
+        //if (vivado_version == 1)
             write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl; //for Vivado 2019.2 and below
         else
             write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl;
@@ -1282,29 +1310,47 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
                             "CONFIG.GUI_SIGNAL_PRESENT_4 {false} CONFIG.GUI_SIGNAL_PRESENT_5 {false} CONFIG.GUI_SIGNAL_PRESENT_6 {false} CONFIG.GUI_SIGNAL_PRESENT_7 {false} "
                             "CONFIG.GUI_SIGNAL_PRESENT_8 {false} CONFIG.GUI_SIGNAL_PRESENT_9 {false}] [get_bd_cells pr_decoupler_"<< std::to_string(j) << "]" <<endl;
 
-    
-        // add one ILA per reconfig region
-        write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-        write_static_tcl << "    # Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
-        write_static_tcl << "    set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] " <<endl;
-        // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
-        //write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {2048} "
-        write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {12} CONFIG.C_DATA_DEPTH {1024} "
-                            "     CONFIG.C_MON_TYPE {MIX} CONFIG.C_NUM_MONITOR_SLOTS {2} CONFIG.C_SLOT_0_APC_EN {0}"
-                            "     CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1}"
-                            "     CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1}"
-                            "     CONFIG.C_SLOT_0_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_W_SEL_DATA {1}"
-                            "     CONFIG.C_SLOT_0_AXI_W_SEL_TRIG {1}"
-                            "     CONFIG.C_SLOT_0_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
-                            "     CONFIG.C_SLOT_1_APC_EN {0}"
-                            "     CONFIG.C_SLOT_1_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_AW_SEL_DATA {1}"
-                            "     CONFIG.C_SLOT_1_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_B_SEL_TRIG {1}"
-                            "     CONFIG.C_SLOT_1_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_W_SEL_DATA {1}"
-                            "     CONFIG.C_SLOT_1_AXI_W_SEL_TRIG {1}"
-                            "     CONFIG.C_SLOT_1_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
-                            "    ] [get_bd_cells system_ila_"<< std::to_string(i) << "]" << endl;
-        write_static_tcl << "}" <<endl;                            
-
+        // decided whether the ILA module must be inserted for this partition
+        if(config["flora"][i]["debug"]){
+            use_ila = config["flora"][i]["debug"].as<bool>();
+            if (use_ila){
+                // get the ILA buffer size. If not defined, use the defaut value
+                int ila_buffer_depth = 1024;
+                if(config["flora"][i]["debug"]["data_depth"]){
+                    ila_buffer_depth = config["flora"][i]["debug"]["data_depth"].as<int>();
+                    // check if ila_buffer_depth is power of 2
+                    if (ceil(log2(ila_buffer_depth)) != floor(log2(ila_buffer_depth)))
+                    { 
+                        cerr<<"ERROR: ILA buffer depth must be power of 2. Found "<<  ila_buffer_depth <<endl; 
+                        exit(EXIT_FAILURE);               
+                    }
+                    if (ila_buffer_depth < 1024)
+                    { 
+                        cerr<<"ERROR: ILA buffer depth must be at least 1024. Found "<<  ila_buffer_depth <<endl;
+                        exit(EXIT_FAILURE);                
+                    }
+                }
+                // add one ILA per reconfig region
+                write_static_tcl << "# Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
+                write_static_tcl << "set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] " <<endl;
+                // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
+                //write_static_tcl << "set_property -dict [ list CONFIG.C_BRAM_CNT {12} CONFIG.C_DATA_DEPTH {1024} "
+                write_static_tcl << "set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {" << ila_buffer_depth << "} "
+                                    "  CONFIG.C_MON_TYPE {MIX} CONFIG.C_NUM_MONITOR_SLOTS {2} CONFIG.C_SLOT_0_APC_EN {0}"
+                                    "  CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1}"
+                                    "  CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1}"
+                                    "  CONFIG.C_SLOT_0_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_W_SEL_DATA {1}"
+                                    "  CONFIG.C_SLOT_0_AXI_W_SEL_TRIG {1}"
+                                    "  CONFIG.C_SLOT_0_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
+                                    "  CONFIG.C_SLOT_1_APC_EN {0}"
+                                    "  CONFIG.C_SLOT_1_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_AW_SEL_DATA {1}"
+                                    "  CONFIG.C_SLOT_1_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_B_SEL_TRIG {1}"
+                                    "  CONFIG.C_SLOT_1_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_W_SEL_DATA {1}"
+                                    "  CONFIG.C_SLOT_1_AXI_W_SEL_TRIG {1}"
+                                    "  CONFIG.C_SLOT_1_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
+                                    "] [get_bd_cells system_ila_"<< std::to_string(i) << "]" << endl;
+            }           
+        }
     }
   
     //connect PS to DDR and Fixed IO

@@ -32,7 +32,7 @@ flora::flora(input_to_flora *input_fl)
         cout << "FLORA: num of partitions **** " << num_rm_partitions <<endl;
 #endif
 //        cout << "FLORA: type of FPGA **** " << type <<endl;
-        cout << "FLORA: path for input **** " << flora_input->path_to_input <<endl;
+//        cout << "FLORA: path for input **** " << flora_input->path_to_input <<endl;
     } 
     else {
         cout <<"FLORA: The number of Reconfigurable modules > 0";

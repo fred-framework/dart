@@ -1,6 +1,9 @@
 #include <algorithm>
+#include <yaml-cpp/yaml.h>
+
 #include "flora.h"
 #include "pr_tool.h"
+#include "version.h"
 
 // TODO: BIruk, I dont know if it is the usage for all configurations.
 // If i's not, please extend this procedure for the other usages.
@@ -49,36 +52,51 @@ vector<string> split(const string& text, char delimiter) {
     return stk;
 }
 
+// lets make the configuration file global, against all recommendations
+YAML::Node config;
 
 int main(int argc, char* argv[])
 {
+    //YAML::Node config = YAML::LoadFile("config.yaml");
+
     vector<string> tokens ;
-    if (argc <3){
+    if (argc <2){
         cerr << "ERROR: mandatory arguments are missing\n\n";
         usage();
         exit(1);
     }
 // checking the mandatory arguments
+/*
     if (!has_only_digits(argv[1])){
         cerr << "ERROR: integer expected as the 1st parameter\n\n";
         usage();
         exit(1);
     }
-    fs::path csv_filename(argv[2]);
+    */
+    fs::path csv_filename(argv[1]);
     if (!fs::exists(csv_filename)){
         cerr << "ERROR: CSV file '" << csv_filename.string() << "' not found\n\n";
         usage();
         exit(1);
     }
+    /*
     if (!fs::is_empty(fs::current_path())){
         cerr << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
         exit(1);
     }
-
+*/
+    config = YAML::LoadFile(csv_filename.string().c_str());
+    /*
+    std::cout << "Parsed YAML:\n" << config << "\n";
+    std::cout << "Parsed YAML:\n" << config["flora"] << "\n";
+    std::cout << "Parsed YAML:\n" << config["flora"][0] << "\n";
+    std::cout << "1o IP da part 0: " << config["flora"][0]["ips_list"][0] << "\n";
+    std::cout << "Parsed YAML:\n" << config["flora"][1] << "\n";
+    */
     // checking the optional arguments
-    string static_top_module = "";
-    string static_dcp_file = "";
-    bool use_ila=false;
+    //string static_top_module = "";
+    //string static_dcp_file = "";
+/*
     // the 1st 3 arguments are mandatory. start searching in the 4th argument
     for (int i = 3; i < argc; ++i) {
         string arg = argv[i];
@@ -116,7 +134,7 @@ int main(int argc, char* argv[])
             exit(1);
         }
     }
-
+*/
 // checking DART_HOME enrironment variables
     string dart_path = getEnvVar ("DART_HOME");
     if (dart_path.empty()){
@@ -168,6 +186,7 @@ int main(int argc, char* argv[])
 
 // check vivado enrironment variable used by tools/start_vivado    
     string vivado_path = getEnvVar ("XILINX_VIVADO");
+    Version vivado_version;
     if (vivado_path.empty()){
         cerr << "ERROR: XILINX_VIVADO environment variable is not defined\n\n";
         exit(1);
@@ -197,10 +216,33 @@ int main(int argc, char* argv[])
             exit(1);        
         }
         tokens = split(line_with_vivado_version, ' ');
+        string vivado_version_str;
+        unsigned vivado_major_version,vivado_minor_version;
+        vivado_version_str = tokens[1];
+        // erase the initial v in vivado version name
+        vivado_version_str.erase(0, 1);
+        // including revision and build numbers to make it compatible with the Version class
+        vivado_version_str += ".0.0";
+        // assing the YAML configuration
+        vivado_major_version = atoi(split(vivado_version_str, '.')[0].c_str());
+        vivado_minor_version = atoi(split(vivado_version_str, '.')[1].c_str());
+        config["vivado_version_str"] = vivado_version_str;
+        config["vivado_major_version"] = vivado_major_version;
+        config["vivado_minor_version"] = vivado_minor_version;
+        cout << "YAML \n" << config << "\n"; 
+        // compare vivado versions
+        vivado_version = vivado_version_str;
+        Version min_version("2018.3.0.0");
+        if (vivado_version < min_version){
+            cerr << "WARNING: expecting vivado version '2018.3' or newer but found '" << vivado_version << "'\n";
+            cerr << "unexpected errors might occur with different Vivado versions\n";
+        }
+        /*
         if (! (tokens[1] == "v2019.2" || tokens[1] == "v2018.3")){
             cerr << "WARNING: expecting vivado version 'v2018.3' or 'v2019.2' but found '" << tokens[1] << "'\n";
             cerr << "unexpected errors might occur with different Vivado versions\n";
         }
+        */
     }
     catch (std::system_error & e)
     {
@@ -222,10 +264,10 @@ int main(int argc, char* argv[])
     // the mandatory arguments for flora
     in_flora.num_rm_modules = atol(argv[1]);
     //in_flora.type_of_fpga = (fpga_type) atol(argv[2]);
-    in_flora.path_to_input = argv[2];
+    //in_flora.path_to_input = argv[2];
     // set the optinal arguments
     // TODO: that's BAD. attributes in input_to_flora and input_to_pr are duplicated 
-    in_flora.use_ila = use_ila;
+    //in_flora.use_ila = use_ila;
 
     flora fl(&in_flora);
     fl.clear_vectors();
@@ -240,21 +282,26 @@ int main(int argc, char* argv[])
         pr_input.num_rm_partitions = atol(argv[1]); 
     #endif
         //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
-        pr_input.path_to_input = argv[2];
+        //pr_input.path_to_input = argv[2];
 
         // set the optional arguments for pr
-        pr_input.use_ila = use_ila;
-        pr_input.static_top_module = static_top_module;
-        pr_input.static_dcp_file = static_dcp_file;
+        //pr_input.use_ila = use_ila;
+        //pr_input.static_top_module = static_top_module;
+        //pr_input.static_dcp_file = static_dcp_file;
 
         // where the project will be created
         pr_input.path_to_output = fs::current_path().string();
-        if (tokens[1] == "v2020.2" || tokens[1] == "v2020.1" || tokens[1] == "v2020.3" || tokens[1] == "v2021.1" || tokens[1] == "v2021.2")
+        /*
+        Version min_version2("2020.1.0.0");
+        if (vivado_version > min_version2){
+        //if (tokens[1] == "v2020.2" || tokens[1] == "v2020.1" || tokens[1] == "v2020.3" || tokens[1] == "v2021.1" || tokens[1] == "v2021.2")
             pr_input.vivado_version = 0;
-        else
+        }else{
             pr_input.vivado_version = 1;
+        }
+        */
 
-        pr_tool tool(&pr_input);
+        //pr_tool tool(&pr_input);
 #endif    
     return 0;
 

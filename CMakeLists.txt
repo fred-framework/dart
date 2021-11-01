@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(dart)
+project(dart LANGUAGES CXX)
 
 if(NOT DEFINED ENV{GUROBI_HOME})
     message(FATAL_ERROR "You must set GUROBI_HOME environment variable")
@@ -43,4 +43,4 @@ add_compile_options(-DFPGA_PYNQ -DWITHOUT_PARTITIONING)
 
 add_executable(${CMAKE_PROJECT_NAME} ${SRC_FILES})
 
-target_link_libraries(${CMAKE_PROJECT_NAME} m stdc++fs ${GUROBI_LIBRARY} gurobi_g++5.2 gurobi81 ${YAML_CPP_LIBRARIES})
+target_link_libraries(${CMAKE_PROJECT_NAME} m stdc++fs ${GUROBI_LIBRARY} gurobi_g++5.2 gurobi81 yaml-cpp)

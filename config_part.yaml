@@ -1,0 +1,22 @@
+flora:   
+  num_partitions: 2
+  use_ila: True
+    data_depth: 2048
+  list_ips:
+    - ip_name: "ip1"
+      top_name: "ip1_top"
+      slack_time: 12444
+      wcet: 144
+      buffers: [4096, 2048, 1024]
+    - ip_name: "ip2"
+      top_name: "ip1_top"
+      slack_time: 12223
+      wcet: 122    
+      buffers: [4096, 1024]
+    - ip_name: "ip3"
+      top_name: "ip3_top" 
+      slack_time: 12333
+      wcet: 133
+      buffers: [1024, 1024]
+static_top_module: static_top
+static_dcp_file: ./dcp/static.dcp
