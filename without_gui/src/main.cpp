@@ -301,7 +301,7 @@ int main(int argc, char* argv[])
         }
         */
 
-        //pr_tool tool(&pr_input);
+        pr_tool tool(&pr_input);
 #endif    
     return 0;
 

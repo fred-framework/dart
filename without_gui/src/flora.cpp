@@ -4,8 +4,11 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <yaml-cpp/yaml.h>
 
 using namespace std;
+
+extern YAML::Node config;
 
 flora::flora(input_to_flora *input_fl)
 {
@@ -69,6 +72,7 @@ void flora::prep_input()
     int i , k;
     unsigned int ptr;
     string str;
+    // TODO remove CSV and replace it by YAML
     CSVData csv_data(flora_input->path_to_input);
 
     row = csv_data.rows();

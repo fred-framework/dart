@@ -55,7 +55,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         
         //Instantiate flora
         //flora fl_inst;
-        
+
         //pre-process the design
         prep_input(); 
     	init_dir_struct();
@@ -72,10 +72,10 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         //syntehsize reconfigurable accelerators
         //TODO (amory): this part could be executed in parallel for each IP
         run_vivado(synthesis_script);
-
+ 
         //extract resource consumption of accelerators
         parse_synthesis_report();
- 
+
         //perform floorplanning/partitioning
         fl_inst = new flora(&in_flora);
         fl_inst->clear_vectors();       
@@ -271,12 +271,12 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 
 void pr_tool::generate_fred_files(flora *fl_ptr)
 {
-    int k, i, bitstream_id = 100;
+    int k, i,j, bitstream_id = 100;
     unsigned long partitions;
     std::string str, src, dest;
     // TODO: why these buffer sizes are hardcoded ? why using only 2 buffers ?
-    unsigned long fred_input_buff_size = 1048576;
-    unsigned long fred_output_buff_size = 32768;
+    //unsigned long fred_input_buff_size = 1048576;
+    //unsigned long fred_output_buff_size = 32768;
 
     try {
     
@@ -349,9 +349,24 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
         #else
             /* Create the arch.csv and hw_tasks.csv files for FRED */
             for(k = 0; k < num_rm_partitions; k++) {
-                write_fred_arch << "p"<<k << ", "  << alloc[k].num_hw_tasks_in_part << "\n";
+                //write_fred_arch << "p"<<k << ", "  << alloc[k].num_hw_tasks_in_part << "\n";
+                write_fred_arch << "p"<<k << ", "  << "1\n";
             }
 
+            for(k = 0; k < num_rm_modules; k++) {
+                for(i = 0; i < config["flora"][k]["partition"].size(); i++) {
+                    if (i < alloc[k].num_hw_tasks_in_part) {
+                        //write_fred_hw << rm_list[alloc[k].rm_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
+                        write_fred_hw << config["flora"][k]["partition"][i]["ip_name"].as<string>() <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
+                        bitstream_id++;
+                        for(j = 0; j < config["flora"][k]["partition"][i]["buffers"].size(); j++) {
+                            write_fred_hw << config["flora"][k]["partition"][i]["buffers"][j].as<int>() <<", ";
+                        }
+                        write_fred_hw << "\n";
+                    }
+                }
+            }
+            /*
             for(k = 0; k < num_rm_partitions; k++) {
                 for(i = 0; i < max_modules_in_partition; i++) {
                     if (i < alloc[k].num_hw_tasks_in_part) {
@@ -360,6 +375,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                     }
                 }
             }
+            */
         
             /* Create the FRED bitstream partition directories */
             for(k = 0; k < num_rm_partitions; k++) {
@@ -411,7 +427,7 @@ void pr_tool::prep_input()
         ips += config["flora"][i]["partition"].size();
     } 
 
-    cout << endl << "PR_TOOL: reading inputs " << ips << <<endl;
+    cout << endl << "PR_TOOL: reading inputs " << ips << endl;
     num_rm_modules = ips;
     try {
         for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
@@ -930,7 +946,7 @@ void pr_tool::parse_synthesis_report()
         i//n_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
 #else
         //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv", input_pr->static_top_modul};
-        in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv"};
+        in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv",};
 #endif
 }
 
@@ -1409,15 +1425,20 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
     //TODO: add ila for US 
 #ifdef FPGA_PYNQ
-        write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
-        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
-        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
-        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
-        write_static_tcl << "   connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
-        write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
-        write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
-        write_static_tcl << "}" <<endl;
+        if(config["flora"][i]["debug"]){
+            use_ila = config["flora"][i]["debug"].as<bool>();
+            if (use_ila){
+                //write_static_tcl << "if { $use_ila == 1 } {" <<endl;
+                write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
+                write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
+                write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
+                write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
+                write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+                write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
+                write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
+                //write_static_tcl << "}" <<endl;
+            }/*  */
+        }
 #endif
     }
     
