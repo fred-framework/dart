@@ -68,15 +68,15 @@ void flora::clear_vectors()
 
 void flora::prep_input()
 {
-    unsigned long row, col;
+    //unsigned long row, col;
     int i , k;
     unsigned int ptr;
     string str;
     // TODO remove CSV and replace it by YAML
-    CSVData csv_data(flora_input->path_to_input);
+    //CSVData csv_data(flora_input->path_to_input);
 
-    row = csv_data.rows();
-    col = csv_data.columns();
+    //row = csv_data.rows();
+    //col = csv_data.columns();
 
     cout << endl << "FLORA: resource requirement of the input slots " <<endl;
     cout << "\t clb " << " \t bram " << "\t dsp " <<endl;
@@ -86,6 +86,7 @@ void flora::prep_input()
     for(i = 0, ptr = 0, k = 0; i < num_rm_partitions; i++, ptr++) {
 #endif
         cout << "slot " << i;  
+        /*
         str = csv_data.get_value(i, k++);
         clb_vector[ptr] = std::stoul(str);
 
@@ -94,13 +95,22 @@ void flora::prep_input()
 
         str = csv_data.get_value(i, k++);
         dsp_vector[ptr] = std::stoul(str);
+        */
+       clb_vector[ptr]  = config["flora"][i]["CLBs"].as<int>();
+       bram_vector[ptr] = config["flora"][i]["BRAMs"].as<int>();
+       dsp_vector[ptr]  = config["flora"][i]["DSPs"].as<int>();
+
 
 #ifdef WITH_PARTITIONING
+        /*
         str = csv_data.get_value(i, k++);
         HW_WCET[ptr] = std::stod(str);
 
         str = csv_data.get_value(i, k++);
-        slacks[ptr] = std::stod(str);     
+        slacks[ptr] = std::stod(str);  
+        */  
+        HW_WCET[ptr] = config["flora"][i]["WCET"].as<int>();
+        slacks[ptr]  = config["flora"][i]["slack"].as<int>();
 #endif
 //        cell_name[i] = csv_data.get_value(i, k++);
         k = 0;

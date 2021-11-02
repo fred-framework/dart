@@ -353,14 +353,19 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                 write_fred_arch << "p"<<k << ", "  << "1\n";
             }
 
-            for(k = 0; k < num_rm_modules; k++) {
+            int n_buffers=0;
+            for(k = 0; k < num_rm_partitions; k++) {
                 for(i = 0; i < config["flora"][k]["partition"].size(); i++) {
                     if (i < alloc[k].num_hw_tasks_in_part) {
                         //write_fred_hw << rm_list[alloc[k].rm_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
                         write_fred_hw << config["flora"][k]["partition"][i]["ip_name"].as<string>() <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
                         bitstream_id++;
-                        for(j = 0; j < config["flora"][k]["partition"][i]["buffers"].size(); j++) {
-                            write_fred_hw << config["flora"][k]["partition"][i]["buffers"][j].as<int>() <<", ";
+                        n_buffers = config["flora"][k]["partition"][i]["buffers"].size();
+                        for(j = 0; j < n_buffers; j++) {
+                            write_fred_hw << config["flora"][k]["partition"][i]["buffers"][j].as<int>();
+                            if (j < (n_buffers-1)){
+                                write_fred_hw << ", ";
+                            }
                         }
                         write_fred_hw << "\n";
                     }
@@ -385,10 +390,13 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
 
             /* Copy the partial bitstreams */
             for(k = 0; k < num_rm_partitions; k++) {
-                for(i = 0; i < max_modules_in_partition; i++) {
+                //for(i = 0; i < max_modules_in_partition; i++) {
+                for(i = 0; i < config["flora"][k]["partition"].size(); i++) {
                     if (i < alloc[k].num_hw_tasks_in_part) {
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
-                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
+                        //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
+                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["flora"][k]["partition"][i]["ip_name"].as<string>() + "_s0.bin";
+                        
                         fs::copy(src, dest);
                     }
                 }
@@ -780,7 +788,7 @@ void pr_tool::parse_synthesis_report()
 #endif    
     string dsp = "DSPs";
     string bram = "Block RAM Tile    |";
-    vector<slot> extracted_res = vector<slot>(num_rm_modules);
+    //vector<slot> extracted_res = vector<slot>(num_rm_modules);
    
     cout << "PR_TOOL: Parsing Synth utilization report "  <<endl;
     
@@ -843,17 +851,23 @@ void pr_tool::parse_synthesis_report()
         max_clb = 0;
         max_bram = 0;
         max_dsp = 0;
-        for(i = 0; i < num_rm_modules; i++) {
+        for(i = 0; i < config["flora"][j]["partition"].size(); i++) {
+        //for(i = 0; i < num_rm_modules; i++) {
             string line, word;
 
-            if(rm_list[i].partition_id == j) {
-                k = 0;
+            //if(rm_list[i].partition_id == j) {
+                //k = 0;
+                //config["flora"][k]["partition"][i]["ip_name"].as<string>()
 
-                cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt" <<endl;
+                //cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+                //              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt" <<endl;
+                cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + config["flora"][j]["partition"][i]["ip_name"].as<string>() + "/" + 
+                              wrapper_top_name + "_" + to_string(j) + "_utilization_synth.rpt" <<endl;
 
-                ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt");
+                //ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+                //              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt");
+                ifstream file (Project_dir + "/Synth/" + config["flora"][j]["partition"][i]["ip_name"].as<string>() + "/" + 
+                              wrapper_top_name + "_" + to_string(j) + "_utilization_synth.rpt");
 
                 while (getline(file, line)) {
                     if(line.find(lut) != string::npos) {
@@ -906,39 +920,53 @@ void pr_tool::parse_synthesis_report()
                         k = 0;
                     }
                 }
-            }
+            //}
         }
-        
+        /*
         extracted_res[j].clb = max_clb;
         extracted_res[j].bram = max_bram;
         extracted_res[j].dsp = max_dsp;
-    
+        */
+        config["flora"][j]["CLBs"] = max_clb;
+        config["flora"][j]["BRAMs"] = max_bram;
+        config["flora"][j]["DSPs"] = max_dsp;
     }
 
 #endif    
     ofstream write_flora_input;
         write_flora_input.open(Project_dir +"/flora_input.csv");
+        int brams, dsps;
 #ifdef WITH_PARTITIONING         
         for(i = 0; i < num_rm_modules; i++){
 #else
         for(i = 0; i < num_rm_partitions; i++){
 #endif
-            write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<"," ; 
-        
-            if(extracted_res[i].bram > 0)
-                write_flora_input << extracted_res[i].bram + BRAM_MARGIN <<",";
-            else
-                write_flora_input << extracted_res[i].bram << "," ;
 
-            if(extracted_res[i].dsp > 0)
-                write_flora_input << extracted_res[i].dsp + DSP_MARGIN <<"," ;
+            //write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<"," ; 
+            write_flora_input << config["flora"][i]["CLBs"].as<int>() + CLB_MARGIN <<"," ; 
+        
+            brams = config["flora"][i]["BRAMs"].as<int>();
+            if(brams > 0)
+                //write_flora_input << extracted_res[i].bram + BRAM_MARGIN <<",";
+                write_flora_input << brams + BRAM_MARGIN <<",";
             else
-                write_flora_input << extracted_res[i].dsp <<"," ;
+                //write_flora_input << extracted_res[i].bram << "," ;
+                write_flora_input << brams << "," ;
+
+            dsps = config["flora"][i]["DSPs"].as<int>();
+            if(dsps > 0)
+                //write_flora_input << extracted_res[i].dsp + DSP_MARGIN <<"," ;
+                write_flora_input << dsps + DSP_MARGIN <<"," ;
+            else
+                //write_flora_input << extracted_res[i].dsp <<"," ;
+                write_flora_input << dsps <<"," ;
 
 #ifdef WITH_PARTITIONING
-            write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
+            //write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
+            write_flora_input << HW_WCET[i] << "," <<slacks[i]  ;
 #endif
-            write_flora_input << rm_list[i].rm_tag <<endl;
+            //write_flora_input << rm_list[i].rm_tag <<endl;
+            write_flora_input <<endl;
         }
         
         write_flora_input.close();        
@@ -946,7 +974,9 @@ void pr_tool::parse_synthesis_report()
         i//n_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
 #else
         //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv", input_pr->static_top_modul};
-        in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv",};
+        // TODO: replace this CSV by YAML
+        //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv",};
+        in_flora = {num_rm_partitions};
 #endif
 }
 

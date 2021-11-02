@@ -64,7 +64,7 @@ typedef struct{
     unsigned long num_rm_partitions;
 #endif
 //    fpga_type type_of_fpga;
-    std::string path_to_input;
+    //std::string path_to_input;
     //std::string static_top_module;
 }input_to_flora;
 
