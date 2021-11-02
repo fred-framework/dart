@@ -13,12 +13,17 @@ extern YAML::Node config;
 //flora::flora(input_to_flora *input_fl)
 flora::flora()
 {
-
+    int i;
     //flora_input = input_fl;
 
 #ifdef WITH_PARTITIONING
+/*
     if(flora_input->num_rm_modules > 0) {
         num_rm_modules = flora_input->num_rm_modules;
+*/
+    // count the number of IPs in all partitions
+    num_rm_modules = config["flora"]["list_ips"].size();    
+    cout << endl << "PR_TOOL: reading inputs " << num_rm_modules << endl;
 #else
 /*
     if(flora_input->num_rm_partitions > 0) {
@@ -73,9 +78,9 @@ void flora::clear_vectors()
 void flora::prep_input()
 {
     //unsigned long row, col;
-    int i , k;
-    unsigned int ptr;
-    string str;
+    int i, clbs, brams, dsps;
+    //unsigned int ptr;
+    //string str;
     // TODO remove CSV and replace it by YAML
     //CSVData csv_data(flora_input->path_to_input);
 
@@ -85,9 +90,15 @@ void flora::prep_input()
     cout << endl << "FLORA: resource requirement of the input slots " <<endl;
     cout << "\t clb " << " \t bram " << "\t dsp " <<endl;
 #ifdef WITH_PARTITIONING 
-    for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
+    for(i = 0; i < num_rm_modules; i++) {
+       clbs  = config["flora"]["list_ips"][i]["CLBs"].as<int>();
+       brams = config["flora"]["list_ips"][i]["BRAMs"].as<int>();
+       dsps  = config["flora"]["list_ips"][i]["DSPs"].as<int>();
 #else    
-    for(i = 0, ptr = 0, k = 0; i < num_rm_partitions; i++, ptr++) {
+    for(i = 0; i < num_rm_partitions; i++) {
+       clbs  = config["flora"][i]["CLBs"].as<int>();
+       brams = config["flora"][i]["BRAMs"].as<int>();
+       dsps  = config["flora"][i]["DSPs"].as<int>();
 #endif
         cout << "slot " << i;  
         /*
@@ -100,9 +111,9 @@ void flora::prep_input()
         str = csv_data.get_value(i, k++);
         dsp_vector[ptr] = std::stoul(str);
         */
-       clb_vector[ptr]  = config["flora"][i]["CLBs"].as<int>();
-       bram_vector[ptr] = config["flora"][i]["BRAMs"].as<int>();
-       dsp_vector[ptr]  = config["flora"][i]["DSPs"].as<int>();
+       clb_vector[i]  = clbs;
+       bram_vector[i] = brams;
+       dsp_vector[i]  = dsps;
 
 
 #ifdef WITH_PARTITIONING
@@ -113,14 +124,14 @@ void flora::prep_input()
         str = csv_data.get_value(i, k++);
         slacks[ptr] = std::stod(str);  
         */  
-        HW_WCET[ptr] = config["flora"][i]["WCET"].as<int>();
-        slacks[ptr]  = config["flora"][i]["slack"].as<int>();
+        HW_WCET[i] = config["flora"][i]["WCET"].as<int>();
+        slacks[i]  = config["flora"][i]["slack"].as<int>();
 #endif
 //        cell_name[i] = csv_data.get_value(i, k++);
-        k = 0;
+//        k = 0;
 
-        cout << "\t " << clb_vector[ptr] << "\t " << bram_vector[ptr] << "\t " 
-             << dsp_vector[ptr] << endl;
+        cout << "\t " << clb_vector[i] << "\t " << bram_vector[i] << "\t " 
+             << dsp_vector[i] << endl;
     }
 }
 

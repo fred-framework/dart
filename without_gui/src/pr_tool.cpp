@@ -15,13 +15,17 @@ extern YAML::Node config;
 
 pr_tool::pr_tool(input_to_pr *pr_input) 
 {
+    int i;
     input_pr = pr_input; 
     dart_path = getenv("DART_HOME");
     std::cout << "PR_TOOL: Starting PR_tool " <<endl;
 
 #ifdef WITH_PARTITIONING
-    if(input_pr->num_rm_modules > 0){
-        num_rm_modules = pr_input->num_rm_modules;
+    //if(input_pr->num_rm_modules > 0){
+    //    num_rm_modules = pr_input->num_rm_modules;
+    // count the number of IPs in all partitions
+    num_rm_modules = config["flora"]["list_ips"].size();    
+    cout << endl << "PR_TOOL: reading inputs " << num_rm_modules << endl;
 #else
     //if(input_pr->num_rm_partitions > 0){
         //num_rm_partitions = pr_input->num_rm_partitions;
@@ -310,16 +314,29 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
         write_fred_hw << "# partition named \"ex_partition\", whose bitstreams are located in \n ";
         write_fred_hw << "# the \"/bits\" folder, and uses three input/output buffers of size 1024 bytes. \n \n ";
 
+        int n_buffers=0;
         #ifdef WITH_PARTITIONING
             for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
-                write_fred_arch << "p"<<k << ", "  << fl_ptr->alloc[k].num_hw_tasks_in_part << "\n";
+                //write_fred_arch << "p"<<k << ", "  << fl_ptr->alloc[k].num_hw_tasks_in_part << "\n";
+                write_fred_arch << "p"<<k << ", "  << "1\n";
             }
 
+            int ip_id;
             for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
                 for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
                     if (i < fl_ptr->alloc[k].num_hw_tasks_in_part) {
-                        write_fred_hw << rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                        //write_fred_hw << rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                        ip_id = fl_ptr->alloc[k].task_id[i];
+                        write_fred_hw << config["flora"]["list_ips"][ip_id]["ip_name"].as<string>() <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
                         bitstream_id++;
+                        n_buffers = config["flora"]["list_ips"][ip_id]["buffers"].size();
+                        for(j = 0; j < n_buffers; j++) {
+                            write_fred_hw << config["flora"]["list_ips"][ip_id]["buffers"][j].as<int>();
+                            if (j < (n_buffers-1)){
+                                write_fred_hw << ", ";
+                            }
+                        }
+                        write_fred_hw << "\n";
                     }
                 }
             }
@@ -335,7 +352,9 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                 for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
                     if (i <  fl_ptr->alloc[k].num_hw_tasks_in_part) {
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin";
-                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
+                        //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
+                        ip_id = fl_ptr->alloc[k].task_id[i];
+                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["flora"]["list_ips"][ip_id]["ip_name"].as<string>() + "_s0.bin";
                         fs::copy(src, dest);
                     }
                 }
@@ -354,7 +373,6 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                 write_fred_arch << "p"<<k << ", "  << "1\n";
             }
 
-            int n_buffers=0;
             for(k = 0; k < num_rm_partitions; k++) {
                 for(i = 0; i < config["flora"][k]["partition"].size(); i++) {
                     if (i < alloc[k].num_hw_tasks_in_part) {
@@ -429,39 +447,34 @@ void pr_tool::prep_input()
 
     //row = csv_data.rows();
     //col = csv_data.columns();
-
-    // count the number of IPs in all partitions
-    int ips=0;
-    for (i=0;i<config["flora"].size();i++) {
-        ips += config["flora"][i]["partition"].size();
-    } 
-
-    cout << endl << "PR_TOOL: reading inputs " << ips << endl;
-    num_rm_modules = ips;
     try {
-        for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
-            for(j = 0; j < config["flora"][i]["partition"].size(); j++) {
 
 #ifdef WITH_PARTITIONING
-                str = csv_data.get_value(i, k++);
-                HW_WCET.push_back(std::stod(str));
-                str = csv_data.get_value(i, k++);
-                slacks.push_back(std::stod(str));
+        for(i = 0; i < num_rm_modules; i++) {
+            //str = csv_data.get_value(i, k++);
+            //HW_WCET.push_back(std::stod(str));
+            HW_WCET.push_back(config["flora"]["list_ips"][i]["wcet"].as<int>());
+            //str = csv_data.get_value(i, k++);
+            //slacks.push_back(std::stod(str));
+            slacks.push_back(config["flora"]["list_ips"][i]["slack"].as<int>());
+        }
 #else
+        for(i = 0, ptr = 0, k = 0; i < num_rm_partitions; i++, ptr++) {
+            for(j = 0; j < config["flora"][i]["partition"].size(); j++) {
                 //str = csv_data.get_value(i, k++);
                 //rm.partition_id = std::stoi(str);
                 rm.partition_id = i;
-#endif
                 //rm.rm_tag = csv_data.get_value(i, k++);
                 rm.rm_tag = config["flora"][i]["partition"][j]["ip_name"].as<std::string>();
                 //rm.source_path = csv_data.get_value(i, k++);
                 //rm.top_module = csv_data.get_value(i, k++);
                 rm.top_module = config["flora"][i]["partition"][j]["top_name"].as<std::string>();
-                
                 rm_list.push_back(rm);
                 k = 0;
             }
         }
+#endif
+
     }
     catch (std::invalid_argument & e)
     {
@@ -787,67 +800,72 @@ void pr_tool::parse_synthesis_report()
 #else
     string lut = "Slice LUTs*";
 #endif    
-    string dsp = "DSPs";
-    string bram = "Block RAM Tile    |";
+    string dsp_str = "DSPs";
+    string bram_str = "Block RAM Tile    |";
     //vector<slot> extracted_res = vector<slot>(num_rm_modules);
    
     cout << "PR_TOOL: Parsing Synth utilization report "  <<endl;
     
 #ifdef WITH_PARTITIONING
+    unsigned long clb, bram, dsp;    
     for(i = 0; i < num_rm_modules; i++) {
         string line, word;
-        cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                      rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
+        //cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+        //              rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
+        cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + config["flora"]["list_ips"][i]["ip_name"].as<std::string>() + "/" + 
+                      config["flora"]["list_ips"][i]["top_name"].as<std::string>() + "_utilization_synth.rpt" <<endl;
 
-        ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                      rm_list[i].top_module + "_utilization_synth.rpt");
+        //ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+        //              rm_list[i].top_module + "_utilization_synth.rpt");
+        ifstream file (Project_dir + "/Synth/" + config["flora"]["list_ips"][i]["ip_name"].as<std::string>() + "/" + 
+                      config["flora"]["list_ips"][i]["top_name"].as<std::string>() + "_utilization_synth.rpt");
 
         while (getline(file, line)) {
             if(line.find(lut) != string::npos) {
                 stringstream iss(line);
-
                 while(iss >> word) {
                     k++;
                     if(k == 5){
-                        extracted_res[i].clb= (unsigned long)((std::stoul(word) / 8));
-                        cout << " clb " <<  extracted_res[i].clb <<endl;
+                        //extracted_res[i].clb= (unsigned long)((std::stoul(word) / 8));
+                        clb = (unsigned long)((std::stoul(word) / 8));
+                        config["flora"]["list_ips"][i]["CLBs"] = clb;
+                        cout << " clb " << clb <<endl;
                     }
                 }
                 k = 0;
             }
 
-            if(line.find(bram) != string::npos) {
+            if(line.find(bram_str) != string::npos) {
                 stringstream iss(line);
-
                 while(iss >> word) {
                     k++;
-
                     if(k == 6) {
-                        extracted_res[i].bram = std::stoul(word); 
-                        cout <<" bram " <<  extracted_res[i].bram <<endl;
+                        //extracted_res[i].bram = std::stoul(word);
+                        bram = std::stoul(word);
+                        config["flora"]["list_ips"][i]["BRAMs"] = bram;
+                        cout <<" bram " <<  bram <<endl;
                     }
                 }
                 k = 0;
             }
 
-            if(line.find(dsp) != string::npos){
+            if(line.find(dsp_str) != string::npos){
                 stringstream iss(line);
-
                 while(iss >> word) {
                     k++;
-
                     if(k == 4){
-                        extracted_res[i].dsp = std::stoul(word);
-                        cout << " dsp " <<  extracted_res[i].dsp <<endl;
+                        //extracted_res[i].dsp = std::stoul(word);
+                        dsp = std::stoul(word);
+                        config["flora"]["list_ips"][i]["DSPs"] = bram;
+                        cout << " dsp " <<  dsp <<endl;
                     }
                 }
                 k = 0;
             }
         }
     }
-
 #else
-    unsigned long max_clb, max_bram, max_dsp;    
+    unsigned long max_clb, max_bram, max_dsp;
     for(j = 0; j < num_rm_partitions; j++) {
         max_clb = 0;
         max_bram = 0;
@@ -873,48 +891,40 @@ void pr_tool::parse_synthesis_report()
                 while (getline(file, line)) {
                     if(line.find(lut) != string::npos) {
                         stringstream iss(line);
-                        
                         while(iss >> word) {
                             k++;
                             if(k == 5){
                                 if(max_clb < (std::stoul(word) / 8))
                                     max_clb = ((std::stoul(word) / 8));
-
                                  cout << " LUTs " <<  word <<endl; 
                             }
                         }
                         k = 0;
                     }
 
-                    if(line.find(bram) != string::npos) {
+                    if(line.find(bram_str) != string::npos) {
                         stringstream iss(line);
-
                         while(iss >> word) {
                             k++;
-
                             if(k == 6) {
                                 if(stod(word) > 0.0 && max_bram <  (std::stoul(word) + 1))
                                     //if(max_bram <  (std::stoul(word) + 1))
                                         max_bram = std::stoul(word) + 1;
                                  else if (max_bram <  (std::stoul(word)))
                                     max_bram = std::stoul(word);
-                                
                                 cout <<" BRAM " <<  word <<endl;
                             }
                         }
                         k = 0;
                     }
 
-                    if(line.find(dsp) != string::npos){
+                    if(line.find(dsp_str) != string::npos){
                         stringstream iss(line);
-
                         while(iss >> word) {
                             k++;
-
                             if(k == 4){
                                 if(max_dsp < std::stoul(word))
                                     max_dsp = std::stoul(word);
-                                    
                                 cout << " DSP " <<  word <<endl;
                             }
                         }
@@ -935,50 +945,55 @@ void pr_tool::parse_synthesis_report()
 
 #endif    
     ofstream write_flora_input;
-        write_flora_input.open(Project_dir +"/flora_input.csv");
-        int brams, dsps;
+    write_flora_input.open(Project_dir +"/flora_input.csv");
+    int clbs, brams, dsps;
 #ifdef WITH_PARTITIONING         
-        for(i = 0; i < num_rm_modules; i++){
+    for(i = 0; i < num_rm_modules; i++){
+        clbs = config["flora"]["list_ips"][i]["CLBs"].as<int>();
+        brams = config["flora"]["list_ips"][i]["BRAMs"].as<int>();
+        dsps = config["flora"]["list_ips"][i]["DSPs"].as<int>();
 #else
-        for(i = 0; i < num_rm_partitions; i++){
+    for(i = 0; i < num_rm_partitions; i++){
+        clbs = config["flora"][i]["CLBs"].as<int>();
+        brams = config["flora"][i]["BRAMs"].as<int>();
+        dsps = config["flora"][i]["DSPs"].as<int>();
 #endif
-
-            //write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<"," ; 
-            write_flora_input << config["flora"][i]["CLBs"].as<int>() + CLB_MARGIN <<"," ; 
+        //write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<"," ; 
+        write_flora_input << clbs + CLB_MARGIN <<"," ; 
         
-            brams = config["flora"][i]["BRAMs"].as<int>();
-            if(brams > 0)
-                //write_flora_input << extracted_res[i].bram + BRAM_MARGIN <<",";
-                write_flora_input << brams + BRAM_MARGIN <<",";
-            else
-                //write_flora_input << extracted_res[i].bram << "," ;
-                write_flora_input << brams << "," ;
+        if(brams > 0)
+            //write_flora_input << extracted_res[i].bram + BRAM_MARGIN <<",";
+            write_flora_input << brams + BRAM_MARGIN <<",";
+        else
+            //write_flora_input << extracted_res[i].bram << "," ;
+            write_flora_input << brams << "," ;
 
-            dsps = config["flora"][i]["DSPs"].as<int>();
-            if(dsps > 0)
-                //write_flora_input << extracted_res[i].dsp + DSP_MARGIN <<"," ;
-                write_flora_input << dsps + DSP_MARGIN <<"," ;
-            else
-                //write_flora_input << extracted_res[i].dsp <<"," ;
-                write_flora_input << dsps <<"," ;
+        if(dsps > 0)
+            //write_flora_input << extracted_res[i].dsp + DSP_MARGIN <<"," ;
+            write_flora_input << dsps + DSP_MARGIN <<"," ;
+        else
+            //write_flora_input << extracted_res[i].dsp <<"," ;
+            write_flora_input << dsps <<"," ;
 
 #ifdef WITH_PARTITIONING
-            //write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
-            write_flora_input << HW_WCET[i] << "," <<slacks[i]  ;
+        //write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
+        write_flora_input << HW_WCET[i] << "," <<slacks[i]  ;
 #endif
-            //write_flora_input << rm_list[i].rm_tag <<endl;
-            write_flora_input <<endl;
-        }
+        //write_flora_input << rm_list[i].rm_tag <<endl;
+        write_flora_input <<endl;
+    }
         
-        write_flora_input.close();        
+        write_flora_input.close();
+/*
 #ifdef WITH_PARTITIONING 
         in_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
 #else
         //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv", input_pr->static_top_modul};
-        // TODO: replace this CSV by YAML
+        //TODO: replace this CSV by YAML
         //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv",};
-        //in_flora = {num_rm_partitions};
+        in_flora = {num_rm_partitions};
 #endif
+*/
 }
 
 void pr_tool::generate_impl_tcl(flora *fl_ptr)

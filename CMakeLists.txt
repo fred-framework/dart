@@ -1,13 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(dart LANGUAGES CXX)
 
-if(NOT DEFINED ENV{GUROBI_HOME})
-    message(FATAL_ERROR "You must set GUROBI_HOME environment variable")
-endif()
-
-# add additional cmake definitions
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/")
-
+##############
+# basic definitions
+##############
 # compilation parameters
 add_compile_options(-std=c++17 -Wno-unused-result)
 
@@ -20,6 +16,16 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 include_directories(${CMAKE_SOURCE_DIR}/include 
     ${CMAKE_SOURCE_DIR}/without_gui/include/
 )
+
+##############
+# check dependencies
+##############
+if(NOT DEFINED ENV{GUROBI_HOME})
+    message(FATAL_ERROR "You must set GUROBI_HOME environment variable")
+endif()
+
+# add additional cmake definitions
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/")
 
 # Gurobi add_dependency. It must be version 8.1 !
 # It will find Gurobi based on GUROBI_HOME
@@ -55,6 +61,13 @@ if (NOT ${PARTITIONING_MODE})
     add_compile_options(-DWITHOUT_PARTITIONING)
     list(APPEND SRC_FILES
         without_gui/src/pr_tool.cpp
+        without_gui/src/flora.cpp
+    )
+else()
+    add_compile_options(-DWITH_PARTITIONING)
+    list(APPEND SRC_FILES
+        without_gui/src/pr_tool.cpp
+        src/partition.cpp
         without_gui/src/flora.cpp
     )
 endif()
@@ -120,9 +133,9 @@ else()
     message(FATAL_ERROR "FPGA '${FPGA}' not suported!")
 endif()
 
-
-add_compile_options(-DFPGA_PYNQ)
-
 add_executable(${CMAKE_PROJECT_NAME} ${SRC_FILES})
 
+##############
+# set libs
+##############
 target_link_libraries(${CMAKE_PROJECT_NAME} m stdc++fs ${GUROBI_LIBRARY} gurobi_g++5.2 gurobi81 yaml-cpp)
