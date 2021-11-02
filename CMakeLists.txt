@@ -31,15 +31,42 @@ find_package(YAML-CPP REQUIRED
     HINTS /usr/local/share/cmake)
 include_directories(${YAML_CPP_INCLUDE_DIRS})
 
-set (SRC_FILES without_gui/src/pr_tool.cpp
-    without_gui/src/flora.cpp
+##############
+# configurable parameters
+##############
+option(PARTITIONING_MODE "Enables partitioning mode" OFF)
+message(STATUS "Partitioning mode: '${PARTITIONING_MODE}'")
+
+set(FPGA "pynq" CACHE STRING
+  "FPGA board chosen for DART")
+set(FPGAValues "pynq;zynq;us;us_96" CACHE STRING
+  "List of possible FPGAs supported by DART")
+set_property(CACHE FPGA PROPERTY STRINGS ${FPGAValues})
+message(STATUS "Supported FPGA: '${FPGA}'")
+
+##############
+# determining the source files to be compiled based on the configurable parameters
+##############
+set (SRC_FILES )
+if (NOT ${PARTITIONING_MODE})
+    message(STATUS "Part: OFF")
+    add_compile_options(-DWITHOUT_PARTITIONING)
+    list(APPEND SRC_FILES
+        without_gui/src/pr_tool.cpp
+        without_gui/src/flora.cpp
+    )
+endif()
+
+list(APPEND SRC_FILES
     src/milp_model_pynq.cpp
     src/csv_data_manipulator.cpp
     without_gui/src/main.cpp
     src/pynq.cpp
-    src/pynq_fine_grained.cpp)
+    src/pynq_fine_grained.cpp
+)
 
-add_compile_options(-DFPGA_PYNQ -DWITHOUT_PARTITIONING)
+
+add_compile_options(-DFPGA_PYNQ)
 
 add_executable(${CMAKE_PROJECT_NAME} ${SRC_FILES})
 
