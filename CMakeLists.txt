@@ -47,9 +47,11 @@ message(STATUS "Supported FPGA: '${FPGA}'")
 ##############
 # determining the source files to be compiled based on the configurable parameters
 ##############
-set (SRC_FILES )
+set (SRC_FILES
+#    src/csv_data_manipulator.cpp
+    without_gui/src/main.cpp
+)
 if (NOT ${PARTITIONING_MODE})
-    message(STATUS "Part: OFF")
     add_compile_options(-DWITHOUT_PARTITIONING)
     list(APPEND SRC_FILES
         without_gui/src/pr_tool.cpp
@@ -57,13 +59,66 @@ if (NOT ${PARTITIONING_MODE})
     )
 endif()
 
-list(APPEND SRC_FILES
-    src/milp_model_pynq.cpp
-    src/csv_data_manipulator.cpp
-    without_gui/src/main.cpp
-    src/pynq.cpp
-    src/pynq_fine_grained.cpp
-)
+# set source and definitions based on the fpga model
+if (${FPGA} STREQUAL "pynq")
+    add_compile_options(-DFPGA_PYNQ)
+    list(APPEND SRC_FILES
+        src/pynq.cpp
+        src/pynq_fine_grained.cpp
+    )
+    if (${PARTITIONING_MODE})
+        list(APPEND SRC_FILES
+            src/milp_model_pynq_with_partition.cpp
+        )
+    else()
+        list(APPEND SRC_FILES
+            src/milp_model_pynq.cpp
+        )
+    endif()
+elseif(${FPGA} STREQUAL "zynq")
+    add_compile_options(-DFPGA_ZYNQ)
+    list(APPEND SRC_FILES
+        src/zynq.cpp 
+        src/zynq_fine_grained.cpp    
+    )
+    if (${PARTITIONING_MODE})
+        list(APPEND SRC_FILES
+            src/milp_model_zynq_with_partition.cpp
+        )
+    else()
+        list(APPEND SRC_FILES
+            src/milp_model_zynq.cpp
+        )
+    endif()
+elseif(${FPGA} STREQUAL "us")
+    add_compile_options(-DFPGA_US)
+    list(APPEND SRC_FILES
+        src/us.cpp
+        src/us_fine_grained.cpp
+    )
+    if (${PARTITIONING_MODE})
+        message(FATAL_ERROR "FPGA '${FPGA}' not implemented in partitioning mode!")
+    else()
+        list(APPEND SRC_FILES
+            src/milp_model_us.cpp
+        )
+    endif()
+elseif(${FPGA} STREQUAL "us_96")
+    add_compile_options(-DFPGA_US96)
+    list(APPEND SRC_FILES
+        src/us_96.cpp
+        src/us_96_fine_grained.cpp
+    )
+    if (${PARTITIONING_MODE})
+        message(FATAL_ERROR "FPGA '${FPGA}' not implemented in partitioning mode!")
+    else()
+        list(APPEND SRC_FILES
+            src/milp_model_us_96.cpp
+        )
+    endif()
+else()
+    message(FATAL_ERROR "FPGA '${FPGA}' not suported!")
+endif()
 
 
 add_compile_options(-DFPGA_PYNQ)
