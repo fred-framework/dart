@@ -128,7 +128,7 @@ public:
     std::string fred_dir;
     //pointer to an instance of flora
     flora *fl_inst = NULL;
-    input_to_flora in_flora;
+    //input_to_flora in_flora;
 
 #ifdef WITH_PARTITIONING
     vector<double> slacks ;

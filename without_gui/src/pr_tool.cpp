@@ -77,7 +77,8 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         parse_synthesis_report();
 
         //perform floorplanning/partitioning
-        fl_inst = new flora(&in_flora);
+        //fl_inst = new flora(&in_flora);
+        fl_inst = new flora();
         fl_inst->clear_vectors();       
         fl_inst->prep_input();
         fl_inst->start_optimizer();
@@ -971,12 +972,12 @@ void pr_tool::parse_synthesis_report()
         
         write_flora_input.close();        
 #ifdef WITH_PARTITIONING 
-        i//n_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
+        in_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
 #else
         //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv", input_pr->static_top_modul};
         // TODO: replace this CSV by YAML
         //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv",};
-        in_flora = {num_rm_partitions};
+        //in_flora = {num_rm_partitions};
 #endif
 }
 

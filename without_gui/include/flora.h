@@ -60,8 +60,8 @@ typedef struct{
 typedef struct{
 #ifdef WITH_PARTITIONING
     unsigned long num_rm_modules;
-#else
-    unsigned long num_rm_partitions;
+//#else
+//    unsigned long num_rm_partitions;
 #endif
 //    fpga_type type_of_fpga;
     //std::string path_to_input;
@@ -74,7 +74,8 @@ class flora
 {
 
 public:
-    explicit flora(input_to_flora*);
+    //explicit flora(input_to_flora*);
+    explicit flora();
     ~flora();
 
 #ifdef FPGA_ZYNQ
@@ -129,7 +130,7 @@ public:
                                                   unsigned long n_min,
                                                   unsigned long n_max);
     // POSSIBLE BUG (AMORY): this part is not set when WITH_PARTITIONING, so this would be empty
-    input_to_flora *flora_input;
+    //input_to_flora *flora_input;
     param_to_solver param;
     param_from_solver from_solver = {0, 0, &eng_x, &eng_y,
                                     &eng_w, &eng_h,

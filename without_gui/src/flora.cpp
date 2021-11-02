@@ -10,17 +10,21 @@ using namespace std;
 
 extern YAML::Node config;
 
-flora::flora(input_to_flora *input_fl)
+//flora::flora(input_to_flora *input_fl)
+flora::flora()
 {
 
-    flora_input = input_fl;
+    //flora_input = input_fl;
 
 #ifdef WITH_PARTITIONING
     if(flora_input->num_rm_modules > 0) {
         num_rm_modules = flora_input->num_rm_modules;
 #else
+/*
     if(flora_input->num_rm_partitions > 0) {
         num_rm_partitions = flora_input->num_rm_partitions;
+*/
+    num_rm_partitions = config["flora"].size();
 #endif
 //        type = flora_input->type_of_fpga; 
 
@@ -36,11 +40,11 @@ flora::flora(input_to_flora *input_fl)
 #endif
 //        cout << "FLORA: type of FPGA **** " << type <<endl;
 //        cout << "FLORA: path for input **** " << flora_input->path_to_input <<endl;
-    } 
-    else {
-        cout <<"FLORA: The number of Reconfigurable modules > 0";
-        exit(-1);
-    }
+    // } 
+    // else {
+    //     cout <<"FLORA: The number of Reconfigurable modules > 0";
+    //     exit(-1);
+    // }
 }
 
 flora::~flora()
