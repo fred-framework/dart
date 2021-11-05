@@ -85,7 +85,15 @@ int main(int argc, char* argv[])
         exit(1);
     }
 */
-    config = YAML::LoadFile(csv_filename.string().c_str());
+    try{
+        config = YAML::LoadFile(csv_filename.string().c_str());
+    }
+    catch (YAML::ParserException & e)
+    {
+        cerr << "Exception :: " << e.what() << endl;
+        cerr << "ERROR: Syntax error in the YAML " << csv_filename << endl;
+        exit(EXIT_FAILURE);
+    }
     /*
     std::cout << "Parsed YAML:\n" << config << "\n";
     std::cout << "Parsed YAML:\n" << config["flora"] << "\n";

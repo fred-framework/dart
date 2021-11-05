@@ -75,8 +75,9 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         //syntehsize reconfigurable accelerators
         //TODO (amory): this part could be executed in parallel for each IP
-        if (!config["flora"]["skip_ip_synthesis"] || !config["flora"]["skip_ip_synthesis"].as<bool>())
+        if (!config["skip_ip_synthesis"] || !config["skip_ip_synthesis"].as<bool>()){
             run_vivado(synthesis_script);
+        }
  
         //extract resource consumption of accelerators
         parse_synthesis_report();
@@ -99,7 +100,9 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         generate_static_part(fl_inst);
 
         //synthesize static part
-        synthesize_static();
+        if (!config["skip_static_synthesis"] || !config["skip_static_synthesis"].as<bool>()){
+            synthesize_static();
+        }
 
 #ifdef WITH_PARTITIONING
         //re_synthesis_after_wrap = 1;
@@ -356,12 +359,18 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                         //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
                         ip_id = fl_ptr->alloc[k].task_id[i];
                         dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["flora"]["list_ips"][ip_id]["ip_name"].as<string>() + "_s0.bin";
+                        if (fs::exists(fs::path(dest))){
+                            fs::remove(fs::path(dest));
+                        }
                         fs::copy(src, dest);
                     }
                 }
             }
 
             /*Copy one of the static bitstreams to FRED*/
+            if (fs::exists(fs::path("fred/dart_fred/bits/static.bin"))){
+                fs::remove(fs::path("fred/dart_fred/bits/static.bin"));
+            }
             fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
 
             write_fred_arch.close();
@@ -416,13 +425,18 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
                         //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
                         dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["flora"][k]["partition"][i]["ip_name"].as<string>() + "_s0.bin";
-                        
+                        if (fs::exists(fs::path(dest))){
+                            fs::remove(fs::path(dest));
+                        }
                         fs::copy(src, dest);
                     }
                 }
             }
 
             /*Copy one of the static bitstreams to FRED*/
+            if (fs::exists(fs::path("fred/dart_fred/bits/static.bin"))){
+                fs::remove(fs::path("fred/dart_fred/bits/static.bin"));
+            }
             fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
 
             write_fred_arch.close();
@@ -443,6 +457,12 @@ void pr_tool::prep_input()
     int i, j, k;
     unsigned int ptr;
     reconfigurable_module rm;
+
+    num_rm_modules = 0;
+    for(i = 0; i < num_rm_partitions; i++) {
+        num_rm_modules += config["flora"][i]["partition"].size();
+    }
+
 
     //CSVData csv_data(input_pr->path_to_input);
 
@@ -493,7 +513,9 @@ void pr_tool::prep_input()
 */
 
 #ifndef WITH_PARTITIONING 
+    i=0;
     for(k = 0; k < num_rm_partitions; k++) {
+        /*
         for(i = 0; i < num_rm_modules; i++) {
             if(rm_list[i].partition_id  == k){
                 alloc[k].num_modules_in_partition += 1;
@@ -501,8 +523,19 @@ void pr_tool::prep_input()
                 alloc[k].rm_id.push_back(i);
             }
         }
-        if(max_modules_in_partition < alloc[k].num_modules_in_partition)
-            max_modules_in_partition = alloc[k].num_modules_in_partition;
+        */
+        alloc[k].num_modules_in_partition = config["flora"][k]["partition"].size();
+        alloc[k].num_hw_tasks_in_part = config["flora"][k]["partition"].size();
+        for(j = 0; j < config["flora"][k]["partition"].size(); j++) {
+            //alloc[k].num_modules_in_partition += 1;
+            //alloc[k].num_hw_tasks_in_part += 1;
+            alloc[k].rm_id.push_back(i);
+        }
+        //if(max_modules_in_partition < alloc[k].num_modules_in_partition)
+        //    max_modules_in_partition = alloc[k].num_modules_in_partition;
+        if(max_modules_in_partition < config["flora"][k]["partition"].size())
+            max_modules_in_partition = config["flora"][k]["partition"].size();
+        i++;
     }
 
 #endif
@@ -565,17 +598,19 @@ void pr_tool::prep_proj_directory()
 #endif 
         fs::path dir_source(dart_path);
         dir_source /= fs::path("tools") / fs::path("Tcl");
-        if (!fs::exists(tcl_project)) { 
-            fs::copy(dir_source, tcl_project, fs::copy_options::recursive); 
+        if (fs::exists(fs::path(tcl_project))) { 
+            fs::remove_all(tcl_project);
         }
+        fs::copy(dir_source, tcl_project, fs::copy_options::recursive); 
         dir_source = dart_path / fs::path("tools") / fs::path("start_vivado");
-        if (!fs::exists(Project_dir)) { 
+        if (!fs::exists(fs::path(Project_dir) / fs::path("start_vivado"))) { 
             fs::copy(dir_source, Project_dir, fs::copy_options::recursive); 
         }
         dir_source = dart_path / fs::path("tools") / fs::path("acc_bbox_ip");
-        if (!fs::exists(ip_repo_path)) { 
-            fs::copy(dir_source, ip_repo_path, fs::copy_options::recursive);
+        if (fs::exists(fs::path(ip_repo_path))) { 
+            fs::remove_all(ip_repo_path);
         }
+        fs::copy(dir_source, ip_repo_path, fs::copy_options::recursive);
     }catch (std::system_error & e)
     {
         cerr << "Exception :: " << e.what() << endl;
@@ -696,9 +731,17 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
          }
      }
 #else
-     for(i = 0; i < num_rm_modules; i++) {
-         write_synth_tcl << module_attributes(rm_list[i].rm_tag,string(wrapper_top_name + "_" + to_string(rm_list[i].partition_id)));
-     }
+    //  for(i = 0; i < num_rm_modules; i++) {
+    //      write_synth_tcl << module_attributes(rm_list[i].rm_tag,string(wrapper_top_name + "_" + to_string(rm_list[i].partition_id)));
+    //  }
+    for(i = 0; i < num_rm_partitions; i++) {
+        for(j = 0; j < config["flora"][i]["partition"].size(); j++) {
+            write_synth_tcl << module_attributes(
+                config["flora"][i]["partition"][j]["ip_name"].as<string>(),
+                string(wrapper_top_name + "_" + to_string(i))
+            );
+        }
+    }
 #endif
      write_synth_tcl << "source $tclDir/run.tcl" <<endl;
      write_synth_tcl << "exit" <<endl;
@@ -1049,7 +1092,7 @@ void pr_tool::parse_synthesis_report()
 
 void pr_tool::generate_impl_tcl(flora *fl_ptr)
 { 
-    unsigned long i, k, partition_ptr, temp_index = 0;
+    unsigned long i,j,k, partition_ptr, temp_index = 0;
     ofstream write_impl_tcl;
     string config_name, tag;
     impl_script = Project_dir + "/impl.tcl";
@@ -1131,7 +1174,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 
      write_impl_tcl<<"####################################################################" <<endl;
      write_impl_tcl<<"### RP Module Definitions" <<endl;
-     write_impl_tcl<<" ####################################################################" <<endl;
+     write_impl_tcl<<"####################################################################" <<endl;
 
 #ifdef WITH_PARTITIONING
 /*    for(i = 0; i < num_rm_modules; i++) {
@@ -1152,11 +1195,21 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         }
 //    }
 #else
+/*
     for(i = 0; i < num_rm_modules; i++) {
         write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
         write_impl_tcl << "set_attribute module "  << rm_list[i].rm_tag <<  " moduleName\t" << wrapper_top_name << "_" << rm_list[i].partition_id <<endl;
         write_impl_tcl <<endl;
      }
+     */
+    for(i = 0; i < num_rm_partitions; i++) {
+        for(j = 0; j < config["flora"][i]["partition"].size(); j++) {
+            write_impl_tcl << "add_module " << config["flora"][i]["partition"][j]["ip_name"].as<string>() <<endl;
+            write_impl_tcl << "set_attribute module "  << config["flora"][i]["partition"][j]["ip_name"].as<string>() 
+                <<  " moduleName\t" << wrapper_top_name << "_" << i <<endl;
+            write_impl_tcl <<endl;
+        }
+    }     
 #endif
 
 #ifdef WITH_PARTITIONING
@@ -1207,6 +1260,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
     }
 
 #else    
+    unsigned idx;
     for(i = 0, k = 0; i < max_modules_in_partition; i++, k++) {
         write_impl_tcl << "############################################################### \n" <<
                            "###Implemenetation configuration " << i <<endl <<
@@ -1229,15 +1283,27 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         for(partition_ptr = 0; partition_ptr <  num_rm_partitions; partition_ptr++) {
             if(alloc[partition_ptr].num_modules_in_partition > 0) {
                 alloc[partition_ptr].num_modules_in_partition--;
+                idx = alloc[partition_ptr].rm_id[temp_index];
+                // write_impl_tcl <<"\t \t \t \t \t";
+                // write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[temp_index]].rm_tag 
+                //    <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[temp_index]].rm_tag 
+                write_impl_tcl <<"[list " << config["flora"]["list_ips"][idx]["ip_name"].as<std::string>()
                    <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
             }
             else {
+                idx = alloc[partition_ptr].rm_id[0];
+                // write_impl_tcl <<"\t \t \t \t \t";
+                // write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[0]].rm_tag 
+                //                <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[0]].rm_tag 
+                write_impl_tcl <<"[list " << config["flora"]["list_ips"][idx]["ip_name"].as<std::string>()
                                <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
             }
+            // write_impl_tcl <<"\t \t \t \t \t";
+            // write_impl_tcl <<"[list " << config["flora"]["list_ips"][idx]["ip_name"].as<std::string>()
+            //     <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
+            
         }
         
         write_impl_tcl <<"]"<<endl;
@@ -1643,6 +1709,9 @@ void pr_tool::synthesize_static()
     run_vivado(static_hw_script);
     
     try {
+        if (fs::exists(fs::path(dest))){
+            fs::remove(fs::path(dest));
+        }
         fs::copy(src, dest);
     }catch (std::system_error & e)
     {
@@ -1660,9 +1729,19 @@ void pr_tool::generate_wrapper(flora *fl_ptr)
 
 #ifndef WITH_PARTITIONING
 
-    for(i = 0; i < num_rm_modules; i++) {
-        create_acc_wrapper(rm_list[i].top_module, rm_list[i].rm_tag, rm_list[i].partition_id );
+    // for(i = 0; i < num_rm_modules; i++) {
+    //     create_acc_wrapper(rm_list[i].top_module, rm_list[i].rm_tag, rm_list[i].partition_id );
+    // }
+    for(i = 0; i < num_rm_partitions; i++) {
+        for(j = 0; j < config["flora"][i]["partition"].size(); j++) {
+            create_acc_wrapper(
+                config["flora"][i]["partition"][j]["top_name"].as<string>(),
+                config["flora"][i]["partition"][j]["ip_name"].as<string>(),
+                i
+            );
+        }
     }
+
 #else
     for(i = 0; i < fl_ptr->from_solver.num_partition; i++) {
         for(k = 0; k <  fl_ptr->alloc[i].num_hw_tasks_in_part; k++) {                                                      
