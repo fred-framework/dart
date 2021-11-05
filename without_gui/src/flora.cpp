@@ -124,8 +124,8 @@ void flora::prep_input()
         str = csv_data.get_value(i, k++);
         slacks[ptr] = std::stod(str);  
         */  
-        HW_WCET[i] = config["flora"][i]["WCET"].as<int>();
-        slacks[i]  = config["flora"][i]["slack"].as<int>();
+        HW_WCET[i] = config["flora"]["list_ips"][i]["wcet"].as<int>();
+        slacks[i]  = config["flora"]["list_ips"][i]["slack_time"].as<int>();
 #endif
 //        cell_name[i] = csv_data.get_value(i, k++);
 //        k = 0;

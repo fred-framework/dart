@@ -103,7 +103,7 @@ public:
     unsigned int re_synthesis_after_wrap = 0;
 
     //Reconfigurable module instance
-    vector<reconfigurable_module> rm_list;
+    //vector<reconfigurable_module> rm_list;
 #ifdef WITH_PARTITIONING
     unsigned long num_rm_modules;
 #else
@@ -131,8 +131,8 @@ public:
     //input_to_flora in_flora;
 
 #ifdef WITH_PARTITIONING
-    vector<double> slacks ;
-    vector <double> HW_WCET;
+    //vector<double> slacks ;
+    //vector <double> HW_WCET;
 #else
     std::vector<partition_allocation> alloc =  std::vector<partition_allocation>(MAX_SLOTS);
     unsigned int max_modules_in_partition = 0;
