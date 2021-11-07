@@ -359,19 +359,19 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                         //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
                         ip_id = fl_ptr->alloc[k].task_id[i];
                         dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["flora"]["list_ips"][ip_id]["ip_name"].as<string>() + "_s0.bin";
-                        if (fs::exists(fs::path(dest))){
-                            fs::remove(fs::path(dest));
-                        }
-                        fs::copy(src, dest);
+                        // if (fs::exists(fs::path(dest))){
+                        //     fs::remove(fs::path(dest));
+                        // }
+                        fs::copy_file(src, dest,fs::copy_options::update_existing);
                     }
                 }
             }
 
             /*Copy one of the static bitstreams to FRED*/
-            if (fs::exists(fs::path("fred/dart_fred/bits/static.bin"))){
-                fs::remove(fs::path("fred/dart_fred/bits/static.bin"));
-            }
-            fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+            // if (fs::exists(fs::path("fred/dart_fred/bits/static.bin"))){
+            //     fs::remove(fs::path("fred/dart_fred/bits/static.bin"));
+            // }
+            fs::copy_file("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin",fs::copy_options::update_existing);
 
             write_fred_arch.close();
             write_fred_hw.close();
@@ -425,19 +425,19 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
                         //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
                         dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["flora"][k]["partition"][i]["ip_name"].as<string>() + "_s0.bin";
-                        if (fs::exists(fs::path(dest))){
-                            fs::remove(fs::path(dest));
-                        }
-                        fs::copy(src, dest);
+                        // if (fs::exists(fs::path(dest))){
+                        //     fs::remove(fs::path(dest));
+                        // }
+                        fs::copy_file(src, dest,fs::copy_options::update_existing);
                     }
                 }
             }
 
             /*Copy one of the static bitstreams to FRED*/
-            if (fs::exists(fs::path("fred/dart_fred/bits/static.bin"))){
-                fs::remove(fs::path("fred/dart_fred/bits/static.bin"));
-            }
-            fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+            // if (fs::exists(fs::path("fred/dart_fred/bits/static.bin"))){
+            //     fs::remove(fs::path("fred/dart_fred/bits/static.bin"));
+            // }
+            fs::copy_file("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin",fs::copy_options::update_existing);
 
             write_fred_arch.close();
             write_fred_hw.close();
@@ -515,6 +515,7 @@ void pr_tool::prep_input()
 #ifndef WITH_PARTITIONING 
     i=0;
     for(k = 0; k < num_rm_partitions; k++) {
+        // TODO logic related to the config generation in impl phase
         /*
         for(i = 0; i < num_rm_modules; i++) {
             if(rm_list[i].partition_id  == k){
@@ -522,8 +523,8 @@ void pr_tool::prep_input()
                 alloc[k].num_hw_tasks_in_part += 1;
                 alloc[k].rm_id.push_back(i);
             }
-        }
-        */
+        }*/
+        
         alloc[k].num_modules_in_partition = config["flora"][k]["partition"].size();
         alloc[k].num_hw_tasks_in_part = config["flora"][k]["partition"].size();
         for(j = 0; j < config["flora"][k]["partition"].size(); j++) {
@@ -603,9 +604,9 @@ void pr_tool::prep_proj_directory()
         }
         fs::copy(dir_source, tcl_project, fs::copy_options::recursive); 
         dir_source = dart_path / fs::path("tools") / fs::path("start_vivado");
-        if (!fs::exists(fs::path(Project_dir) / fs::path("start_vivado"))) { 
-            fs::copy(dir_source, Project_dir, fs::copy_options::recursive); 
-        }
+        //if (!fs::exists(fs::path(Project_dir) / fs::path("start_vivado"))) { 
+            fs::copy(dir_source, Project_dir, fs::copy_options::update_existing); 
+        //}
         dir_source = dart_path / fs::path("tools") / fs::path("acc_bbox_ip");
         if (fs::exists(fs::path(ip_repo_path))) { 
             fs::remove_all(ip_repo_path);
@@ -1283,22 +1284,20 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         for(partition_ptr = 0; partition_ptr <  num_rm_partitions; partition_ptr++) {
             if(alloc[partition_ptr].num_modules_in_partition > 0) {
                 alloc[partition_ptr].num_modules_in_partition--;
-                idx = alloc[partition_ptr].rm_id[temp_index];
+                //idx = alloc[partition_ptr].rm_id[temp_index];
                 // write_impl_tcl <<"\t \t \t \t \t";
                 // write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[temp_index]].rm_tag 
                 //    <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << config["flora"]["list_ips"][idx]["ip_name"].as<std::string>()
-                   <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
+                write_impl_tcl <<"[list " << config["flora"][partition_ptr]["partition"][temp_index]["ip_name"].as<std::string>() <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
             }
             else {
-                idx = alloc[partition_ptr].rm_id[0];
+                //idx = alloc[partition_ptr].rm_id[0];
                 // write_impl_tcl <<"\t \t \t \t \t";
                 // write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[0]].rm_tag 
                 //                <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << config["flora"]["list_ips"][idx]["ip_name"].as<std::string>()
-                               <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
+                write_impl_tcl <<"[list " << config["flora"][partition_ptr]["partition"][0]["ip_name"].as<std::string>()  <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
             }
             // write_impl_tcl <<"\t \t \t \t \t";
             // write_impl_tcl <<"[list " << config["flora"]["list_ips"][idx]["ip_name"].as<std::string>()
@@ -1709,10 +1708,10 @@ void pr_tool::synthesize_static()
     run_vivado(static_hw_script);
     
     try {
-        if (fs::exists(fs::path(dest))){
-            fs::remove(fs::path(dest));
-        }
-        fs::copy(src, dest);
+        // if (fs::exists(fs::path(dest))){
+        //     fs::remove(fs::path(dest));
+        // }
+        fs::copy_file(src, dest, fs::copy_options::update_existing);
     }catch (std::system_error & e)
     {
         cerr << "Exception :: " << e.what() << endl;
