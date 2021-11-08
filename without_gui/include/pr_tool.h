@@ -44,6 +44,7 @@ using namespace std;
 //using namespace Ui;
 
 //A class to contain info about a reconfigurable module
+/*
 typedef struct{
 #ifndef WITH_PARTITIONING
     unsigned int partition_id;
@@ -52,7 +53,8 @@ typedef struct{
     //std::string source_path;
     std::string top_module;
 }reconfigurable_module;
-
+*/
+/*
 typedef struct{
 #ifdef WITH_PARTITIONING
     unsigned long num_rm_modules;
@@ -64,13 +66,14 @@ typedef struct{
     //std::string path_to_input;
     std::string path_to_output;
 }input_to_pr;
-
+*/
+/*
 typedef struct {
     unsigned int num_modules_in_partition = 0;
     unsigned int num_hw_tasks_in_part = 0;
     std::vector<unsigned int> rm_id;
 }partition_allocation;
-
+*/
 //The main class to process everything
 class pr_tool
 {
@@ -104,13 +107,11 @@ public:
 
     //Reconfigurable module instance
     //vector<reconfigurable_module> rm_list;
-#ifdef WITH_PARTITIONING
-    unsigned long num_rm_modules;
-#else
-    unsigned long num_rm_partitions;
     unsigned long num_rm_modules = 0;
+#ifndef WITH_PARTITIONING
+    unsigned long num_rm_partitions;
 #endif 
-    input_to_pr *input_pr;
+    //input_to_pr *input_pr;
     fpga_type type;
     string dart_path;
 
@@ -134,8 +135,8 @@ public:
     //vector<double> slacks ;
     //vector <double> HW_WCET;
 #else
-    std::vector<partition_allocation> alloc =  std::vector<partition_allocation>(MAX_SLOTS);
-    unsigned int max_modules_in_partition = 0;
+    //std::vector<partition_allocation> alloc =  std::vector<partition_allocation>(MAX_SLOTS);
+    //unsigned int max_modules_in_partition = 0;
 #endif
 
 
@@ -155,7 +156,11 @@ public:
     void generate_wrapper(flora *fptr);
     void generate_fred_device_tree(flora *fptr);
 
-    explicit pr_tool(input_to_pr *);
+    //explicit pr_tool(input_to_pr *);
+    explicit pr_tool(string);
 
     ~pr_tool();
+private:
+
+    std::string exec(const char*  cmd);
 };

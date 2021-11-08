@@ -13,12 +13,14 @@ using namespace std;
 
 extern YAML::Node config;
 
-pr_tool::pr_tool(input_to_pr *pr_input) 
+pr_tool::pr_tool(string path_to_output) 
+//pr_tool::pr_tool(input_to_pr *pr_input) 
 {
     int i;
-    input_pr = pr_input; 
+    //input_pr = pr_input; 
     dart_path = getenv("DART_HOME");
     std::cout << "PR_TOOL: Starting PR_tool " <<endl;
+    Project_dir = path_to_output;
 
 #ifdef WITH_PARTITIONING
     //if(input_pr->num_rm_modules > 0){
@@ -33,7 +35,11 @@ pr_tool::pr_tool(input_to_pr *pr_input)
     if (num_rm_partitions <= 0) {
         cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
         exit(EXIT_FAILURE);
-    }      
+    } 
+    num_rm_modules = 0;
+    for(i = 0; i < num_rm_partitions; i++) {
+        num_rm_modules += config["flora"][i]["partition"].size();
+    }         
 #endif
 
 #ifdef FPGA_ZYNQ
@@ -55,13 +61,13 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 #endif        
         cout << "PR_TOOL: type of FPGA pr_tool **** " << type <<endl;
         //cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
-        cout << "PR_TOOL: path for output pr_tool **** " << pr_input->path_to_output <<endl;
+        cout << "PR_TOOL: path for output pr_tool **** " <<     Project_dir  <<endl;
         
         //Instantiate flora
         //flora fl_inst;
 
         //pre-process the design
-        prep_input(); 
+        //prep_input(); 
     	init_dir_struct();
 
         prep_proj_directory();
@@ -385,7 +391,8 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
 
             for(k = 0; k < num_rm_partitions; k++) {
                 for(i = 0; i < config["flora"][k]["partition"].size(); i++) {
-                    if (i < alloc[k].num_hw_tasks_in_part) {
+                    // commented since it' s always true
+                    //if (i < alloc[k].num_hw_tasks_in_part) {
                         //write_fred_hw << rm_list[alloc[k].rm_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
                         write_fred_hw << config["flora"][k]["partition"][i]["ip_name"].as<string>() <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
                         bitstream_id++;
@@ -397,7 +404,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                             }
                         }
                         write_fred_hw << "\n";
-                    }
+                    //}
                 }
             }
             /*
@@ -421,7 +428,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
             for(k = 0; k < num_rm_partitions; k++) {
                 //for(i = 0; i < max_modules_in_partition; i++) {
                 for(i = 0; i < config["flora"][k]["partition"].size(); i++) {
-                    if (i < alloc[k].num_hw_tasks_in_part) {
+                    //if (i < alloc[k].num_hw_tasks_in_part) {
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
                         //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
                         dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["flora"][k]["partition"][i]["ip_name"].as<string>() + "_s0.bin";
@@ -429,7 +436,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                         //     fs::remove(fs::path(dest));
                         // }
                         fs::copy_file(src, dest,fs::copy_options::update_existing);
-                    }
+                    //}
                 }
             }
 
@@ -456,12 +463,8 @@ void pr_tool::prep_input()
     unsigned long row;
     int i, j, k;
     unsigned int ptr;
-    reconfigurable_module rm;
+    //reconfigurable_module rm;
 
-    num_rm_modules = 0;
-    for(i = 0; i < num_rm_partitions; i++) {
-        num_rm_modules += config["flora"][i]["partition"].size();
-    }
 
 
     //CSVData csv_data(input_pr->path_to_input);
@@ -511,27 +514,28 @@ void pr_tool::prep_input()
         exit(EXIT_FAILURE);        
     }    
 */
-
+/*
 #ifndef WITH_PARTITIONING 
     i=0;
     for(k = 0; k < num_rm_partitions; k++) {
         // TODO logic related to the config generation in impl phase
-        /*
+        
         for(i = 0; i < num_rm_modules; i++) {
             if(rm_list[i].partition_id  == k){
                 alloc[k].num_modules_in_partition += 1;
                 alloc[k].num_hw_tasks_in_part += 1;
                 alloc[k].rm_id.push_back(i);
             }
-        }*/
-        
-        alloc[k].num_modules_in_partition = config["flora"][k]["partition"].size();
-        alloc[k].num_hw_tasks_in_part = config["flora"][k]["partition"].size();
-        for(j = 0; j < config["flora"][k]["partition"].size(); j++) {
-            //alloc[k].num_modules_in_partition += 1;
-            //alloc[k].num_hw_tasks_in_part += 1;
-            alloc[k].rm_id.push_back(i);
         }
+        
+        // alloc[k].num_modules_in_partition = config["flora"][k]["partition"].size();
+        // alloc[k].num_hw_tasks_in_part = config["flora"][k]["partition"].size();
+        // for(j = 0; j < config["flora"][k]["partition"].size(); j++) {
+        //     //alloc[k].num_modules_in_partition += 1;
+        //     //alloc[k].num_hw_tasks_in_part += 1;
+        //     alloc[k].rm_id.push_back(i);
+        // }
+        
         //if(max_modules_in_partition < alloc[k].num_modules_in_partition)
         //    max_modules_in_partition = alloc[k].num_modules_in_partition;
         if(max_modules_in_partition < config["flora"][k]["partition"].size())
@@ -540,6 +544,7 @@ void pr_tool::prep_input()
     }
 
 #endif
+*/
 }
 
 void pr_tool::prep_proj_directory()
@@ -842,6 +847,7 @@ void pr_tool::create_vivado_project()
 
 void pr_tool::run_vivado(std::string synth_script)
 { 
+    int ret_code;
     chdir(("cd " + Project_dir).c_str());
     //fs::current_path(Src_path);
     //std::system(("python3.6  load_prj.py"));
@@ -860,10 +866,12 @@ void pr_tool::run_vivado(std::string synth_script)
     }
     // run vivado
     try{
-        std::system((bash_script.string() + " " + vivado_script.string()).c_str());
+        ret_code = std::system((bash_script.string() + " " + vivado_script.string()).c_str());
+        if (ret_code != EXIT_SUCCESS) {
+            cerr << "ERROR: Vivado synthesis error" << endl;
+            exit(EXIT_FAILURE);
+        }
     }
-    // TODO capture the output and parse for errors
-    // https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po
     catch (std::system_error & e)
     {
         cerr << "Exception :: " << e.what() << endl;
@@ -1261,7 +1269,14 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
     }
 
 #else    
-    unsigned idx;
+    unsigned idx, max_modules_in_partition=0;
+    vector<unsigned> rm_per_part;
+    for(i=0;i<num_rm_partitions;i++){
+        rm_per_part.push_back(config["flora"][i]["partition"].size());
+        if(max_modules_in_partition < config["flora"][i]["partition"].size())
+            max_modules_in_partition = config["flora"][i]["partition"].size();
+    }
+     
     for(i = 0, k = 0; i < max_modules_in_partition; i++, k++) {
         write_impl_tcl << "############################################################### \n" <<
                            "###Implemenetation configuration " << i <<endl <<
@@ -1282,8 +1297,10 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         else
             write_impl_tcl <<"[list [list $static           $top \t" + import   + "   ] \\" <<endl;
         for(partition_ptr = 0; partition_ptr <  num_rm_partitions; partition_ptr++) {
-            if(alloc[partition_ptr].num_modules_in_partition > 0) {
-                alloc[partition_ptr].num_modules_in_partition--;
+            if (rm_per_part[partition_ptr]>0){
+                rm_per_part[partition_ptr]--;
+            // if(alloc[partition_ptr].num_modules_in_partition > 0) {
+            //     alloc[partition_ptr].num_modules_in_partition--;
                 //idx = alloc[partition_ptr].rm_id[temp_index];
                 // write_impl_tcl <<"\t \t \t \t \t";
                 // write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[temp_index]].rm_tag 
@@ -1322,7 +1339,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 
 void pr_tool::init_dir_struct()
 {
-    Project_dir = input_pr->path_to_output;
+    //Project_dir = input_pr->path_to_output;
 
     cout << "PR_TOOL: Project directory is " << Project_dir <<endl;
 

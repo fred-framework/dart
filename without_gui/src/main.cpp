@@ -283,12 +283,12 @@ int main(int argc, char* argv[])
     fl.start_optimizer();
 //    fl.generate_xdc();
 #else
-    input_to_pr pr_input;
-    #ifdef WITH_PARTITIONING    
-        pr_input.num_rm_modules = atol(argv[1]); 
-    #else
-        pr_input.num_rm_partitions = atol(argv[1]); 
-    #endif
+    // input_to_pr pr_input;
+    // #ifdef WITH_PARTITIONING    
+    //     pr_input.num_rm_modules = atol(argv[1]); 
+    // #else
+    //     pr_input.num_rm_partitions = atol(argv[1]); 
+    // #endif
         //pr_input.type_of_fpga = (fpga_type) atol(argv[2]);
         //pr_input.path_to_input = argv[2];
 
@@ -298,7 +298,7 @@ int main(int argc, char* argv[])
         //pr_input.static_dcp_file = static_dcp_file;
 
         // where the project will be created
-        pr_input.path_to_output = fs::current_path().string();
+        //pr_input.path_to_output = fs::current_path().string();
         /*
         Version min_version2("2020.1.0.0");
         if (vivado_version > min_version2){
@@ -309,7 +309,8 @@ int main(int argc, char* argv[])
         }
         */
 
-        pr_tool tool(&pr_input);
+        //pr_tool tool(&pr_input);
+        pr_tool tool(fs::current_path().string());
 #endif    
     return 0;
 
