@@ -133,6 +133,36 @@ else()
     message(FATAL_ERROR "FPGA '${FPGA}' not suported!")
 endif()
 
+##############
+# get git revision and date running these two commands:
+# - git log -1 --format=%cd 
+# - git rev-parse --short HEAD
+##############
+IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
+  FIND_PACKAGE(Git)
+  IF(GIT_FOUND)
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      OUTPUT_VARIABLE "GIT_BUILD_VERSION"
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    MESSAGE( STATUS "Git version: ${GIT_BUILD_VERSION}" )
+    add_compile_options(-DGIT_REV="${GIT_BUILD_VERSION}")
+    EXECUTE_PROCESS(
+      COMMAND ${GIT_EXECUTABLE} log -1 --format=%cd 
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      OUTPUT_VARIABLE "GIT_DATE"
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    MESSAGE( STATUS "Git commit date: ${GIT_DATE}" )
+    add_compile_options(-DGIT_DATE="${GIT_DATE}")
+  ELSE(GIT_FOUND)
+    SET(GIT_BUILD_VERSION 0)
+    SET(GIT_DATE 0)
+  ENDIF(GIT_FOUND)
+ENDIF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
+
 add_executable(${CMAKE_PROJECT_NAME} ${SRC_FILES})
 
 ##############

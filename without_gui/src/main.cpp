@@ -5,25 +5,34 @@
 #include "pr_tool.h"
 #include "version.h"
 
-// TODO: BIruk, I dont know if it is the usage for all configurations.
-// If i's not, please extend this procedure for the other usages.
+// #define GIT_REV "01234"
+// #define GIT_DATE "3456"
+
 void usage(){
-    cout << "pr_tool <version>, 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
-    cout << "Usage:\n";
+    cout << "Dart, rev "<< GIT_REV << ", 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
+    cout << "Last commit time: " << GIT_DATE <<endl;;
     #ifdef WITH_PARTITIONING
-    cout << "  run_pr_tool_with_part_* <# IPs> <CSV file> <optional arguments>\n";
-    cout << "     Mandatory arguments:\n";
-    cout << "      * <# IPs>\n";
+    cout << "  - Partitioning mode ON;" <<endl;
     #else
-    cout << "  run_pr_tool_without_part_* <# reconf_regions> <CSV file> <optional arguments>\n";
-    cout << "     Mandatory arguments:\n";
-    cout << "      * <# reconf_regions>\n";
+    cout << "  - Partitioning mode OFF;" <<endl;
     #endif
-    cout << "      * <CSV file>\n";
-    cout << "     Optional arguments:\n";
-    cout << "      * --ila \n"; 
-    cout << "      * --static <static top module> <static part DCP file>\n\n";
-    cout << "  The current directory must be empty to receive the pr_tool project.\n\n";
+    #ifdef FPGA_PYNQ
+    cout << "  - Pynq board;" <<endl;
+    cout << "  - FPGA device: xc7z020clg400-1" <<endl;
+    #elif FPGA_ZYNQ
+    cout << "  - Zynq board;" <<endl;
+    cout << "  - FPGA device: xc7z010clg400-1" <<endl;
+    #elif FPGA_US
+    cout << "  - Zynq board;" <<endl;
+    cout << "  - FPGA device: xczu9eg-ffvb1156-2-e" <<endl;
+    #elif FPGA_US_96
+    cout << "  - Ultra96-V2 board;" <<endl;
+    cout << "  - FPGA device: xczu3eg-sbva484-1-e" <<endl;
+    #else
+        #error "FPGA not suported!"
+    #endif    
+    cout << "Usage:\n";
+    cout << "  dart <YAML file>\n";
     cout << "Environment variables:\n";
     cout << " - XILINX_VIVADO: points to the Vivado directory;\n";
     cout << " - DART_HOME: the source dir for DART. It must be gurobi version 8.1.1;\n";
@@ -57,50 +66,30 @@ YAML::Node config;
 
 int main(int argc, char* argv[])
 {
-    //YAML::Node config = YAML::LoadFile("config.yaml");
-
     vector<string> tokens ;
     if (argc <2){
         cerr << "ERROR: mandatory arguments are missing\n\n";
         usage();
         exit(1);
     }
-// checking the mandatory arguments
-/*
-    if (!has_only_digits(argv[1])){
-        cerr << "ERROR: integer expected as the 1st parameter\n\n";
+
+    fs::path yaml_filename(argv[1]);
+    if (!fs::exists(yaml_filename)){
+        cerr << "ERROR: YAML file '" << yaml_filename.string() << "' not found\n\n";
         usage();
         exit(1);
     }
-    */
-    fs::path csv_filename(argv[1]);
-    if (!fs::exists(csv_filename)){
-        cerr << "ERROR: CSV file '" << csv_filename.string() << "' not found\n\n";
-        usage();
-        exit(1);
-    }
-    /*
-    if (!fs::is_empty(fs::current_path())){
-        cerr << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
-        exit(1);
-    }
-*/
+
     try{
-        config = YAML::LoadFile(csv_filename.string().c_str());
+        config = YAML::LoadFile(yaml_filename.string().c_str());
     }
     catch (YAML::ParserException & e)
     {
         cerr << "Exception :: " << e.what() << endl;
-        cerr << "ERROR: Syntax error in the YAML " << csv_filename << endl;
+        cerr << "ERROR: Syntax error in the YAML " << yaml_filename << endl;
         exit(EXIT_FAILURE);
     }
-    /*
-    std::cout << "Parsed YAML:\n" << config << "\n";
-    std::cout << "Parsed YAML:\n" << config["flora"] << "\n";
-    std::cout << "Parsed YAML:\n" << config["flora"][0] << "\n";
-    std::cout << "1o IP da part 0: " << config["flora"][0]["ips_list"][0] << "\n";
-    std::cout << "Parsed YAML:\n" << config["flora"][1] << "\n";
-    */
+
     // checking the optional arguments
     //string static_top_module = "";
     //string static_dcp_file = "";
