@@ -118,20 +118,13 @@ pr_tool::pr_tool(string path_to_output)
         run_vivado(synthesis_script);
 #endif
 
-        // TODO: If one partition uses ILA, then debug probes must be generated 
-        bool use_ila = false;
-        //for(YAML::const_iterator it=config["flora"].begin();it!=config["flora"].end();++it) {
+        // TODO: If one partition (or an IP, in partitioning mode) uses ILA, then debug probes must be generated 
         for (std::size_t i=0;i<config["flora"].size();i++) {
             if(config["flora"][i]["debug"]){
-                std::cout << config["flora"][i]["debug"].as<bool>() << "\n";
-                use_ila = config["flora"][i]["debug"].as<bool>();
-                if (use_ila)
-                    break;
+                add_debug_probes();
+                break;
             }
         }           
-        if (use_ila){
-            add_debug_probes();
-        }
 
         //generate implementation script
         generate_impl_tcl(fl_inst);
@@ -1408,7 +1401,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 #endif
 
     // TODO: apply ILA per partition and read it from the YAML
-    bool use_ila = false;
+    //bool use_ila = false;
    
     //create the bbox instance of the accelerator IPs and the decouplers (two decouplers for each acc)
     string vivado_version_str(config["vivado_version_str"].as<std::string>());
@@ -1512,8 +1505,8 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 
         // decided whether the ILA module must be inserted for this partition
         if(config["flora"][i]["debug"]){
-            use_ila = config["flora"][i]["debug"].as<bool>();
-            if (use_ila){
+            //use_ila = config["flora"][i]["debug"].as<bool>();
+            //if (use_ila){
                 // get the ILA buffer size. If not defined, use the defaut value
                 int ila_buffer_depth = 1024;
                 if(config["flora"][i]["debug"]["data_depth"]){
@@ -1524,9 +1517,15 @@ void pr_tool::generate_static_part(flora *fl_ptr)
                         cerr<<"ERROR: ILA buffer depth must be power of 2. Found "<<  ila_buffer_depth <<endl; 
                         exit(EXIT_FAILURE);               
                     }
+                    // WARNING: not sure if these limits are true for every device. They are true for Pynq
                     if (ila_buffer_depth < 1024)
                     { 
                         cerr<<"ERROR: ILA buffer depth must be at least 1024. Found "<<  ila_buffer_depth <<endl;
+                        exit(EXIT_FAILURE);                
+                    }
+                    if (ila_buffer_depth > 131072)
+                    { 
+                        cerr<<"ERROR: ILA buffer depth must be at most 131072. Found "<<  ila_buffer_depth <<endl;
                         exit(EXIT_FAILURE);                
                     }
                 }
@@ -1549,7 +1548,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
                                     "  CONFIG.C_SLOT_1_AXI_W_SEL_TRIG {1}"
                                     "  CONFIG.C_SLOT_1_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
                                     "] [get_bd_cells system_ila_"<< std::to_string(i) << "]" << endl;
-            }           
+            //}           
         }
     }
   
@@ -1610,8 +1609,8 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     //TODO: add ila for US 
 #ifdef FPGA_PYNQ
         if(config["flora"][i]["debug"]){
-            use_ila = config["flora"][i]["debug"].as<bool>();
-            if (use_ila){
+            //use_ila = config["flora"][i]["debug"].as<bool>();
+            //if (use_ila){
                 //write_static_tcl << "if { $use_ila == 1 } {" <<endl;
                 write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
                 write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
@@ -1621,7 +1620,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
                 write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
                 write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
                 //write_static_tcl << "}" <<endl;
-            }/*  */
+            //}
         }
 #endif
     }
