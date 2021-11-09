@@ -10,7 +10,7 @@
 
 void usage(){
     cout << "Dart, rev "<< GIT_REV << ", 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
-    cout << "Last commit time: " << GIT_DATE <<endl;;
+    cout << "Last commit time: " << GIT_DATE <<endl;
     #ifdef WITH_PARTITIONING
     cout << "  - Partitioning mode ON;" <<endl;
     #else
