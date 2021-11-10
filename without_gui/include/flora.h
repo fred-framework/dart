@@ -48,6 +48,16 @@ enum fpga_type {
     TYPE_US,
     TYPE_US_96
 };
+/*
+const char * fpga_type_name[]= {
+    "zynq",
+    "virtex",
+    "virtex5",
+    "pynq",
+    "ultrascale",
+    "ultra96"
+};
+*/
 
 typedef std::vector<pos> position_vec;
 typedef std::vector<std::vector<unsigned long>> vec_2d;

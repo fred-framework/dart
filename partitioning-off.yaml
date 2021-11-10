@@ -13,5 +13,5 @@ dart:
           buffers: [32768, 32768, 32770]
     static_top_module: static_top
     static_dcp_file: ./dcp/static.dcp
-skip_ip_synthesis: True
-skip_static_synthesis: True
+skip_ip_synthesis: False
+skip_static_synthesis: False

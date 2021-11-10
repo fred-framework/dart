@@ -22,14 +22,14 @@ flora::flora()
         num_rm_modules = flora_input->num_rm_modules;
 */
     // count the number of IPs in all partitions
-    num_rm_modules = config["flora"]["list_ips"].size();    
+    num_rm_modules = config["dart"]["hw_ips"].size();    
     cout << endl << "PR_TOOL: reading inputs " << num_rm_modules << endl;
 #else
 /*
     if(flora_input->num_rm_partitions > 0) {
         num_rm_partitions = flora_input->num_rm_partitions;
 */
-    num_rm_partitions = config["flora"].size();
+    num_rm_partitions = config["dart"]["partitions"].size();
 #endif
 //        type = flora_input->type_of_fpga; 
 
@@ -91,14 +91,14 @@ void flora::prep_input()
     cout << "\t clb " << " \t bram " << "\t dsp " <<endl;
 #ifdef WITH_PARTITIONING 
     for(i = 0; i < num_rm_modules; i++) {
-       clbs  = config["flora"]["list_ips"][i]["CLBs"].as<int>();
-       brams = config["flora"]["list_ips"][i]["BRAMs"].as<int>();
-       dsps  = config["flora"]["list_ips"][i]["DSPs"].as<int>();
+       clbs  = config["dart"]["hw_ips"][i]["CLBs"].as<int>();
+       brams = config["dart"]["hw_ips"][i]["BRAMs"].as<int>();
+       dsps  = config["dart"]["hw_ips"][i]["DSPs"].as<int>();
 #else    
     for(i = 0; i < num_rm_partitions; i++) {
-       clbs  = config["flora"][i]["CLBs"].as<int>();
-       brams = config["flora"][i]["BRAMs"].as<int>();
-       dsps  = config["flora"][i]["DSPs"].as<int>();
+       clbs  = config["dart"]["partitions"][i]["CLBs"].as<int>();
+       brams = config["dart"]["partitions"][i]["BRAMs"].as<int>();
+       dsps  = config["dart"]["partitions"][i]["DSPs"].as<int>();
 #endif
         cout << "slot " << i;  
         /*
@@ -124,8 +124,8 @@ void flora::prep_input()
         str = csv_data.get_value(i, k++);
         slacks[ptr] = std::stod(str);  
         */  
-        HW_WCET[i] = config["flora"]["list_ips"][i]["wcet"].as<int>();
-        slacks[i]  = config["flora"]["list_ips"][i]["slack_time"].as<int>();
+        HW_WCET[i] = config["dart"]["hw_ips"][i]["wcet"].as<int>();
+        slacks[i]  = config["dart"]["hw_ips"][i]["slack_time"].as<int>();
 #endif
 //        cell_name[i] = csv_data.get_value(i, k++);
 //        k = 0;

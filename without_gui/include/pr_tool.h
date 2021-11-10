@@ -140,7 +140,7 @@ public:
 #endif
 
 
-    void prep_input();
+    //void prep_input();
     void init_dir_struct();
     void prep_proj_directory();
     void create_vivado_project();
