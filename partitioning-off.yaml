@@ -1,0 +1,17 @@
+dart:
+    partitions: 
+      - hw_ips:
+        - ip_name: "sum_vec"
+          top_name: "sum_vec_top"
+          buffers: [32768, 32768, 32768]
+        - ip_name: "sub_vec"
+          top_name: "sub_vec_top"
+          buffers: [32768, 32768, 32769]
+      - hw_ips:
+        - ip_name: "xor_vec"
+          top_name: "xor_vec_top"
+          buffers: [32768, 32768, 32770]
+    static_top_module: static_top
+    static_dcp_file: ./dcp/static.dcp
+skip_ip_synthesis: True
+skip_static_synthesis: True

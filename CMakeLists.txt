@@ -54,7 +54,6 @@ message(STATUS "Supported FPGA: '${FPGA}'")
 # determining the source files to be compiled based on the configurable parameters
 ##############
 set (SRC_FILES
-#    src/csv_data_manipulator.cpp
     without_gui/src/main.cpp
 )
 if (NOT ${PARTITIONING_MODE})
@@ -72,66 +71,12 @@ else()
     )
 endif()
 
+##############
 # set source and definitions based on the fpga model
-if (${FPGA} STREQUAL "pynq")
-    add_compile_options(-DFPGA_PYNQ)
-    list(APPEND SRC_FILES
-        src/pynq.cpp
-        src/pynq_fine_grained.cpp
-    )
-    if (${PARTITIONING_MODE})
-        list(APPEND SRC_FILES
-            src/milp_model_pynq_with_partition.cpp
-        )
-    else()
-        list(APPEND SRC_FILES
-            src/milp_model_pynq.cpp
-        )
-    endif()
-elseif(${FPGA} STREQUAL "zynq")
-    add_compile_options(-DFPGA_ZYNQ)
-    list(APPEND SRC_FILES
-        src/zynq.cpp 
-        src/zynq_fine_grained.cpp    
-    )
-    if (${PARTITIONING_MODE})
-        list(APPEND SRC_FILES
-            src/milp_model_zynq_with_partition.cpp
-        )
-    else()
-        list(APPEND SRC_FILES
-            src/milp_model_zynq.cpp
-        )
-    endif()
-elseif(${FPGA} STREQUAL "us")
-    add_compile_options(-DFPGA_US)
-    list(APPEND SRC_FILES
-        src/us.cpp
-        src/us_fine_grained.cpp
-    )
-    if (${PARTITIONING_MODE})
-        message(FATAL_ERROR "FPGA '${FPGA}' not implemented in partitioning mode!")
-    else()
-        list(APPEND SRC_FILES
-            src/milp_model_us.cpp
-        )
-    endif()
-elseif(${FPGA} STREQUAL "us_96")
-    add_compile_options(-DFPGA_US96)
-    list(APPEND SRC_FILES
-        src/us_96.cpp
-        src/us_96_fine_grained.cpp
-    )
-    if (${PARTITIONING_MODE})
-        message(FATAL_ERROR "FPGA '${FPGA}' not implemented in partitioning mode!")
-    else()
-        list(APPEND SRC_FILES
-            src/milp_model_us_96.cpp
-        )
-    endif()
-else()
-    message(FATAL_ERROR "FPGA '${FPGA}' not suported!")
-endif()
+##############
+add_subdirectory("src/devices/${FPGA}")
+# DEVICE_DEFINE is created in the child scope and copied back to the parent scope
+add_definitions(${DEVICE_DEFINE})
 
 ##############
 # get git revision and date running these two commands:
@@ -157,6 +102,8 @@ IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     MESSAGE( STATUS "Git commit date: ${GIT_DATE}" )
     add_compile_options(-DGIT_DATE="${GIT_DATE}")
+    # TODO: ideally these definitions would only apply to the main.cpp, avoiding recompiling all the code base every commit. However, the command below is not working
+    #add_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/without_gui/src/main.cpp -DGIT_DATE=\\"${GIT_DATE}\\" -DGIT_REV=\\"${GIT_BUILD_VERSION}\\" )
   ELSE(GIT_FOUND)
     SET(GIT_BUILD_VERSION 0)
     SET(GIT_DATE 0)
