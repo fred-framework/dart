@@ -117,15 +117,16 @@ pr_tool::pr_tool(string path_to_output)
         create_vivado_project();       
         generate_synthesis_tcl(fl_inst);
         run_vivado(synthesis_script);
-#endif
-
-        // TODO: If one partition (or an IP, in partitioning mode) uses ILA, then debug probes must be generated 
+#else
+        // TODO: currently, ILA are inserted only in the partitioning OFF mode
+        // If one partition (or an IP, in partitioning mode) uses ILA, then debug probes must be generated 
         for (std::size_t i=0;i<num_rm_partitions;i++) {
             if(config["dart"]["partitions"][i]["debug"]){
                 add_debug_probes();
                 break;
             }
         }           
+#endif
 
         //generate implementation script
         generate_impl_tcl(fl_inst);
@@ -1414,23 +1415,6 @@ void pr_tool::generate_static_part(flora *fl_ptr)
             int ila_buffer_depth = 1024;
             if(config["dart"]["partitions"][i]["debug"]["data_depth"]){
                 ila_buffer_depth = config["dart"]["partitions"][i]["debug"]["data_depth"].as<int>();
-                // check if ila_buffer_depth is power of 2
-                if (ceil(log2(ila_buffer_depth)) != floor(log2(ila_buffer_depth)))
-                { 
-                    cerr<<"ERROR: ILA buffer depth must be power of 2. Found "<<  ila_buffer_depth <<endl; 
-                    exit(EXIT_FAILURE);               
-                }
-                // WARNING: not sure if these limits are true for every device. They are true for Pynq
-                if (ila_buffer_depth < 1024)
-                { 
-                    cerr<<"ERROR: ILA buffer depth must be at least 1024. Found "<<  ila_buffer_depth <<endl;
-                    exit(EXIT_FAILURE);                
-                }
-                if (ila_buffer_depth > 131072)
-                { 
-                    cerr<<"ERROR: ILA buffer depth must be at most 131072. Found "<<  ila_buffer_depth <<endl;
-                    exit(EXIT_FAILURE);                
-                }
             }
             // add one ILA per reconfig region
             write_static_tcl << "# Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
