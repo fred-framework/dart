@@ -655,7 +655,7 @@
   <spirit:addressSpaces>
     <spirit:addressSpace>
       <spirit:name>Data_m_axi_mem_bus</spirit:name>
-      <spirit:range>4G</spirit:range>
+      <spirit:range spirit:format="long">4G</spirit:range>
       <spirit:width spirit:format="long">32</spirit:width>
       <spirit:parameters>
         <spirit:parameter>
@@ -1065,7 +1065,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>81a8d7e4</spirit:value>
+            <spirit:value>73afdf9c</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1081,7 +1081,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>2fb94609</spirit:value>
+            <spirit:value>36b6a599</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1097,7 +1097,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>fdb37de8</spirit:value>
+            <spirit:value>a78867e5</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1113,7 +1113,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>78a1fcc0</spirit:value>
+            <spirit:value>86507b1a</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -2515,7 +2515,7 @@
       <spirit:file>
         <spirit:name>hdl/vhdl/acc.vhd</spirit:name>
         <spirit:fileType>vhdlSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_58c951eb</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_41dc0c04</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
@@ -2638,12 +2638,12 @@
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_ENABLE_ID_PORTS</spirit:name>
       <spirit:displayName>Enable ID ports</spirit:displayName>
-      <spirit:value spirit:format="bool" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_ENABLE_ID_PORTS" spirit:order="2" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)">false</spirit:value>
+      <spirit:value spirit:format="bool" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_ENABLE_ID_PORTS" spirit:order="2">false</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_ID_WIDTH</spirit:name>
       <spirit:displayName>ID width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_ID_WIDTH" spirit:order="3" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:minimum="1" spirit:maximum="32" spirit:rangeType="long">1</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_ID_WIDTH" spirit:order="3" spirit:minimum="1" spirit:maximum="32" spirit:rangeType="long">1</spirit:value>
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
@@ -2655,17 +2655,17 @@
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_DATA_WIDTH</spirit:name>
       <spirit:displayName>Data width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_DATA_WIDTH" spirit:choiceRef="choice_list_40181835" spirit:order="4" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)">64</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_DATA_WIDTH" spirit:choiceRef="choice_list_40181835" spirit:order="4">64</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_ENABLE_USER_PORTS</spirit:name>
       <spirit:displayName>Enable USER ports</spirit:displayName>
-      <spirit:value spirit:format="bool" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_ENABLE_USER_PORTS" spirit:order="5" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)">false</spirit:value>
+      <spirit:value spirit:format="bool" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_ENABLE_USER_PORTS" spirit:order="5">false</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_AWUSER_WIDTH</spirit:name>
       <spirit:displayName>AWUSER width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_AWUSER_WIDTH" spirit:order="6" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_AWUSER_WIDTH" spirit:order="6" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
@@ -2677,7 +2677,7 @@
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_WUSER_WIDTH</spirit:name>
       <spirit:displayName>WUSER width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_WUSER_WIDTH" spirit:order="7" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_WUSER_WIDTH" spirit:order="7" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
@@ -2689,7 +2689,7 @@
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_BUSER_WIDTH</spirit:name>
       <spirit:displayName>BUSER width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_BUSER_WIDTH" spirit:order="8" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_BUSER_WIDTH" spirit:order="8" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
@@ -2701,7 +2701,7 @@
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_ARUSER_WIDTH</spirit:name>
       <spirit:displayName>ARUSER width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_ARUSER_WIDTH" spirit:order="9" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_ARUSER_WIDTH" spirit:order="9" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
@@ -2713,7 +2713,7 @@
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_RUSER_WIDTH</spirit:name>
       <spirit:displayName>RUSER width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_RUSER_WIDTH" spirit:order="10" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_RUSER_WIDTH" spirit:order="10" spirit:minimum="1" spirit:maximum="1024" spirit:rangeType="long">1</spirit:value>
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
@@ -2725,7 +2725,7 @@
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_USER_VALUE</spirit:name>
       <spirit:displayName>USER value</spirit:displayName>
-      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_USER_VALUE" spirit:order="11" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:bitStringLength="32">0x00000000</spirit:value>
+      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_USER_VALUE" spirit:order="11" spirit:bitStringLength="32">0x00000000</spirit:value>
       <spirit:vendorExtensions>
         <xilinx:parameterInfo>
           <xilinx:enablement>
@@ -2737,12 +2737,12 @@
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_PROT_VALUE</spirit:name>
       <spirit:displayName>PROT value</spirit:displayName>
-      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_PROT_VALUE" spirit:order="12" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:bitStringLength="3">&quot;000&quot;</spirit:value>
+      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_PROT_VALUE" spirit:order="12" spirit:bitStringLength="3">&quot;000&quot;</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>C_M_AXI_MEM_BUS_CACHE_VALUE</spirit:name>
       <spirit:displayName>CACHE value</spirit:displayName>
-      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_CACHE_VALUE" spirit:order="13" spirit:configGroups="1 m axi mem bus (AXI4 Master Interface)" spirit:bitStringLength="4">&quot;0011&quot;</spirit:value>
+      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.C_M_AXI_MEM_BUS_CACHE_VALUE" spirit:order="13" spirit:bitStringLength="4">&quot;0011&quot;</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>Component_Name</spirit:name>
@@ -2773,24 +2773,45 @@
     <xilinx:coreExtensions>
       <xilinx:supportedFamilies>
         <xilinx:family xilinx:lifeCycle="Pre-Production">zynq</xilinx:family>
+        <xilinx:family xilinx:lifeCycle="Beta">zynquplus</xilinx:family>
       </xilinx:supportedFamilies>
       <xilinx:taxonomies>
         <xilinx:taxonomy>/VIVADO_HLS_IP</xilinx:taxonomy>
       </xilinx:taxonomies>
       <xilinx:displayName>Acc</xilinx:displayName>
       <xilinx:definitionSource>HLS</xilinx:definitionSource>
-      <xilinx:coreRevision>2104151758</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2021-04-15T15:59:01Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>2104151759</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2021-07-30T11:46:22Z</xilinx:coreCreationDateTime>
+      <xilinx:tags>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@78c1b358_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3fa46740_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@2799dcad_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@88364f3_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5f1a6491_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@63a9e4c5_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@54440fa1_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@71a1852a_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@73ead2a3_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5dc156d9_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@ef8829c_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@56a26af5_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@62a8cb1_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@c7d74df_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@463ff1f5_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@551b1fb6_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@41a9f57b_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@953a887_ARCHIVE_LOCATION">/usr/local/src/xilinx/xilinx_18/AMPERE_DART/dart_bbox_ips/acc_bbox/solution1/impl/ip</xilinx:tag>
+      </xilinx:tags>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2019.2</xilinx:xilinxVersion>
       <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="6acade61"/>
-      <xilinx:checksum xilinx:scope="addressSpaces" xilinx:value="5cd7fd36"/>
+      <xilinx:checksum xilinx:scope="addressSpaces" xilinx:value="cd78d71a"/>
       <xilinx:checksum xilinx:scope="memoryMaps" xilinx:value="762ac6a0"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="0250ac9b"/>
-      <xilinx:checksum xilinx:scope="ports" xilinx:value="26bd018a"/>
-      <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="37f82bbd"/>
-      <xilinx:checksum xilinx:scope="parameters" xilinx:value="202082b0"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="3a487699"/>
+      <xilinx:checksum xilinx:scope="ports" xilinx:value="71424b71"/>
+      <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="b0db05fa"/>
+      <xilinx:checksum xilinx:scope="parameters" xilinx:value="18bcc7e3"/>
     </xilinx:packagingInfo>
   </spirit:vendorExtensions>
 </spirit:component>

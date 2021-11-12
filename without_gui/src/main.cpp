@@ -69,11 +69,11 @@ int main(int argc, char* argv[])
         cerr << "ERROR: CSV file '" << csv_filename.string() << "' not found\n\n";
         usage();
         exit(1);
-    }
+    }/*
     if (!fs::is_empty(fs::current_path())){
         cerr << "ERROR: the current directory '" << fs::current_path().string() << "' must be empty.\n\n";
         exit(1);
-    }
+    }*/
 
     // checking the optional arguments
     string static_top_module = "";
@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
         pr_input.static_dcp_file = static_dcp_file;
 
         // where the project will be created
-        pr_input.path_to_output = fs::current_path().string();
+        pr_input.path_to_output = fs::current_path().string(); 
         if (tokens[1] == "v2020.2" || tokens[1] == "v2020.1" || tokens[1] == "v2020.3" || tokens[1] == "v2021.1" || tokens[1] == "v2021.2")
             pr_input.vivado_version = 0;
         else
