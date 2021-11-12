@@ -12,4 +12,4 @@ endif()
 
 # send the definitions for the parent scope
 set(SRC_FILES ${SRC_FILES} PARENT_SCOPE)
-set(DEVICE_DEFINE -DFPGA_US96 PARENT_SCOPE)
+set(DEVICE_DEFINE -DFPGA_US_96 PARENT_SCOPE)
