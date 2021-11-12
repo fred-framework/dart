@@ -165,9 +165,9 @@ void flora::start_optimizer()
     platform->maxFPGAResources[BRAM] = ZYNQ_BRAM_TOT;
     platform->maxFPGAResources[DSP]  = ZYNQ_DSP_TOT;
 
-    platform->recTimePerUnit[CLB]  = 1.0/1500.0;
-    platform->recTimePerUnit[BRAM] = 1.0/1500.0;
-    platform->recTimePerUnit[DSP]  = 1.0/1000.0;
+    platform->recTimePerUnit[CLB]  = 1.0/4500.0;
+    platform->recTimePerUnit[BRAM] = 1.0/4500.0;
+    platform->recTimePerUnit[DSP]  = 1.0/4000.0;
 #endif
     cout <<"FLORA: starting ZYNQ MILP optimizer " <<endl;
     zynq_start_optimizer(&param, &from_solver);
@@ -251,9 +251,9 @@ void flora::start_optimizer()
     param.dsp_per_tile  = US96_DSP_PER_TILE;
 
 #ifdef WITH_PARTITIONING      
-    platform->maxFPGAResources[CLB]  = US_CLB_TOT;
-    platform->maxFPGAResources[BRAM] = US_BRAM_TOT;
-    platform->maxFPGAResources[DSP]  = US_DSP_TOT;
+    platform->maxFPGAResources[CLB]  = US96_CLB_TOT;
+    platform->maxFPGAResources[BRAM] = US96_BRAM_TOT;
+    platform->maxFPGAResources[DSP]  = US96_DSP_TOT;
 
     platform->recTimePerUnit[CLB]  = 1.0/4500.0;
     platform->recTimePerUnit[BRAM] = 1.0/4500.0;

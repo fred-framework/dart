@@ -825,7 +825,7 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                     model.addConstr(b[x][k] >= (double)t.HW_Tasks[a].resDemand[x]*A[a][k], "con 4");
                     exp += A[a][k];
                 }
-                model.addConstr(b[x][k] <= (double)BIG_M * exp, "con 11");
+                //model.addConstr(b[x][k] <= (double)BIG_M * exp, "con 11");
             }
         }
 
@@ -846,8 +846,8 @@ int solve_milp(Taskset &t, Platform &platform, vector<double> &slacks, bool pree
                         exp += (double)platform.recTimePerUnit[x]*b[x][k];
 
 
-                    model.addConstr(r[a] >= exp -(1.0 - A[a][k])*BIG_M_con5
-                                                -(1.0 - gamma_part[a])*BIG_M_con5, "con 6");
+//                    model.addConstr(r[a] >= exp -(1.0 - A[a][k])*BIG_M_con5
+//                                                -(1.0 - gamma_part[a])*BIG_M_con5, "con 6");
             }
         /********************************************************************
         Constraint 0.6: Interference among HW-tasks due to execution
