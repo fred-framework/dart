@@ -1296,7 +1296,8 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "endgroup " <<endl;
 #elif FPGA_US
     write_static_tcl << "startgroup " <<endl;
-    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.2 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
+    //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.2 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.3 zynq_ultra_ps_e_0" <<endl; //TODO: Amory
     write_static_tcl << "endgroup " <<endl;
 #elif FPGA_US_96
     write_static_tcl << "startgroup " <<endl;
