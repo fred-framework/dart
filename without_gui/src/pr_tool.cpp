@@ -4,32 +4,49 @@
 #include <fstream>
 #include <utility> // std::as_const
 #include "pr_tool.h"
+#include "version.h"
+#include <yaml-cpp/yaml.h>
 
 #undef RE_WRAP
 
 using namespace std;
 
-pr_tool::pr_tool(input_to_pr *pr_input) 
+extern YAML::Node config;
+
+pr_tool::pr_tool(string path_to_output) 
+//pr_tool::pr_tool(input_to_pr *pr_input) 
 {
-    int vivado_version = pr_input->vivado_version;
-    bool use_ila=false;
-    input_pr = pr_input; 
+    int i;
+    //input_pr = pr_input; 
     dart_path = getenv("DART_HOME");
-    cout << "PR_TOOL: Starting PR_tool " <<endl;
+    std::cout << "PR_TOOL: Starting PR_tool " <<endl;
+    Project_dir = path_to_output;
 
 #ifdef WITH_PARTITIONING
-    if(input_pr->num_rm_modules > 0){
-        num_rm_modules = pr_input->num_rm_modules;
+    //if(input_pr->num_rm_modules > 0){
+    //    num_rm_modules = pr_input->num_rm_modules;
+    // count the number of IPs in all partitions
+    num_rm_modules = config["dart"]["hw_ips"].size();    
+    cout << endl << "PR_TOOL: reading inputs " << num_rm_modules << endl;
 #else
-    if(input_pr->num_rm_partitions > 0){
-        num_rm_partitions = pr_input->num_rm_partitions;
+    //if(input_pr->num_rm_partitions > 0){
+        //num_rm_partitions = pr_input->num_rm_partitions;
+    num_rm_partitions = config["dart"]["partitions"].size();
+    if (num_rm_partitions <= 0) {
+        cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
+        exit(EXIT_FAILURE);
+    } 
+    num_rm_modules = 0;
+    for(i = 0; i < num_rm_partitions; i++) {
+        num_rm_modules += config["dart"]["partitions"][i]["hw_ips"].size();
+    }         
 #endif
 
 #ifdef FPGA_ZYNQ
     type = TYPE_ZYNQ;
 #elif FPGA_PYNQ 
     type = TYPE_PYNQ;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     type = TYPE_US;
 #elif FPGA_US_96
     type = TYPE_US_96;
@@ -43,14 +60,15 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         cout << "PR_TOOL: num of partitions **** " << num_rm_partitions <<endl;
 #endif        
         cout << "PR_TOOL: type of FPGA pr_tool **** " << type <<endl;
-        cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
-        cout << "PR_TOOL: path for output pr_tool **** " << pr_input->path_to_output <<endl;
+        //cout << "PR_TOOL: type of FPGA pr_tool **** " << fpga_type_name[type] <<endl;
+        //cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
+        cout << "PR_TOOL: path for output pr_tool **** " <<     Project_dir  <<endl;
         
         //Instantiate flora
         //flora fl_inst;
-        
+
         //pre-process the design
-        prep_input(); 
+        //prep_input(); 
     	init_dir_struct();
 
         prep_proj_directory();
@@ -64,29 +82,34 @@ pr_tool::pr_tool(input_to_pr *pr_input)
 
         //syntehsize reconfigurable accelerators
         //TODO (amory): this part could be executed in parallel for each IP
-        run_vivado(synthesis_script);
-
+        if (!config["skip_ip_synthesis"] || !config["skip_ip_synthesis"].as<bool>()){
+            run_vivado(synthesis_script);
+        }
+ 
         //extract resource consumption of accelerators
         parse_synthesis_report();
- 
+
         //perform floorplanning/partitioning
-        fl_inst = new flora(&in_flora);
+        //fl_inst = new flora(&in_flora);
+        fl_inst = new flora();
         fl_inst->clear_vectors();       
         fl_inst->prep_input();
         fl_inst->start_optimizer();
         fl_inst->generate_xdc(fplan_xdc_file);
 
 // TODO: that's BAD. I had to duplicate the attribute use ila here and in the main to support both part and flora modes
-#ifdef WITH_PARTITIONING
-        use_ila = input_pr->use_ila;
-#else
-        use_ila = in_flora.use_ila;
-#endif
+// #ifdef WITH_PARTITIONING
+//         use_ila = input_pr->use_ila;
+// #else
+//         use_ila = in_flora.use_ila;
+// #endif
         //generate static hardware
-        generate_static_part(fl_inst, use_ila, vivado_version);
+        generate_static_part(fl_inst);
 
         //synthesize static part
-        synthesize_static();
+        if (!config["skip_static_synthesis"] || !config["skip_static_synthesis"].as<bool>()){
+            synthesize_static();
+        }
 
 #ifdef WITH_PARTITIONING
         //re_synthesis_after_wrap = 1;
@@ -94,11 +117,16 @@ pr_tool::pr_tool(input_to_pr *pr_input)
         create_vivado_project();       
         generate_synthesis_tcl(fl_inst);
         run_vivado(synthesis_script);
+#else
+        // TODO: currently, ILA are inserted only in the partitioning OFF mode
+        // If one partition (or an IP, in partitioning mode) uses ILA, then debug probes must be generated 
+        for (std::size_t i=0;i<num_rm_partitions;i++) {
+            if(config["dart"]["partitions"][i]["debug"]){
+                add_debug_probes();
+                break;
+            }
+        }           
 #endif
-
-        if (use_ila){
-            add_debug_probes();
-        }
 
         //generate implementation script
         generate_impl_tcl(fl_inst);
@@ -108,12 +136,7 @@ pr_tool::pr_tool(input_to_pr *pr_input)
       
         //generate the run-time management files for FRED
         generate_fred_files(fl_inst);
-        generate_fred_device_tree(fl_inst);
-    }
-    else {
-        cout <<"PR_TOOL: The number of Reconfigurable modules > 0";
-        exit(-1);
-    }    
+        generate_fred_device_tree(fl_inst);  
 }
 
 pr_tool::~pr_tool()
@@ -140,7 +163,7 @@ void pr_tool::add_debug_probes()
 
 void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 {
-    int i, j, k, p=0;
+    int i, j, k;
     unsigned int num_partitions = 0;
     unsigned int first_interrupt = 0x1d;
     unsigned int first_reg_addr = 0xc0;
@@ -155,7 +178,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     write_dev_tree.open(fred_dir + "/dart_dev_tree.dts");
     
     write_dev_tree << "/* DART generated device tree overlay */"<<endl;
-#if defined (FPGA_US) || defined (FPGA_US_96)
+#if defined (FPGA_ZCU_102) || defined (FPGA_US_96)
     write_dev_tree <<"/dts-v1/;" <<endl;
     write_dev_tree <<"/plugin/;" <<endl;
     write_dev_tree <<"/ { \n" <<endl;
@@ -216,10 +239,9 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     write_dev_tree << endl;
 #endif
 
-    p=0;
     for (i = 0; i < num_partitions * 2; i+=2) {
 #if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
-        write_dev_tree <<"\t\t\tslot_p"<<p<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg = <0x43" <<std::hex << first_reg_addr + i <<"0000 0x10000>;" <<endl; 
         write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
@@ -227,14 +249,14 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
 
-        write_dev_tree <<"\t\t\tpr_decoupler_p"<<p<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg =  <0x43" <<std::hex << first_reg_addr + i + 1 <<"0000 0x10000>;" <<endl; 
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
 
-#elif defined (FPGA_US) || defined (FPGA_US_96)
-        write_dev_tree <<"\t\t\tslot_p"<<p<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl; 
+#elif defined (FPGA_ZCU_102) || defined (FPGA_US_96)
+        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl; 
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i<<"0000 0x10000>;" <<endl;
         write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
@@ -242,14 +264,13 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
 
-        write_dev_tree <<"\t\t\tpr_decoupler_p"<<p<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i+1 <<"0000 0x10000>;" <<endl;
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
         write_dev_tree <<"\t\t}; " <<endl;
 #endif    
-        p++;
     }
     write_dev_tree <<"\t}; " <<endl;
     write_dev_tree <<"}; " <<endl;
@@ -258,12 +279,12 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 
 void pr_tool::generate_fred_files(flora *fl_ptr)
 {
-    int k, i, bitstream_id = 100;
+    int k, i,j, bitstream_id = 100;
     unsigned long partitions;
     std::string str, src, dest;
     // TODO: why these buffer sizes are hardcoded ? why using only 2 buffers ?
-    unsigned long fred_input_buff_size = 1048576;
-    unsigned long fred_output_buff_size = 32768;
+    //unsigned long fred_input_buff_size = 1048576;
+    //unsigned long fred_output_buff_size = 32768;
 
     try {
     
@@ -283,29 +304,54 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
         write_fred_arch <<"# defines a partion named \"ex_partition\" containing 3 slots\n";
 
         /*  HW_tasks description file header*/
-        write_fred_hw << "# FRED hw-tasks description file. \n ";
-        write_fred_hw << "# Warning: This file must match synthesized hardware! \n \n";
-        write_fred_hw << "# Each line defines a HW-Tasks: \n ";
-        write_fred_hw << "# <name>, <hw_id>, <partition>, <bistream_path>, <buff_0_size>, ... <buff_7_size> \n ";
-        write_fred_hw << "# Note: the association between a hw-task and its partition \n ";
-        write_fred_hw << "# it's defined during the synthesis flow! Here is specified only \n ";
-        write_fred_hw << "# to guess the number of bistreams and their length. \n \n ";
-        write_fred_hw << "# example: \n ";
-        write_fred_hw << "# \"ex_hw_task, 64, ex_partition, bits, 1024, 1024, 1024\" \n ";
-        write_fred_hw << "# defines a hw-task named \"ex_hw_task\", with id 64, allocated on a \n ";
-        write_fred_hw << "# partition named \"ex_partition\", whose bitstreams are located in \n ";
-        write_fred_hw << "# the \"/bits\" folder, and uses three input/output buffers of size 1024 bytes. \n \n ";
+        write_fred_hw << "# Fred-Linux hw-tasks description file. \n ";
+        write_fred_hw << "# Warning: This file must match synthesized hardware! \n ";
+        write_fred_hw << "# \n ";
+        write_fred_hw << "# Each line defines a HW-Tasks with the following syntax: \n ";
+        write_fred_hw << "# <name>, <id>, <timeout_ms>, <partition>, <bits_path>, <buff_0_size>, ... <buff_7_size> \n ";
+        write_fred_hw << "# \n ";
+        write_fred_hw << "# For each hw-task, the field: \n ";
+        write_fred_hw << "# - <name> is the name of the hw-task and must match the name of the bitstream files; \n ";
+        write_fred_hw << "# - <id> is the hw-id of the hw-task; \n ";
+        write_fred_hw << "# - <timeout_ms> defines an execution timeout for the hw-task in milliseconds; \n ";
+        write_fred_hw << "# - <partition> is the name of the partition to which it belongs; \n ";
+        write_fred_hw << "# - <bits_path> define the relative path of the bitstreams directory for the hw-task; \n ";
+        write_fred_hw << "# - <buff_0_size>, ... <buff_7_size> define the number and sizes fo the data buffers. \n ";
+        write_fred_hw << "# \n ";
+        write_fred_hw << "# Example: \n ";
+        write_fred_hw << "# \"ex-hw-task, 64, ex-partition, bitstreams, 100, 1024, 1024, 1024\" \n ";
+        write_fred_hw << "# defines a hw-task named \"ex-hw-task\" \n ";
+        write_fred_hw << "# - having id 64, \n ";
+        write_fred_hw << "# - belonging to a partition named \"ex-partition\", \n ";
+        write_fred_hw << "# - whose bitstreams are located in the \"./bitstreams\" directory, \n ";
+        write_fred_hw << "# - having an execution timeout of 100 ms, \n ";
+        write_fred_hw << "# - using three input/output buffers of size 1024 bytes each. \n ";
 
+
+        int n_buffers=0;
         #ifdef WITH_PARTITIONING
             for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
-                write_fred_arch << "p"<<k << ", "  << fl_ptr->alloc[k].num_hw_tasks_in_part << "\n";
+                //write_fred_arch << "p"<<k << ", "  << fl_ptr->alloc[k].num_hw_tasks_in_part << "\n";
+                write_fred_arch << "p"<<k << ", "  << "1\n";
             }
 
+            int ip_id;
             for(k = 0; k < fl_ptr->from_solver.num_partition; k++) {
                 for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
                     if (i < fl_ptr->alloc[k].num_hw_tasks_in_part) {
-                        write_fred_hw << rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                        //write_fred_hw << rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
+                        ip_id = fl_ptr->alloc[k].task_id[i];
+                        write_fred_hw << config["dart"]["hw_ips"][ip_id]["ip_name"].as<string>() <<", " <<bitstream_id <<
+                            ", " << config["dart"]["hw_ips"][ip_id]["timeout"].as<uint>() << ", p"<<k<<", dart_fred/bits, ";
                         bitstream_id++;
+                        n_buffers = config["dart"]["hw_ips"][ip_id]["buffers"].size();
+                        for(j = 0; j < n_buffers; j++) {
+                            write_fred_hw << config["dart"]["hw_ips"][ip_id]["buffers"][j].as<int>();
+                            if (j < (n_buffers-1)){
+                                write_fred_hw << ", ";
+                            }
+                        }
+                        write_fred_hw << "\n";
                     }
                 }
             }
@@ -321,14 +367,22 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                 for(i = 0; i < fl_ptr->from_solver.max_modules_per_partition; i++) {
                     if (i <  fl_ptr->alloc[k].num_hw_tasks_in_part) {
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin";
-                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
-                        fs::copy(src, dest);
+                        //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
+                        ip_id = fl_ptr->alloc[k].task_id[i];
+                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["dart"]["hw_ips"][ip_id]["ip_name"].as<string>() + "_s0.bin";
+                        // if (fs::exists(fs::path(dest))){
+                        //     fs::remove(fs::path(dest));
+                        // }
+                        fs::copy_file(src, dest,fs::copy_options::update_existing);
                     }
                 }
             }
 
             /*Copy one of the static bitstreams to FRED*/
-            fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+            // if (fs::exists(fs::path("fred/dart_fred/bits/static.bin"))){
+            //     fs::remove(fs::path("fred/dart_fred/bits/static.bin"));
+            // }
+            fs::copy_file("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin",fs::copy_options::update_existing);
 
             write_fred_arch.close();
             write_fred_hw.close();
@@ -336,9 +390,30 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
         #else
             /* Create the arch.csv and hw_tasks.csv files for FRED */
             for(k = 0; k < num_rm_partitions; k++) {
-                write_fred_arch << "p"<<k << ", "  << alloc[k].num_hw_tasks_in_part << "\n";
+                //write_fred_arch << "p"<<k << ", "  << alloc[k].num_hw_tasks_in_part << "\n";
+                write_fred_arch << "p"<<k << ", "  << "1\n";
             }
 
+            for(k = 0; k < num_rm_partitions; k++) {
+                for(i = 0; i < config["dart"]["partitions"][k]["hw_ips"].size(); i++) {
+                    // commented since it' s always true
+                    //if (i < alloc[k].num_hw_tasks_in_part) {
+                        //write_fred_hw << rm_list[alloc[k].rm_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
+                        write_fred_hw << config["dart"]["partitions"][k]["hw_ips"][i]["ip_name"].as<string>() <<", " <<bitstream_id << 
+                            ", " << config["dart"]["partitions"][k]["hw_ips"][i]["timeout"].as<uint>() << ", p"<<k<<", dart_fred/bits, ";
+                        bitstream_id++;
+                        n_buffers = config["dart"]["partitions"][k]["hw_ips"][i]["buffers"].size();
+                        for(j = 0; j < n_buffers; j++) {
+                            write_fred_hw << config["dart"]["partitions"][k]["hw_ips"][i]["buffers"][j].as<int>();
+                            if (j < (n_buffers-1)){
+                                write_fred_hw << ", ";
+                            }
+                        }
+                        write_fred_hw << "\n";
+                    //}
+                }
+            }
+            /*
             for(k = 0; k < num_rm_partitions; k++) {
                 for(i = 0; i < max_modules_in_partition; i++) {
                     if (i < alloc[k].num_hw_tasks_in_part) {
@@ -347,6 +422,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                     }
                 }
             }
+            */
         
             /* Create the FRED bitstream partition directories */
             for(k = 0; k < num_rm_partitions; k++) {
@@ -356,17 +432,25 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
 
             /* Copy the partial bitstreams */
             for(k = 0; k < num_rm_partitions; k++) {
-                for(i = 0; i < max_modules_in_partition; i++) {
-                    if (i < alloc[k].num_hw_tasks_in_part) {
+                //for(i = 0; i < max_modules_in_partition; i++) {
+                for(i = 0; i < config["dart"]["partitions"][k]["hw_ips"].size(); i++) {
+                    //if (i < alloc[k].num_hw_tasks_in_part) {
                         src = "Bitstreams/config_" + std::to_string(i) + "_pblock_slot_" + std::to_string(k) + "_partial.bin"; 
-                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
-                        fs::copy(src, dest);
-                    }
+                        //dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + rm_list[alloc[k].rm_id[i]].rm_tag + "_s" +  std::to_string(i) + ".bin";
+                        dest = "fred/dart_fred/bits/p"+ std::to_string(k) + "/" + config["dart"]["partitions"][k]["hw_ips"][i]["ip_name"].as<string>() + "_s0.bin";
+                        // if (fs::exists(fs::path(dest))){
+                        //     fs::remove(fs::path(dest));
+                        // }
+                        fs::copy_file(src, dest,fs::copy_options::update_existing);
+                    //}
                 }
             }
 
             /*Copy one of the static bitstreams to FRED*/
-            fs::copy("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin");
+            // if (fs::exists(fs::path("fred/dart_fred/bits/static.bin"))){
+            //     fs::remove(fs::path("fred/dart_fred/bits/static.bin"));
+            // }
+            fs::copy_file("Bitstreams/config_0.bin", "fred/dart_fred/bits/static.bin",fs::copy_options::update_existing);
 
             write_fred_arch.close();
             write_fred_hw.close();
@@ -379,59 +463,9 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     } 
 }
 
-void pr_tool::prep_input()
-{
-    std::string str;
-    unsigned long row, col;
-    int i , k;
-    unsigned int ptr;
-    reconfigurable_module rm;
-
-    CSVData csv_data(input_pr->path_to_input);
-
-    row = csv_data.rows();
-    col = csv_data.columns();
-
-    cout << endl << "PR_TOOL: reading inputs " << row << " " << col <<endl;
-    num_rm_modules = row;
-    for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
-
-#ifdef WITH_PARTITIONING
-        str = csv_data.get_value(i, k++);
-        HW_WCET.push_back(std::stod(str));
-        str = csv_data.get_value(i, k++);
-        slacks.push_back(std::stod(str));
-#else
-        str = csv_data.get_value(i, k++);
-        rm.partition_id = std::stoul(str);
-#endif
-        rm.rm_tag = csv_data.get_value(i, k++);
-        //rm.source_path = csv_data.get_value(i, k++);
-        rm.top_module = csv_data.get_value(i, k++);
-        
-        rm_list.push_back(rm);
-        k = 0;
-    }
-
-#ifndef WITH_PARTITIONING 
-    for(k = 0; k < num_rm_partitions; k++) {
-        for(i = 0; i < num_rm_modules; i++) {
-            if(rm_list[i].partition_id  == k){
-                alloc[k].num_modules_in_partition += 1;
-                alloc[k].num_hw_tasks_in_part += 1;
-                alloc[k].rm_id.push_back(i);
-            }
-        }
-        if(max_modules_in_partition < alloc[k].num_modules_in_partition)
-            max_modules_in_partition = alloc[k].num_modules_in_partition;
-    }
-
-#endif
-}
-
 void pr_tool::prep_proj_directory()
 {
-    int status, i;
+    int status, i,j;
     
     try{
         cout << "PR_TOOL: creating project directory "<<endl;
@@ -462,17 +496,42 @@ void pr_tool::prep_proj_directory()
         //      2. remove leading or trailing space from source_path
 
         //copy source files of each RM to Source/core/top_name
+        string ip_name;
+#ifdef WITH_PARTITIONING
         for(i = 0; i < num_rm_modules; i++){
-            std::string str = Src_path / fs::path("cores") / rm_list[i].rm_tag;
-            fs::create_directories(str);
-            fs::copy(fs::path(dart_ip_path) / rm_list[i].rm_tag, str, fs::copy_options::recursive); 
+            ip_name = config["dart"]["hw_ips"][i]["ip_name"].as<std::string>();
+            std::string str = Src_path / fs::path("cores") / ip_name;
+            if (!fs::exists(str)) { 
+                fs::create_directories(str);
+                fs::copy(fs::path(dart_ip_path) / ip_name, str, fs::copy_options::recursive); 
+            }
         } 
+#else
+        for(i = 0; i < num_rm_partitions; i++) {
+            for(j = 0; j < config["dart"]["partitions"][i]["hw_ips"].size(); j++) {
+                ip_name = config["dart"]["partitions"][i]["hw_ips"][j]["ip_name"].as<std::string>();
+                std::string str = Src_path / fs::path("cores") / ip_name;
+                if (!fs::exists(str)) { 
+                    fs::create_directories(str);
+                    fs::copy(fs::path(dart_ip_path) / ip_name, str, fs::copy_options::recursive); 
+                }
+            }
+        }
+#endif 
         fs::path dir_source(dart_path);
         dir_source /= fs::path("tools") / fs::path("Tcl");
+        if (fs::exists(fs::path(tcl_project))) { 
+            fs::remove_all(tcl_project);
+        }
         fs::copy(dir_source, tcl_project, fs::copy_options::recursive); 
         dir_source = dart_path / fs::path("tools") / fs::path("start_vivado");
-        fs::copy(dir_source, Project_dir, fs::copy_options::recursive); 
+        //if (!fs::exists(fs::path(Project_dir) / fs::path("start_vivado"))) { 
+            fs::copy(dir_source, Project_dir, fs::copy_options::update_existing); 
+        //}
         dir_source = dart_path / fs::path("tools") / fs::path("acc_bbox_ip");
+        if (fs::exists(fs::path(ip_repo_path))) { 
+            fs::remove_all(ip_repo_path);
+        }
         fs::copy(dir_source, ip_repo_path, fs::copy_options::recursive);
     }catch (std::system_error & e)
     {
@@ -535,7 +594,7 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
      write_synth_tcl << "set part xc7z020clg400-1" <<endl;
 #elif FPGA_ZYNQ
      write_synth_tcl << "set part xc7z010clg400-1" <<endl;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     write_synth_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
 #elif FPGA_US_96
     write_synth_tcl << "set part xczu3eg-sbva484-1-e" <<endl;
@@ -578,7 +637,8 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
     if (re_synthesis_after_wrap == 1) {
         for(i = 0; i < fl_ptr->from_solver.num_partition; i++) {
             for(k = 0; k <  fl_ptr->alloc[i].num_hw_tasks_in_part; k++) {          
-                tag = rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag;
+                //tag = rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag;
+                tag = config["dart"]["hw_ips"][fl_ptr->alloc[i].task_id[k]]["ip_name"].as<std::string>();
                 write_synth_tcl << module_attributes(tag,string(wrapper_top_name + "_" + to_string(i)));
             }
         }
@@ -586,13 +646,24 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
     
     else {     
          for(i = 0; i < num_rm_modules; i++) {
-            write_synth_tcl << module_attributes(rm_list[i].rm_tag,rm_list[i].top_module);
+            tag = config["dart"]["hw_ips"][i]["ip_name"].as<std::string>();
+            top_mod = config["dart"]["hw_ips"][i]["top_name"].as<std::string>();
+            //write_synth_tcl << module_attributes(rm_list[i].rm_tag,rm_list[i].top_module);
+            write_synth_tcl << module_attributes(tag,top_mod);
          }
      }
 #else
-     for(i = 0; i < num_rm_modules; i++) {
-         write_synth_tcl << module_attributes(rm_list[i].rm_tag,string(wrapper_top_name + "_" + to_string(rm_list[i].partition_id)));
-     }
+    //  for(i = 0; i < num_rm_modules; i++) {
+    //      write_synth_tcl << module_attributes(rm_list[i].rm_tag,string(wrapper_top_name + "_" + to_string(rm_list[i].partition_id)));
+    //  }
+    for(i = 0; i < num_rm_partitions; i++) {
+        for(j = 0; j < config["dart"]["partitions"][i]["hw_ips"].size(); j++) {
+            write_synth_tcl << module_attributes(
+                config["dart"]["partitions"][i]["hw_ips"][j]["ip_name"].as<string>(),
+                string(wrapper_top_name + "_" + to_string(i))
+            );
+        }
+    }
 #endif
      write_synth_tcl << "source $tclDir/run.tcl" <<endl;
      write_synth_tcl << "exit" <<endl;
@@ -692,6 +763,7 @@ void pr_tool::create_vivado_project()
 
 void pr_tool::run_vivado(std::string synth_script)
 { 
+    int ret_code;
     chdir(("cd " + Project_dir).c_str());
     //fs::current_path(Src_path);
     //std::system(("python3.6  load_prj.py"));
@@ -710,10 +782,12 @@ void pr_tool::run_vivado(std::string synth_script)
     }
     // run vivado
     try{
-        std::system((bash_script.string() + " " + vivado_script.string()).c_str());
+        ret_code = std::system((bash_script.string() + " " + vivado_script.string()).c_str());
+        if (ret_code != EXIT_SUCCESS) {
+            cerr << "ERROR: Vivado synthesis error" << endl;
+            exit(EXIT_FAILURE);
+        }
     }
-    // TODO capture the output and parse for errors
-    // https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po
     catch (std::system_error & e)
     {
         cerr << "Exception :: " << e.what() << endl;
@@ -725,186 +799,223 @@ void pr_tool::run_vivado(std::string synth_script)
 void pr_tool::parse_synthesis_report()
 {
     unsigned long i, k, j = 0;
-#if defined(FPGA_US) || defined (FPGA_US_96)
+#if defined(FPGA_ZCU_102) || defined (FPGA_US_96)
     string lut = "CLB LUTs*";
 #else
     string lut = "Slice LUTs*";
 #endif    
-    string dsp = "DSPs";
-    string bram = "Block RAM Tile    |";
-    vector<slot> extracted_res = vector<slot>(num_rm_modules);
+    string dsp_str = "DSPs";
+    string bram_str = "Block RAM Tile    |";
+    fs::path log_file_name;
+    //vector<slot> extracted_res = vector<slot>(num_rm_modules);
    
     cout << "PR_TOOL: Parsing Synth utilization report "  <<endl;
     
 #ifdef WITH_PARTITIONING
+    unsigned long clb, bram, dsp;    
     for(i = 0; i < num_rm_modules; i++) {
         string line, word;
-        cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                      rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
+        //cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+        //              rm_list[i].top_module + "_utilization_synth.rpt" <<endl;
+        cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + config["dart"]["hw_ips"][i]["ip_name"].as<std::string>() + "/" + 
+                      config["dart"]["hw_ips"][i]["top_name"].as<std::string>() + "_utilization_synth.rpt" <<endl;
 
-        ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                      rm_list[i].top_module + "_utilization_synth.rpt");
+        //ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+        //              rm_list[i].top_module + "_utilization_synth.rpt");
+        log_file_name = Project_dir + "/Synth/" + config["dart"]["hw_ips"][i]["ip_name"].as<std::string>() + "/" + 
+                      config["dart"]["hw_ips"][i]["top_name"].as<std::string>() + "_utilization_synth.rpt";
+        if (!fs::exists(log_file_name)){
+            cerr << "ERROR: log file " << log_file_name << " not found!\n";
+            exit(EXIT_FAILURE);
+        }
+        ifstream file (log_file_name);
 
+        k = 0;
         while (getline(file, line)) {
             if(line.find(lut) != string::npos) {
                 stringstream iss(line);
-
                 while(iss >> word) {
                     k++;
                     if(k == 5){
-                        extracted_res[i].clb= (unsigned long)((std::stoul(word) / 8));
-                        cout << " clb " <<  extracted_res[i].clb <<endl;
+                        //extracted_res[i].clb= (unsigned long)((std::stoul(word) / 8));
+                        clb = (unsigned long)((std::stoul(word) / 8));
+                        config["dart"]["hw_ips"][i]["CLBs"] = clb;
+                        cout << " clb " << clb <<endl;
                     }
                 }
                 k = 0;
             }
 
-            if(line.find(bram) != string::npos) {
+            if(line.find(bram_str) != string::npos) {
                 stringstream iss(line);
-
                 while(iss >> word) {
                     k++;
-
                     if(k == 6) {
-                        extracted_res[i].bram = std::stoul(word); 
-                        cout <<" bram " <<  extracted_res[i].bram <<endl;
+                        //extracted_res[i].bram = std::stoul(word);
+                        bram = std::stoul(word);
+                        config["dart"]["hw_ips"][i]["BRAMs"] = bram;
+                        cout <<" bram " <<  bram <<endl;
                     }
                 }
                 k = 0;
             }
 
-            if(line.find(dsp) != string::npos){
+            if(line.find(dsp_str) != string::npos){
                 stringstream iss(line);
-
                 while(iss >> word) {
                     k++;
-
                     if(k == 4){
-                        extracted_res[i].dsp = std::stoul(word);
-                        cout << " dsp " <<  extracted_res[i].dsp <<endl;
+                        //extracted_res[i].dsp = std::stoul(word);
+                        dsp = std::stoul(word);
+                        config["dart"]["hw_ips"][i]["DSPs"] = bram;
+                        cout << " dsp " <<  dsp <<endl;
                     }
                 }
                 k = 0;
             }
         }
     }
-
 #else
-    unsigned long max_clb, max_bram, max_dsp;    
+    unsigned long max_clb, max_bram, max_dsp;
     for(j = 0; j < num_rm_partitions; j++) {
         max_clb = 0;
         max_bram = 0;
         max_dsp = 0;
-        for(i = 0; i < num_rm_modules; i++) {
+        for(i = 0; i < config["dart"]["partitions"][j]["hw_ips"].size(); i++) {
+        //for(i = 0; i < num_rm_modules; i++) {
             string line, word;
 
-            if(rm_list[i].partition_id == j) {
+            //if(rm_list[i].partition_id == j) {
                 k = 0;
+                //cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+                //              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt" <<endl;
+                cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + config["dart"]["partitions"][j]["hw_ips"][i]["ip_name"].as<string>() + "/" + 
+                              wrapper_top_name + "_" + to_string(j) + "_utilization_synth.rpt" <<endl;
 
-                cout <<"PR_TOOL:filename is " << Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt" <<endl;
-
-                ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
-                              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt");
+                //ifstream file (Project_dir + "/Synth/" + rm_list[i].rm_tag + "/" + 
+                //              wrapper_top_name + "_" + to_string(rm_list[i].partition_id) + "_utilization_synth.rpt");
+                log_file_name = Project_dir + "/Synth/" + config["dart"]["partitions"][j]["hw_ips"][i]["ip_name"].as<string>() + "/" + 
+                              wrapper_top_name + "_" + to_string(j) + "_utilization_synth.rpt";
+                if (!fs::exists(log_file_name)){
+                    cerr << "ERROR: log file " << log_file_name << " not found!\n";
+                    exit(EXIT_FAILURE);
+                }
+                ifstream file (log_file_name);
 
                 while (getline(file, line)) {
                     if(line.find(lut) != string::npos) {
                         stringstream iss(line);
-                        
                         while(iss >> word) {
                             k++;
                             if(k == 5){
                                 if(max_clb < (std::stoul(word) / 8))
                                     max_clb = ((std::stoul(word) / 8));
-
                                  cout << " LUTs " <<  word <<endl; 
                             }
                         }
                         k = 0;
                     }
 
-                    if(line.find(bram) != string::npos) {
+                    if(line.find(bram_str) != string::npos) {
                         stringstream iss(line);
-
                         while(iss >> word) {
                             k++;
-
                             if(k == 6) {
                                 if(stod(word) > 0.0 && max_bram <  (std::stoul(word) + 1))
                                     //if(max_bram <  (std::stoul(word) + 1))
                                         max_bram = std::stoul(word) + 1;
                                  else if (max_bram <  (std::stoul(word)))
                                     max_bram = std::stoul(word);
-                                
                                 cout <<" BRAM " <<  word <<endl;
                             }
                         }
                         k = 0;
                     }
 
-                    if(line.find(dsp) != string::npos){
+                    if(line.find(dsp_str) != string::npos){
                         stringstream iss(line);
-
                         while(iss >> word) {
                             k++;
-
                             if(k == 4){
                                 if(max_dsp < std::stoul(word))
                                     max_dsp = std::stoul(word);
-                                    
                                 cout << " DSP " <<  word <<endl;
                             }
                         }
                         k = 0;
                     }
                 }
-            }
+            //}
         }
-        
+        /*
         extracted_res[j].clb = max_clb;
         extracted_res[j].bram = max_bram;
         extracted_res[j].dsp = max_dsp;
-    
+        */
+        config["dart"]["partitions"][j]["CLBs"] = max_clb;
+        config["dart"]["partitions"][j]["BRAMs"] = max_bram;
+        config["dart"]["partitions"][j]["DSPs"] = max_dsp;
     }
 
 #endif    
     ofstream write_flora_input;
-        write_flora_input.open(Project_dir +"/flora_input.csv");
+    write_flora_input.open(Project_dir +"/flora_input.csv");
+    int clbs, brams, dsps;
 #ifdef WITH_PARTITIONING         
-        for(i = 0; i < num_rm_modules; i++){
+    for(i = 0; i < num_rm_modules; i++){
+        clbs = config["dart"]["hw_ips"][i]["CLBs"].as<int>();
+        brams = config["dart"]["hw_ips"][i]["BRAMs"].as<int>();
+        dsps = config["dart"]["hw_ips"][i]["DSPs"].as<int>();
 #else
-        for(i = 0; i < num_rm_partitions; i++){
+    for(i = 0; i < num_rm_partitions; i++){
+        clbs = config["dart"]["partitions"][i]["CLBs"].as<int>();
+        brams = config["dart"]["partitions"][i]["BRAMs"].as<int>();
+        dsps = config["dart"]["partitions"][i]["DSPs"].as<int>();
 #endif
-            write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<"," ; 
+        //write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<"," ; 
+        write_flora_input << clbs + CLB_MARGIN <<"," ; 
         
-            if(extracted_res[i].bram > 0)
-                write_flora_input << extracted_res[i].bram + BRAM_MARGIN <<",";
-            else
-                write_flora_input << extracted_res[i].bram << "," ;
+        if(brams > 0)
+            //write_flora_input << extracted_res[i].bram + BRAM_MARGIN <<",";
+            write_flora_input << brams + BRAM_MARGIN <<",";
+        else
+            //write_flora_input << extracted_res[i].bram << "," ;
+            write_flora_input << brams << "," ;
 
-            if(extracted_res[i].dsp > 0)
-                write_flora_input << extracted_res[i].dsp + DSP_MARGIN <<"," ;
-            else
-                write_flora_input << extracted_res[i].dsp <<"," ;
+        if(dsps > 0)
+            //write_flora_input << extracted_res[i].dsp + DSP_MARGIN <<"," ;
+            write_flora_input << dsps + DSP_MARGIN <<"," ;
+        else
+            //write_flora_input << extracted_res[i].dsp <<"," ;
+            write_flora_input << dsps <<"," ;
 
 #ifdef WITH_PARTITIONING
-            write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
+        //write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
+        //write_flora_input << HW_WCET[i] << "," <<slacks[i]  ;
+        write_flora_input << 
+            config["dart"]["hw_ips"][i]["wcet"].as<int>() << "," << 
+            config["dart"]["hw_ips"][i]["slack_time"].as<int>();
 #endif
-            write_flora_input << rm_list[i].rm_tag <<endl;
-        }
+        //write_flora_input << rm_list[i].rm_tag <<endl;
+        write_flora_input <<endl;
+    }
         
-        write_flora_input.close();        
+        write_flora_input.close();
+/*
 #ifdef WITH_PARTITIONING 
         in_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
 #else
         //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv", input_pr->static_top_modul};
-        in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv"};
+        //TODO: replace this CSV by YAML
+        //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv",};
+        in_flora = {num_rm_partitions};
 #endif
+*/
 }
 
 void pr_tool::generate_impl_tcl(flora *fl_ptr)
 { 
-    unsigned long i, k, partition_ptr, temp_index = 0;
+    unsigned long i,j,k, partition_ptr, temp_index = 0;
     ofstream write_impl_tcl;
     string config_name, tag;
     impl_script = Project_dir + "/impl.tcl";
@@ -935,7 +1046,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl << "set part xc7z020clg400-1" <<endl;
 #elif FPGA_ZYNQ
      write_impl_tcl << "set part xc7z010clg400-1" <<endl;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     write_impl_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
 #elif FPGA_US_96
     write_impl_tcl << "set part xczu3eg-sbva484-1-e" <<endl;
@@ -986,7 +1097,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 
      write_impl_tcl<<"####################################################################" <<endl;
      write_impl_tcl<<"### RP Module Definitions" <<endl;
-     write_impl_tcl<<" ####################################################################" <<endl;
+     write_impl_tcl<<"####################################################################" <<endl;
 
 #ifdef WITH_PARTITIONING
 /*    for(i = 0; i < num_rm_modules; i++) {
@@ -998,7 +1109,8 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 //    if (re_synthesis_after_wrap == 1) {
         for(i = 0; i < fl_ptr->from_solver.num_partition; i++) {
             for(k = 0; k <  fl_ptr->alloc[i].num_hw_tasks_in_part; k++) {
-                tag = rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag;
+                //tag = rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag;
+                tag = config["dart"]["hw_ips"][fl_ptr->alloc[i].task_id[k]]["ip_name"].as<std::string>();
                 write_impl_tcl << "add_module " << tag <<endl;
                 write_impl_tcl << "set_attribute module " <<tag << " moduleName\t" << wrapper_top_name << "_" << i <<endl;
                 
@@ -1006,11 +1118,21 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         }
 //    }
 #else
+/*
     for(i = 0; i < num_rm_modules; i++) {
         write_impl_tcl << "add_module " << rm_list[i].rm_tag <<endl;
         write_impl_tcl << "set_attribute module "  << rm_list[i].rm_tag <<  " moduleName\t" << wrapper_top_name << "_" << rm_list[i].partition_id <<endl;
         write_impl_tcl <<endl;
      }
+     */
+    for(i = 0; i < num_rm_partitions; i++) {
+        for(j = 0; j < config["dart"]["partitions"][i]["hw_ips"].size(); j++) {
+            write_impl_tcl << "add_module " << config["dart"]["partitions"][i]["hw_ips"][j]["ip_name"].as<string>() <<endl;
+            write_impl_tcl << "set_attribute module "  << config["dart"]["partitions"][i]["hw_ips"][j]["ip_name"].as<string>() 
+                <<  " moduleName\t" << wrapper_top_name << "_" << i <<endl;
+            write_impl_tcl <<endl;
+        }
+    }     
 #endif
 
 #ifdef WITH_PARTITIONING
@@ -1037,13 +1159,17 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
             if(fl_ptr->alloc[partition_ptr].num_tasks_in_part > 0) {
                 fl_ptr->alloc[partition_ptr].num_tasks_in_part--;
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[partition_ptr].task_id[temp_index]].rm_tag 
+                //write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[partition_ptr].task_id[temp_index]].rm_tag 
+                //   <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
+                write_impl_tcl <<"[list " << config["dart"]["hw_ips"][fl_ptr->alloc[partition_ptr].task_id[temp_index]]["ip_name"].as<std::string>()
                    <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
             }
 
             else {
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[partition_ptr].task_id[0]].rm_tag
+                //write_impl_tcl <<"[list " << rm_list[fl_ptr->alloc[partition_ptr].task_id[0]].rm_tag
+                //               <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl;
+                write_impl_tcl <<"[list " << config["dart"]["hw_ips"][fl_ptr->alloc[partition_ptr].task_id[0]]["ip_name"].as<std::string>()
                                <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl;
             }
         }
@@ -1057,6 +1183,14 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
     }
 
 #else    
+    unsigned idx, max_modules_in_partition=0;
+    vector<unsigned> rm_per_part;
+    for(i=0;i<num_rm_partitions;i++){
+        rm_per_part.push_back(config["dart"]["partitions"][i]["hw_ips"].size());
+        if(max_modules_in_partition < config["dart"]["partitions"][i]["hw_ips"].size())
+            max_modules_in_partition = config["dart"]["partitions"][i]["hw_ips"].size();
+    }
+     
     for(i = 0, k = 0; i < max_modules_in_partition; i++, k++) {
         write_impl_tcl << "############################################################### \n" <<
                            "###Implemenetation configuration " << i <<endl <<
@@ -1077,16 +1211,24 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
         else
             write_impl_tcl <<"[list [list $static           $top \t" + import   + "   ] \\" <<endl;
         for(partition_ptr = 0; partition_ptr <  num_rm_partitions; partition_ptr++) {
-            if(alloc[partition_ptr].num_modules_in_partition > 0) {
-                alloc[partition_ptr].num_modules_in_partition--;
+            if (rm_per_part[partition_ptr]>0){
+                rm_per_part[partition_ptr]--;
+            // if(alloc[partition_ptr].num_modules_in_partition > 0) {
+            //     alloc[partition_ptr].num_modules_in_partition--;
+                //idx = alloc[partition_ptr].rm_id[temp_index];
+                // write_impl_tcl <<"\t \t \t \t \t";
+                // write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[temp_index]].rm_tag 
+                //    <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[temp_index]].rm_tag 
-                   <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
+                write_impl_tcl <<"[list " << config["dart"]["partitions"][partition_ptr]["hw_ips"][temp_index]["ip_name"].as<std::string>() <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" implement] \\" <<endl;
             }
             else {
+                //idx = alloc[partition_ptr].rm_id[0];
+                // write_impl_tcl <<"\t \t \t \t \t";
+                // write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[0]].rm_tag 
+                //                <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
                 write_impl_tcl <<"\t \t \t \t \t";
-                write_impl_tcl <<"[list " << rm_list[alloc[partition_ptr].rm_id[0]].rm_tag 
-                               <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
+                write_impl_tcl <<"[list " << config["dart"]["partitions"][partition_ptr]["hw_ips"][0]["ip_name"].as<std::string>()  <<"\t " << fl_ptr->cell_name[partition_ptr]  <<" import] \\" <<endl; 
             }
         }
         
@@ -1107,7 +1249,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 
 void pr_tool::init_dir_struct()
 {
-    Project_dir = input_pr->path_to_output;
+    //Project_dir = input_pr->path_to_output;
 
     cout << "PR_TOOL: Project directory is " << Project_dir <<endl;
 
@@ -1124,7 +1266,7 @@ void pr_tool::init_dir_struct()
     static_dir = Project_dir + "/static_hw";
 }
 
-void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_version) 
+void pr_tool::generate_static_part(flora *fl_ptr) 
 {
     int i, j, k;
     unsigned int num_partitions = 0;
@@ -1146,7 +1288,7 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
 #elif FPGA_ZYNQ
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
     write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
-#elif FPGA_US
+#elif FPGA_ZCU_102
      write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
      write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.2 [current_project] " <<endl;
 #elif FPGA_US_96
@@ -1165,9 +1307,10 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     write_static_tcl << "startgroup " <<endl;
     write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0" <<endl; //TODO: PS must be templated
     write_static_tcl << "endgroup " <<endl;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     write_static_tcl << "startgroup " <<endl;
-    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.2 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
+    //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.2 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.3 zynq_ultra_ps_e_0" <<endl; // TODO: this works with 2020.2. Perhaps the IP version is different for older versions
     write_static_tcl << "endgroup " <<endl;
 #elif FPGA_US_96
     write_static_tcl << "startgroup " <<endl;
@@ -1175,16 +1318,20 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     write_static_tcl << "endgroup " <<endl;
 #endif
 
-    // this TCL variable is used to decide whether ILA will be inserted in the design or not
-    write_static_tcl << "set use_ila "<< (use_ila ? "1" : "0") <<endl;
+    // TODO: apply ILA per partition and read it from the YAML
+    //bool use_ila = false;
    
     //create the bbox instance of the accelerator IPs and the decouplers (two decouplers for each acc)
+    string vivado_version_str(config["vivado_version_str"].as<std::string>());
+    Version vivado_version(vivado_version_str);
+    Version min_vivado_version("2020.1.0.0");
     for(i=0, j=0; i < num_partitions; i++, j++) {
         write_static_tcl << "startgroup " <<endl;
         write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:hls:acc:1.0 acc_" <<std::to_string(i) <<endl;
         write_static_tcl << "endgroup " <<endl;
         write_static_tcl << "startgroup " <<endl;
-        if (vivado_version == 1)
+        //if (vivado_version == 1)
+        if (vivado_version<min_vivado_version)
             write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl; //for Vivado 2019.2 and below
         else
             write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) <<endl;
@@ -1238,7 +1385,8 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
    
         j++; 
         write_static_tcl << "startgroup" << endl;
-        if (vivado_version == 1)
+        if (vivado_version<min_vivado_version)
+        //if (vivado_version == 1)
             write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:pr_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl; //for Vivado 2019.2 and below
         else
             write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:dfx_decoupler:1.0 pr_decoupler_"<<std::to_string(j) << endl;
@@ -1273,29 +1421,33 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
                             "CONFIG.GUI_SIGNAL_PRESENT_4 {false} CONFIG.GUI_SIGNAL_PRESENT_5 {false} CONFIG.GUI_SIGNAL_PRESENT_6 {false} CONFIG.GUI_SIGNAL_PRESENT_7 {false} "
                             "CONFIG.GUI_SIGNAL_PRESENT_8 {false} CONFIG.GUI_SIGNAL_PRESENT_9 {false}] [get_bd_cells pr_decoupler_"<< std::to_string(j) << "]" <<endl;
 
-    
-        // add one ILA per reconfig region
-        write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-        write_static_tcl << "    # Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
-        write_static_tcl << "    set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] " <<endl;
-        // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
-        //write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {2048} "
-        write_static_tcl << "    set_property -dict [ list CONFIG.C_BRAM_CNT {12} CONFIG.C_DATA_DEPTH {1024} "
-                            "     CONFIG.C_MON_TYPE {MIX} CONFIG.C_NUM_MONITOR_SLOTS {2} CONFIG.C_SLOT_0_APC_EN {0}"
-                            "     CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1}"
-                            "     CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1}"
-                            "     CONFIG.C_SLOT_0_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_W_SEL_DATA {1}"
-                            "     CONFIG.C_SLOT_0_AXI_W_SEL_TRIG {1}"
-                            "     CONFIG.C_SLOT_0_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
-                            "     CONFIG.C_SLOT_1_APC_EN {0}"
-                            "     CONFIG.C_SLOT_1_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_AW_SEL_DATA {1}"
-                            "     CONFIG.C_SLOT_1_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_B_SEL_TRIG {1}"
-                            "     CONFIG.C_SLOT_1_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_W_SEL_DATA {1}"
-                            "     CONFIG.C_SLOT_1_AXI_W_SEL_TRIG {1}"
-                            "     CONFIG.C_SLOT_1_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
-                            "    ] [get_bd_cells system_ila_"<< std::to_string(i) << "]" << endl;
-        write_static_tcl << "}" <<endl;                            
-
+        // decided whether the ILA module must be inserted for this partition
+        if(config["dart"]["partitions"][i]["debug"]){
+            // get the ILA buffer size. If not defined, use the defaut value
+            int ila_buffer_depth = 1024;
+            if(config["dart"]["partitions"][i]["debug"]["data_depth"]){
+                ila_buffer_depth = config["dart"]["partitions"][i]["debug"]["data_depth"].as<int>();
+            }
+            // add one ILA per reconfig region
+            write_static_tcl << "# Create instance: system_ila_"<< std::to_string(i) <<", and set properties " <<endl;
+            write_static_tcl << "set system_ila_"<< std::to_string(i) <<" [ create_bd_cell -type ip -vlnv xilinx.com:ip:system_ila:1.1 system_ila_"<< std::to_string(i) <<" ] " <<endl;
+            // TODO: it might be interesting to enable changing CONFIG.C_DATA_DEPTH {XXXX}"
+            //write_static_tcl << "set_property -dict [ list CONFIG.C_BRAM_CNT {12} CONFIG.C_DATA_DEPTH {1024} "
+            write_static_tcl << "set_property -dict [ list CONFIG.C_BRAM_CNT {23.5} CONFIG.C_DATA_DEPTH {" << ila_buffer_depth << "} "
+                                "  CONFIG.C_MON_TYPE {MIX} CONFIG.C_NUM_MONITOR_SLOTS {2} CONFIG.C_SLOT_0_APC_EN {0}"
+                                "  CONFIG.C_SLOT_0_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_AW_SEL_DATA {1}"
+                                "  CONFIG.C_SLOT_0_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_B_SEL_TRIG {1}"
+                                "  CONFIG.C_SLOT_0_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_0_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_0_AXI_W_SEL_DATA {1}"
+                                "  CONFIG.C_SLOT_0_AXI_W_SEL_TRIG {1}"
+                                "  CONFIG.C_SLOT_0_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
+                                "  CONFIG.C_SLOT_1_APC_EN {0}"
+                                "  CONFIG.C_SLOT_1_AXI_AR_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_AR_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_AW_SEL_DATA {1}"
+                                "  CONFIG.C_SLOT_1_AXI_AW_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_B_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_B_SEL_TRIG {1}"
+                                "  CONFIG.C_SLOT_1_AXI_R_SEL_DATA {1} CONFIG.C_SLOT_1_AXI_R_SEL_TRIG {1} CONFIG.C_SLOT_1_AXI_W_SEL_DATA {1}"
+                                "  CONFIG.C_SLOT_1_AXI_W_SEL_TRIG {1}"
+                                "  CONFIG.C_SLOT_1_INTF_TYPE {xilinx.com:interface:aximm_rtl:1.0}"
+                                "] [get_bd_cells system_ila_"<< std::to_string(i) << "]" << endl;
+        }
     }
   
     //connect PS to DDR and Fixed IO
@@ -1305,7 +1457,7 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     write_static_tcl << "startgroup " <<endl;
     write_static_tcl << "set_property -dict [list CONFIG.PCW_USE_S_AXI_HP0 {1}] [get_bd_cells processing_system7_0] " <<endl; //TODO: number of HPO should be changed based on number of acc
     write_static_tcl << "endgroup " <<endl;
-#elif defined (FPGA_US) || defined (FPGA_US_96)
+#elif defined (FPGA_ZCU_102) || defined (FPGA_US_96)
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:zynq_ultra_ps_e -config {apply_board_preset \"1\" }  [get_bd_cells zynq_ultra_ps_e_0]" <<endl;
     write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__S_AXI_GP0 {1}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
     write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__M_AXI_GP1 {0}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
@@ -1335,7 +1487,7 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
 #ifdef FPGA_PYNQ        
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins processing_system7_0/M_AXI_GP0]" <<endl; 
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXI_HPM0_FPD]" <<endl; 
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]" <<endl;
 #endif
@@ -1346,7 +1498,7 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] -boundary_type upper [get_bd_intf_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_AXI]" <<endl;
 #ifdef FPGA_PYNQ
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)        
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)        
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/S_AXI_HPC0_FPD]" <<endl;
 #endif        
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT]" <<endl; 
@@ -1354,15 +1506,15 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
     //TODO: add ila for US 
 #ifdef FPGA_PYNQ
-        write_static_tcl << "if { $use_ila == 1 } {" <<endl;
-        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
-        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
-        write_static_tcl << "   connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
-        write_static_tcl << "   set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
-        write_static_tcl << "   connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
-        write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
-        write_static_tcl << "   connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
-        write_static_tcl << "}" <<endl;
+        if(config["dart"]["partitions"][i]["debug"]){
+            write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
+            write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/m_axi_mem_bus]" <<endl;
+            write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
+            write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
+            write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
+            write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
+            write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
+        }
 #endif
     }
     
@@ -1373,7 +1525,7 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_ACLK]" <<endl;
-#elif FPGA_US || defined(FPGA_US_96)
+#elif FPGA_ZCU_102 || defined(FPGA_US_96)
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_ACLK]" <<endl;
@@ -1386,7 +1538,7 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/S00_ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/M00_ACLK]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/S00_ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_1/ACLK]" <<endl;
@@ -1399,7 +1551,7 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
 #ifdef FPGA_PYNQ
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg_aresetn] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] " <<endl;
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_rp_reset_RST] [get_bd_pins rst_ps7_0_100M/interconnect_aresetn]" <<endl;
-#elif defined(FPGA_US)  
+#elif defined(FPGA_ZCU_102)  
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg_aresetn] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn] " <<endl;
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_rp_reset_RST] [get_bd_pins rst_ps8_0_99M/interconnect_aresetn]" <<endl;
 #elif defined(FPGA_US_96) 
@@ -1427,13 +1579,13 @@ void pr_tool::generate_static_part(flora *fl_ptr, bool use_ila, int vivado_versi
     write_static_tcl << "startgroup" <<endl;
 #ifdef FPGA_PYNQ
     write_static_tcl << "set_property -dict [list CONFIG.PCW_USE_FABRIC_INTERRUPT {1} CONFIG.PCW_IRQ_F2P_INTR {1}] [get_bd_cells processing_system7_0]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
     write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__IRQ0 {1}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
 #endif    
     write_static_tcl << "endgroup" <<endl;
 #ifdef FPGA_PYNQ    
     write_static_tcl << "connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins processing_system7_0/IRQ_F2P]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
     write_static_tcl << "connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins zynq_ultra_ps_e_0/pl_ps_irq0]" <<endl;
 #endif
 
@@ -1465,7 +1617,10 @@ void pr_tool::synthesize_static()
     run_vivado(static_hw_script);
     
     try {
-        fs::copy(src, dest);
+        // if (fs::exists(fs::path(dest))){
+        //     fs::remove(fs::path(dest));
+        // }
+        fs::copy_file(src, dest, fs::copy_options::update_existing);
     }catch (std::system_error & e)
     {
         cerr << "Exception :: " << e.what() << endl;
@@ -1482,15 +1637,30 @@ void pr_tool::generate_wrapper(flora *fl_ptr)
 
 #ifndef WITH_PARTITIONING
 
-    for(i = 0; i < num_rm_modules; i++) {
-        create_acc_wrapper(rm_list[i].top_module, rm_list[i].rm_tag, rm_list[i].partition_id );
+    // for(i = 0; i < num_rm_modules; i++) {
+    //     create_acc_wrapper(rm_list[i].top_module, rm_list[i].rm_tag, rm_list[i].partition_id );
+    // }
+    for(i = 0; i < num_rm_partitions; i++) {
+        for(j = 0; j < config["dart"]["partitions"][i]["hw_ips"].size(); j++) {
+            create_acc_wrapper(
+                config["dart"]["partitions"][i]["hw_ips"][j]["top_name"].as<string>(),
+                config["dart"]["partitions"][i]["hw_ips"][j]["ip_name"].as<string>(),
+                i
+            );
+        }
     }
+
 #else
     for(i = 0; i < fl_ptr->from_solver.num_partition; i++) {
         for(k = 0; k <  fl_ptr->alloc[i].num_hw_tasks_in_part; k++) {                                                      
-            create_acc_wrapper(rm_list[fl_ptr->alloc[i].task_id[k]].top_module, 
-                                rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag, 
-                                i);
+            //create_acc_wrapper(rm_list[fl_ptr->alloc[i].task_id[k]].top_module, 
+            //                    rm_list[fl_ptr->alloc[i].task_id[k]].rm_tag, 
+            //                    i);
+            create_acc_wrapper(
+                config["dart"]["hw_ips"][fl_ptr->alloc[i].task_id[k]]["top_name"].as<std::string>(), 
+                config["dart"]["hw_ips"][fl_ptr->alloc[i].task_id[k]]["ip_name"].as<std::string>(), 
+                i
+            );
         }
     }
 /*

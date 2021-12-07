@@ -30,7 +30,7 @@
 #elif FPGA_PYNQ
     #include "pynq_fine_grained.h"
 //    #include "pynq.h"
-#elif FPGA_US
+#elif FPGA_ZCU_102
     #include "ultrascale_fine_grained.h"
 #elif FPGA_US_96
     #include "ultrascale_96_fine_grained.h"
@@ -48,6 +48,16 @@ enum fpga_type {
     TYPE_US,
     TYPE_US_96
 };
+/*
+const char * fpga_type_name[]= {
+    "zynq",
+    "virtex",
+    "virtex5",
+    "pynq",
+    "ultrascale",
+    "ultra96"
+};
+*/
 
 typedef std::vector<pos> position_vec;
 typedef std::vector<std::vector<unsigned long>> vec_2d;
@@ -60,13 +70,12 @@ typedef struct{
 typedef struct{
 #ifdef WITH_PARTITIONING
     unsigned long num_rm_modules;
-#else
-    unsigned long num_rm_partitions;
+//#else
+//    unsigned long num_rm_partitions;
 #endif
 //    fpga_type type_of_fpga;
-    std::string path_to_input;
-    std::string static_top_module;
-    bool use_ila;
+    //std::string path_to_input;
+    //std::string static_top_module;
 }input_to_flora;
 
 #define MY_RAND() ((double)((double)rand()/(double)RAND_MAX))
@@ -75,14 +84,15 @@ class flora
 {
 
 public:
-    explicit flora(input_to_flora*);
+    //explicit flora(input_to_flora*);
+    explicit flora();
     ~flora();
 
 #ifdef FPGA_ZYNQ
     zynq_7010 *zynq;
 #elif FPGA_PYNQ
     pynq *pynq_inst;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     ultrascale *us_inst;
 #elif FPGA_US_96
     ultrascale_96 *us_96_inst;
@@ -130,7 +140,7 @@ public:
                                                   unsigned long n_min,
                                                   unsigned long n_max);
     // POSSIBLE BUG (AMORY): this part is not set when WITH_PARTITIONING, so this would be empty
-    input_to_flora *flora_input;
+    //input_to_flora *flora_input;
     param_to_solver param;
     param_from_solver from_solver = {0, 0, &eng_x, &eng_y,
                                     &eng_w, &eng_h,

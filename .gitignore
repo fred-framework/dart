@@ -30,6 +30,9 @@ designs/**
 #
 #################################################
 
+# cmake usual build dir
+build/**
+
 # Prerequisites
 *.d
 

@@ -44,6 +44,7 @@ using namespace std;
 //using namespace Ui;
 
 //A class to contain info about a reconfigurable module
+/*
 typedef struct{
 #ifndef WITH_PARTITIONING
     unsigned int partition_id;
@@ -52,27 +53,27 @@ typedef struct{
     //std::string source_path;
     std::string top_module;
 }reconfigurable_module;
-
+*/
+/*
 typedef struct{
 #ifdef WITH_PARTITIONING
     unsigned long num_rm_modules;
 #else
     unsigned long num_rm_partitions;
 #endif
-    std::string static_dcp_file;
-    std::string static_top_module;
-    std::string path_to_input;
+    //std::string static_dcp_file;
+    //std::string static_top_module;
+    //std::string path_to_input;
     std::string path_to_output;
-    bool use_ila;
-    int vivado_version;
 }input_to_pr;
-
+*/
+/*
 typedef struct {
     unsigned int num_modules_in_partition = 0;
     unsigned int num_hw_tasks_in_part = 0;
     std::vector<unsigned int> rm_id;
 }partition_allocation;
-
+*/
 //The main class to process everything
 class pr_tool
 {
@@ -105,14 +106,12 @@ public:
     unsigned int re_synthesis_after_wrap = 0;
 
     //Reconfigurable module instance
-    vector<reconfigurable_module> rm_list;
-#ifdef WITH_PARTITIONING
-    unsigned long num_rm_modules;
-#else
-    unsigned long num_rm_partitions;
+    //vector<reconfigurable_module> rm_list;
     unsigned long num_rm_modules = 0;
+#ifndef WITH_PARTITIONING
+    unsigned long num_rm_partitions;
 #endif 
-    input_to_pr *input_pr;
+    //input_to_pr *input_pr;
     fpga_type type;
     string dart_path;
 
@@ -130,18 +129,18 @@ public:
     std::string fred_dir;
     //pointer to an instance of flora
     flora *fl_inst = NULL;
-    input_to_flora in_flora;
+    //input_to_flora in_flora;
 
 #ifdef WITH_PARTITIONING
-    vector<double> slacks ;
-    vector <double> HW_WCET;
+    //vector<double> slacks ;
+    //vector <double> HW_WCET;
 #else
-    std::vector<partition_allocation> alloc =  std::vector<partition_allocation>(MAX_SLOTS);
-    unsigned int max_modules_in_partition = 0;
+    //std::vector<partition_allocation> alloc =  std::vector<partition_allocation>(MAX_SLOTS);
+    //unsigned int max_modules_in_partition = 0;
 #endif
 
 
-    void prep_input();
+    //void prep_input();
     void init_dir_struct();
     void prep_proj_directory();
     void create_vivado_project();
@@ -152,12 +151,16 @@ public:
     void parse_synthesis_report();
     void generate_impl_tcl(flora *fl);
     void generate_fred_files(flora *fptr);
-    void generate_static_part(flora *fl, bool use_ila, int vivado_version);
+    void generate_static_part(flora *fl);
     void synthesize_static(); 
     void generate_wrapper(flora *fptr);
     void generate_fred_device_tree(flora *fptr);
 
-    explicit pr_tool(input_to_pr *);
+    //explicit pr_tool(input_to_pr *);
+    explicit pr_tool(string);
 
     ~pr_tool();
+private:
+
+    std::string exec(const char*  cmd);
 };

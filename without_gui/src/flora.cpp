@@ -4,20 +4,32 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <yaml-cpp/yaml.h>
 
 using namespace std;
 
-flora::flora(input_to_flora *input_fl)
-{
+extern YAML::Node config;
 
-    flora_input = input_fl;
+//flora::flora(input_to_flora *input_fl)
+flora::flora()
+{
+    int i;
+    //flora_input = input_fl;
 
 #ifdef WITH_PARTITIONING
+/*
     if(flora_input->num_rm_modules > 0) {
         num_rm_modules = flora_input->num_rm_modules;
+*/
+    // count the number of IPs in all partitions
+    num_rm_modules = config["dart"]["hw_ips"].size();    
+    cout << endl << "PR_TOOL: reading inputs " << num_rm_modules << endl;
 #else
+/*
     if(flora_input->num_rm_partitions > 0) {
         num_rm_partitions = flora_input->num_rm_partitions;
+*/
+    num_rm_partitions = config["dart"]["partitions"].size();
 #endif
 //        type = flora_input->type_of_fpga; 
 
@@ -32,12 +44,12 @@ flora::flora(input_to_flora *input_fl)
         cout << "FLORA: num of partitions **** " << num_rm_partitions <<endl;
 #endif
 //        cout << "FLORA: type of FPGA **** " << type <<endl;
-        cout << "FLORA: path for input **** " << flora_input->path_to_input <<endl;
-    } 
-    else {
-        cout <<"FLORA: The number of Reconfigurable modules > 0";
-        exit(-1);
-    }
+//        cout << "FLORA: path for input **** " << flora_input->path_to_input <<endl;
+    // } 
+    // else {
+    //     cout <<"FLORA: The number of Reconfigurable modules > 0";
+    //     exit(-1);
+    // }
 }
 
 flora::~flora()
@@ -65,23 +77,31 @@ void flora::clear_vectors()
 
 void flora::prep_input()
 {
-    unsigned long row, col;
-    int i , k;
-    unsigned int ptr;
-    string str;
-    CSVData csv_data(flora_input->path_to_input);
+    //unsigned long row, col;
+    int i, clbs, brams, dsps;
+    //unsigned int ptr;
+    //string str;
+    // TODO remove CSV and replace it by YAML
+    //CSVData csv_data(flora_input->path_to_input);
 
-    row = csv_data.rows();
-    col = csv_data.columns();
+    //row = csv_data.rows();
+    //col = csv_data.columns();
 
     cout << endl << "FLORA: resource requirement of the input slots " <<endl;
     cout << "\t clb " << " \t bram " << "\t dsp " <<endl;
 #ifdef WITH_PARTITIONING 
-    for(i = 0, ptr = 0, k = 0; i < num_rm_modules; i++, ptr++) {
+    for(i = 0; i < num_rm_modules; i++) {
+       clbs  = config["dart"]["hw_ips"][i]["CLBs"].as<int>();
+       brams = config["dart"]["hw_ips"][i]["BRAMs"].as<int>();
+       dsps  = config["dart"]["hw_ips"][i]["DSPs"].as<int>();
 #else    
-    for(i = 0, ptr = 0, k = 0; i < num_rm_partitions; i++, ptr++) {
+    for(i = 0; i < num_rm_partitions; i++) {
+       clbs  = config["dart"]["partitions"][i]["CLBs"].as<int>();
+       brams = config["dart"]["partitions"][i]["BRAMs"].as<int>();
+       dsps  = config["dart"]["partitions"][i]["DSPs"].as<int>();
 #endif
         cout << "slot " << i;  
+        /*
         str = csv_data.get_value(i, k++);
         clb_vector[ptr] = std::stoul(str);
 
@@ -90,19 +110,28 @@ void flora::prep_input()
 
         str = csv_data.get_value(i, k++);
         dsp_vector[ptr] = std::stoul(str);
+        */
+       clb_vector[i]  = clbs;
+       bram_vector[i] = brams;
+       dsp_vector[i]  = dsps;
+
 
 #ifdef WITH_PARTITIONING
+        /*
         str = csv_data.get_value(i, k++);
         HW_WCET[ptr] = std::stod(str);
 
         str = csv_data.get_value(i, k++);
-        slacks[ptr] = std::stod(str);     
+        slacks[ptr] = std::stod(str);  
+        */  
+        HW_WCET[i] = config["dart"]["hw_ips"][i]["wcet"].as<int>();
+        slacks[i]  = config["dart"]["hw_ips"][i]["slack_time"].as<int>();
 #endif
 //        cell_name[i] = csv_data.get_value(i, k++);
-        k = 0;
+//        k = 0;
 
-        cout << "\t " << clb_vector[ptr] << "\t " << bram_vector[ptr] << "\t " 
-             << dsp_vector[ptr] << endl;
+        cout << "\t " << clb_vector[i] << "\t " << bram_vector[i] << "\t " 
+             << dsp_vector[i] << endl;
     }
 }
 
@@ -165,9 +194,9 @@ void flora::start_optimizer()
     platform->maxFPGAResources[BRAM] = ZYNQ_BRAM_TOT;
     platform->maxFPGAResources[DSP]  = ZYNQ_DSP_TOT;
 
-    platform->recTimePerUnit[CLB]  = 1.0/1500.0;
-    platform->recTimePerUnit[BRAM] = 1.0/1500.0;
-    platform->recTimePerUnit[DSP]  = 1.0/1000.0;
+    platform->recTimePerUnit[CLB]  = 1.0/4500.0;
+    platform->recTimePerUnit[BRAM] = 1.0/4500.0;
+    platform->recTimePerUnit[DSP]  = 1.0/4000.0;
 #endif
     cout <<"FLORA: starting ZYNQ MILP optimizer " <<endl;
     zynq_start_optimizer(&param, &from_solver);
@@ -204,7 +233,7 @@ void flora::start_optimizer()
     pynq_start_optimizer(&param, &from_solver);
     cout <<"FLORA: finished MILP optimizer " <<endl;
 
-#elif FPGA_US
+#elif FPGA_ZCU_102
     us_inst = new ultrascale();
     for(i = 0; i < us_inst->num_forbidden_slots; i++) {
         forbidden_region[i] = us_inst->forbidden_pos[i];
@@ -251,9 +280,9 @@ void flora::start_optimizer()
     param.dsp_per_tile  = US96_DSP_PER_TILE;
 
 #ifdef WITH_PARTITIONING      
-    platform->maxFPGAResources[CLB]  = US_CLB_TOT;
-    platform->maxFPGAResources[BRAM] = US_BRAM_TOT;
-    platform->maxFPGAResources[DSP]  = US_DSP_TOT;
+    platform->maxFPGAResources[CLB]  = US96_CLB_TOT;
+    platform->maxFPGAResources[BRAM] = US96_BRAM_TOT;
+    platform->maxFPGAResources[DSP]  = US96_DSP_TOT;
 
     platform->recTimePerUnit[CLB]  = 1.0/4500.0;
     platform->recTimePerUnit[BRAM] = 1.0/4500.0;
@@ -298,7 +327,7 @@ void flora::generate_xdc(std::string fplan_xdc_file)
     generate_cell_name(num_rm_partitions, &cell_name);
     generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
 #endif
-#elif FPGA_US
+#elif FPGA_ZCU_102
     us_fine_grained *fg_us_instance = new us_fine_grained();
 #ifdef WITH_PARTITIONING
     generate_cell_name(from_solver.num_partition, &cell_name);
