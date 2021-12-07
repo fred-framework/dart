@@ -71,7 +71,7 @@ string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
     cout << "GENERATE_XDC: Finsihded xdc generation " << endl;\
 }
 
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
 #define generate_xdc_file(fpga_type, from_fp_solver, to_solver,  num_slots, cell_name, fplan_xdc_file)\
 {\
     unsigned long a;\

@@ -30,7 +30,7 @@
 #elif FPGA_PYNQ
     #include "pynq_fine_grained.h"
 //    #include "pynq.h"
-#elif FPGA_US
+#elif FPGA_ZCU_102
     #include "ultrascale_fine_grained.h"
 #elif FPGA_US_96
     #include "ultrascale_96_fine_grained.h"
@@ -92,7 +92,7 @@ public:
     zynq_7010 *zynq;
 #elif FPGA_PYNQ
     pynq *pynq_inst;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     ultrascale *us_inst;
 #elif FPGA_US_96
     ultrascale_96 *us_96_inst;

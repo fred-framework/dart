@@ -23,7 +23,7 @@ void usage(){
     #elif FPGA_ZYNQ
     cout << "  - Zynq board;" <<endl;
     cout << "  - FPGA device: xc7z010clg400-1" <<endl;
-    #elif FPGA_US
+    #elif FPGA_ZCU_102
     cout << "  - Zynq board;" <<endl;
     cout << "  - FPGA device: xczu9eg-ffvb1156-2-e" <<endl;
     #elif FPGA_US_96

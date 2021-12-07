@@ -233,7 +233,7 @@ void flora::start_optimizer()
     pynq_start_optimizer(&param, &from_solver);
     cout <<"FLORA: finished MILP optimizer " <<endl;
 
-#elif FPGA_US
+#elif FPGA_ZCU_102
     us_inst = new ultrascale();
     for(i = 0; i < us_inst->num_forbidden_slots; i++) {
         forbidden_region[i] = us_inst->forbidden_pos[i];
@@ -327,7 +327,7 @@ void flora::generate_xdc(std::string fplan_xdc_file)
     generate_cell_name(num_rm_partitions, &cell_name);
     generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
 #endif
-#elif FPGA_US
+#elif FPGA_ZCU_102
     us_fine_grained *fg_us_instance = new us_fine_grained();
 #ifdef WITH_PARTITIONING
     generate_cell_name(from_solver.num_partition, &cell_name);

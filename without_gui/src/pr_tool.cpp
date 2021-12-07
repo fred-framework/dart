@@ -46,7 +46,7 @@ pr_tool::pr_tool(string path_to_output)
     type = TYPE_ZYNQ;
 #elif FPGA_PYNQ 
     type = TYPE_PYNQ;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     type = TYPE_US;
 #elif FPGA_US_96
     type = TYPE_US_96;
@@ -178,7 +178,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     write_dev_tree.open(fred_dir + "/dart_dev_tree.dts");
     
     write_dev_tree << "/* DART generated device tree overlay */"<<endl;
-#if defined (FPGA_US) || defined (FPGA_US_96)
+#if defined (FPGA_ZCU_102) || defined (FPGA_US_96)
     write_dev_tree <<"/dts-v1/;" <<endl;
     write_dev_tree <<"/plugin/;" <<endl;
     write_dev_tree <<"/ { \n" <<endl;
@@ -255,7 +255,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         write_dev_tree <<"\t\t\t\t}; " <<endl;
         write_dev_tree <<endl;
 
-#elif defined (FPGA_US) || defined (FPGA_US_96)
+#elif defined (FPGA_ZCU_102) || defined (FPGA_US_96)
         write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl; 
         write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i<<"0000 0x10000>;" <<endl;
@@ -594,7 +594,7 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
      write_synth_tcl << "set part xc7z020clg400-1" <<endl;
 #elif FPGA_ZYNQ
      write_synth_tcl << "set part xc7z010clg400-1" <<endl;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     write_synth_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
 #elif FPGA_US_96
     write_synth_tcl << "set part xczu3eg-sbva484-1-e" <<endl;
@@ -799,7 +799,7 @@ void pr_tool::run_vivado(std::string synth_script)
 void pr_tool::parse_synthesis_report()
 {
     unsigned long i, k, j = 0;
-#if defined(FPGA_US) || defined (FPGA_US_96)
+#if defined(FPGA_ZCU_102) || defined (FPGA_US_96)
     string lut = "CLB LUTs*";
 #else
     string lut = "Slice LUTs*";
@@ -1046,7 +1046,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl << "set part xc7z020clg400-1" <<endl;
 #elif FPGA_ZYNQ
      write_impl_tcl << "set part xc7z010clg400-1" <<endl;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     write_impl_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
 #elif FPGA_US_96
     write_impl_tcl << "set part xczu3eg-sbva484-1-e" <<endl;
@@ -1288,7 +1288,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 #elif FPGA_ZYNQ
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
     write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
-#elif FPGA_US
+#elif FPGA_ZCU_102
      write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
      write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.2 [current_project] " <<endl;
 #elif FPGA_US_96
@@ -1307,7 +1307,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "startgroup " <<endl;
     write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0" <<endl; //TODO: PS must be templated
     write_static_tcl << "endgroup " <<endl;
-#elif FPGA_US
+#elif FPGA_ZCU_102
     write_static_tcl << "startgroup " <<endl;
     //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.2 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
     write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.3 zynq_ultra_ps_e_0" <<endl; // TODO: this works with 2020.2. Perhaps the IP version is different for older versions
@@ -1457,7 +1457,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "startgroup " <<endl;
     write_static_tcl << "set_property -dict [list CONFIG.PCW_USE_S_AXI_HP0 {1}] [get_bd_cells processing_system7_0] " <<endl; //TODO: number of HPO should be changed based on number of acc
     write_static_tcl << "endgroup " <<endl;
-#elif defined (FPGA_US) || defined (FPGA_US_96)
+#elif defined (FPGA_ZCU_102) || defined (FPGA_US_96)
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:zynq_ultra_ps_e -config {apply_board_preset \"1\" }  [get_bd_cells zynq_ultra_ps_e_0]" <<endl;
     write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__S_AXI_GP0 {1}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
     write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__M_AXI_GP1 {0}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
@@ -1487,7 +1487,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 #ifdef FPGA_PYNQ        
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins processing_system7_0/M_AXI_GP0]" <<endl; 
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_0/S00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/M_AXI_HPM0_FPD]" <<endl; 
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/ap_clk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]" <<endl;
 #endif
@@ -1498,7 +1498,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] -boundary_type upper [get_bd_intf_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_AXI]" <<endl;
 #ifdef FPGA_PYNQ
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)        
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)        
         write_static_tcl << "connect_bd_intf_net -boundary_type upper [get_bd_intf_pins axi_interconnect_1/M00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/S_AXI_HPC0_FPD]" <<endl;
 #endif        
         write_static_tcl << "connect_bd_net [get_bd_pins acc_"<<std::to_string(i)<<"/interrupt] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_acc_interrupt_INTERRUPT]" <<endl; 
@@ -1525,7 +1525,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_ACLK]" <<endl;
-#elif FPGA_US || defined(FPGA_US_96)
+#elif FPGA_ZCU_102 || defined(FPGA_US_96)
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/M0"<<std::to_string(j+1)<<"_ACLK]" <<endl;
         write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_1/S0"<<std::to_string(i)<<"_ACLK]" <<endl;
@@ -1538,7 +1538,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_0/S00_ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (100 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins axi_interconnect_1/M00_ACLK]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_0/S00_ACLK]" <<endl;
     write_static_tcl << "apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/zynq_ultra_ps_e_0/pl_clk0 (99 MHz)} Freq {100} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}} [get_bd_pins axi_interconnect_1/ACLK]" <<endl;
@@ -1551,7 +1551,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 #ifdef FPGA_PYNQ
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg_aresetn] [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] " <<endl;
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_rp_reset_RST] [get_bd_pins rst_ps7_0_100M/interconnect_aresetn]" <<endl;
-#elif defined(FPGA_US)  
+#elif defined(FPGA_ZCU_102)  
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_axi_reg_aresetn] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn] " <<endl;
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/rp_rp_reset_RST] [get_bd_pins rst_ps8_0_99M/interconnect_aresetn]" <<endl;
 #elif defined(FPGA_US_96) 
@@ -1579,13 +1579,13 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "startgroup" <<endl;
 #ifdef FPGA_PYNQ
     write_static_tcl << "set_property -dict [list CONFIG.PCW_USE_FABRIC_INTERRUPT {1} CONFIG.PCW_IRQ_F2P_INTR {1}] [get_bd_cells processing_system7_0]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
     write_static_tcl << "set_property -dict [list CONFIG.PSU__USE__IRQ0 {1}] [get_bd_cells zynq_ultra_ps_e_0] " <<endl;
 #endif    
     write_static_tcl << "endgroup" <<endl;
 #ifdef FPGA_PYNQ    
     write_static_tcl << "connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins processing_system7_0/IRQ_F2P]" <<endl;
-#elif defined(FPGA_US) || defined(FPGA_US_96)
+#elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)
     write_static_tcl << "connect_bd_net [get_bd_pins xlconcat_0/dout] [get_bd_pins zynq_ultra_ps_e_0/pl_ps_irq0]" <<endl;
 #endif
 
