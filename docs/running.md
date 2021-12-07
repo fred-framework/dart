@@ -27,11 +27,13 @@ dart:
   hw_ips:
     - ip_name: "sum_vec"
       top_name: "sum_vec_top"
+      timeout: 100000
       slack_time: 10000
       wcet: 100
       buffers: [32768, 32768, 32768]
     - ip_name: "sub_vec"
       top_name: "sub_vec_top"
+      timeout: 100000
       slack_time: 10000
       wcet: 101    
       buffers: [32768, 32768, 32768]
@@ -52,6 +54,7 @@ An IP description, in the partitioning mode, has the following attributes:
  - `ip_name`: \<string\>, following this regular expression `[a-zA-Z_][a-zA-Z0-9]*`
  - `top_name`: \<string\>, following this regular expression `[a-zA-Z_][a-zA-Z0-9]*`
  - `slack_time`:  \<unsigned int\>,representing microseconds
+ - `timeout`:  \<unsigned int\>,representing microseconds (used only by FRED)
  - `wcet`: \<unsigned int\>,representing microseconds
  - `buffers`: a list of \<unsigned int\>,representing FRED buffer sizes in bytes
 
@@ -67,15 +70,18 @@ dart:
       - hw_ips:
         - ip_name: "sum_vec"
           top_name: "sum_vec_top"
+          timeout: 100000
           buffers: [32768, 32768, 32768]
         - ip_name: "sub_vec"
           top_name: "sub_vec_top"
+          timeout: 100000
           buffers: [32768, 32768, 32769]
         debug:
           data_depth: 2048
       - hw_ips:
         - ip_name: "xor_vec"
           top_name: "xor_vec_top"
+          timeout: 100000
           buffers: [32768, 32768, 32770]
     static_top_module: static_top
     static_dcp_file: ./dcp/static.dcp
@@ -99,6 +105,7 @@ dart:
       - hw_ips:
         - ip_name: "memcpy"
           top_name: "memcpy_top"
+          timeout: 100000
           buffers: [32768, 32768]
 ```
 
@@ -252,11 +259,13 @@ dart:
       - hw_ips:
         - ip_name: "sub_vec"
           top_name: "sub_vec_top"
+          timeout: 100000
           buffers: [32768, 32768, 32768]
     partitions: 
       - hw_ips:
         - ip_name: "sum_vec"
           top_name: "sum_vec_top"
+          timeout: 100000
           buffers: [32768, 32768, 32768]
 ```
 

@@ -304,18 +304,29 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
         write_fred_arch <<"# defines a partion named \"ex_partition\" containing 3 slots\n";
 
         /*  HW_tasks description file header*/
-        write_fred_hw << "# FRED hw-tasks description file. \n ";
-        write_fred_hw << "# Warning: This file must match synthesized hardware! \n \n";
-        write_fred_hw << "# Each line defines a HW-Tasks: \n ";
-        write_fred_hw << "# <name>, <hw_id>, <partition>, <bistream_path>, <buff_0_size>, ... <buff_7_size> \n ";
-        write_fred_hw << "# Note: the association between a hw-task and its partition \n ";
-        write_fred_hw << "# it's defined during the synthesis flow! Here is specified only \n ";
-        write_fred_hw << "# to guess the number of bistreams and their length. \n \n ";
-        write_fred_hw << "# example: \n ";
-        write_fred_hw << "# \"ex_hw_task, 64, ex_partition, bits, 1024, 1024, 1024\" \n ";
-        write_fred_hw << "# defines a hw-task named \"ex_hw_task\", with id 64, allocated on a \n ";
-        write_fred_hw << "# partition named \"ex_partition\", whose bitstreams are located in \n ";
-        write_fred_hw << "# the \"/bits\" folder, and uses three input/output buffers of size 1024 bytes. \n \n ";
+        write_fred_hw << "# Fred-Linux hw-tasks description file. \n ";
+        write_fred_hw << "# Warning: This file must match synthesized hardware! \n ";
+        write_fred_hw << "# \n ";
+        write_fred_hw << "# Each line defines a HW-Tasks with the following syntax: \n ";
+        write_fred_hw << "# <name>, <id>, <timeout_ms>, <partition>, <bits_path>, <buff_0_size>, ... <buff_7_size> \n ";
+        write_fred_hw << "# \n ";
+        write_fred_hw << "# For each hw-task, the field: \n ";
+        write_fred_hw << "# - <name> is the name of the hw-task and must match the name of the bitstream files; \n ";
+        write_fred_hw << "# - <id> is the hw-id of the hw-task; \n ";
+        write_fred_hw << "# - <timeout_ms> defines an execution timeout for the hw-task in milliseconds; \n ";
+        write_fred_hw << "# - <partition> is the name of the partition to which it belongs; \n ";
+        write_fred_hw << "# - <bits_path> define the relative path of the bitstreams directory for the hw-task; \n ";
+        write_fred_hw << "# - <buff_0_size>, ... <buff_7_size> define the number and sizes fo the data buffers. \n ";
+        write_fred_hw << "# \n ";
+        write_fred_hw << "# Example: \n ";
+        write_fred_hw << "# \"ex-hw-task, 64, ex-partition, bitstreams, 100, 1024, 1024, 1024\" \n ";
+        write_fred_hw << "# defines a hw-task named \"ex-hw-task\" \n ";
+        write_fred_hw << "# - having id 64, \n ";
+        write_fred_hw << "# - belonging to a partition named \"ex-partition\", \n ";
+        write_fred_hw << "# - whose bitstreams are located in the \"./bitstreams\" directory, \n ";
+        write_fred_hw << "# - having an execution timeout of 100 ms, \n ";
+        write_fred_hw << "# - using three input/output buffers of size 1024 bytes each. \n ";
+
 
         int n_buffers=0;
         #ifdef WITH_PARTITIONING
@@ -330,7 +341,8 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                     if (i < fl_ptr->alloc[k].num_hw_tasks_in_part) {
                         //write_fred_hw << rm_list[fl_ptr->alloc[k].task_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, " <<fred_input_buff_size <<", " << fred_output_buff_size <<"\n";
                         ip_id = fl_ptr->alloc[k].task_id[i];
-                        write_fred_hw << config["dart"]["hw_ips"][ip_id]["ip_name"].as<string>() <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
+                        write_fred_hw << config["dart"]["hw_ips"][ip_id]["ip_name"].as<string>() <<", " <<bitstream_id <<
+                            ", " << config["dart"]["hw_ips"][ip_id]["timeout"].as<uint>() << ", p"<<k<<", dart_fred/bits, ";
                         bitstream_id++;
                         n_buffers = config["dart"]["hw_ips"][ip_id]["buffers"].size();
                         for(j = 0; j < n_buffers; j++) {
@@ -387,7 +399,8 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
                     // commented since it' s always true
                     //if (i < alloc[k].num_hw_tasks_in_part) {
                         //write_fred_hw << rm_list[alloc[k].rm_id[i]].rm_tag <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
-                        write_fred_hw << config["dart"]["partitions"][k]["hw_ips"][i]["ip_name"].as<string>() <<", " <<bitstream_id << ", p"<<k<<", dart_fred/bits, ";
+                        write_fred_hw << config["dart"]["partitions"][k]["hw_ips"][i]["ip_name"].as<string>() <<", " <<bitstream_id << 
+                            ", " << config["dart"]["partitions"][k]["hw_ips"][i]["timeout"].as<uint>() << ", p"<<k<<", dart_fred/bits, ";
                         bitstream_id++;
                         n_buffers = config["dart"]["partitions"][k]["hw_ips"][i]["buffers"].size();
                         for(j = 0; j < n_buffers; j++) {
@@ -1297,7 +1310,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 #elif FPGA_US
     write_static_tcl << "startgroup " <<endl;
     //write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.2 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
-    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.3 zynq_ultra_ps_e_0" <<endl; //TODO: Amory
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.3 zynq_ultra_ps_e_0" <<endl; // TODO: this works with 2020.2. Perhaps the IP version is different for older versions
     write_static_tcl << "endgroup " <<endl;
 #elif FPGA_US_96
     write_static_tcl << "startgroup " <<endl;

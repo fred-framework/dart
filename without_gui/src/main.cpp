@@ -219,6 +219,23 @@ void check_ip_keys(YAML::Node ip_node,string key_msg){
     }
     check_string_key(ip_node["top_name"],"top_name");
 
+    // it is mandatory to have timeout both with partition ON or OFF
+    if (!ip_node["timeout"]){
+        cerr << "ERROR: key 'timeout' not found in " << key_msg << endl;
+        exit(EXIT_FAILURE);
+    }
+    unsigned int aux_uint;
+    try{
+        // all values must be unsigned int
+        aux_uint = ip_node["timeout"].as<unsigned int>();
+    } catch (const std::exception &e) {
+        cerr << "ERROR: key 'timeout' expects unsigned int values. See " << key_msg << endl;
+        exit(EXIT_FAILURE);
+    } catch (...) {
+        cerr << "ERROR: key 'timeout' expects unsigned int values. See " << key_msg << endl;
+        exit(EXIT_FAILURE);
+    }
+
     // it is mandatory to have at least two buffers; one for data in and the other to data out
     if (!ip_node["buffers"]){
         cerr << "ERROR: key 'buffers' not found in " << key_msg << endl;
@@ -334,7 +351,7 @@ void check_yaml(void){
         for(YAML::const_iterator it=ip_node.begin();it!=ip_node.end();++it) {
             key_name = it->first.as<std::string>();
             if (key_name != "ip_name" && key_name != "top_name" && key_name != "buffers" &&
-                key_name != "slack_time" && key_name != "wcet")
+                key_name != "slack_time" && key_name != "wcet" && key_name != "timeout")
             {
                 cerr << "ERROR: unexpected key '" << key_name << "' in " << node_msg << endl;
                 exit(EXIT_FAILURE);
@@ -453,7 +470,7 @@ void check_yaml(void){
             // checking for unsupported keys for an IP
             for(YAML::const_iterator it=ip_node.begin();it!=ip_node.end();++it) {
                 key_name = it->first.as<std::string>();
-                if (key_name != "ip_name" && key_name != "top_name" && key_name != "buffers"){
+                if (key_name != "ip_name" && key_name != "top_name" && key_name != "buffers" && key_name != "timeout"){
                     cerr << "ERROR: unexpected key '" << key_name << "' in " << node_msg << endl;
                     exit(EXIT_FAILURE);
                 }
