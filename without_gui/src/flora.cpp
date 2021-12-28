@@ -296,9 +296,11 @@ void flora::start_optimizer()
 }
 
 
-void flora::generate_cell_name(unsigned long num_part, vector<std::string> *cell)
+//void flora::generate_cell_name(unsigned long num_part, vector<std::string> *cell)
+void flora::generate_cell_name(unsigned long num_part)
 {
     int i;
+    vector<std::string> *cell = &(this->cell_name);
     for(i = 0; i < num_part; i++)
         (*cell)[i] = "dart_i/acc_" + to_string(i) + "/inst";
 //        (*cell)[i] = flora_input->static_top_module + "_i/hw_task_0_" + to_string(i) + "/inst";
@@ -311,39 +313,39 @@ void flora::generate_xdc(std::string fplan_xdc_file)
 #ifdef FPGA_ZYNQ
     zynq_fine_grained *fg_zynq_instance = new zynq_fine_grained();
 #ifdef WITH_PARTITIONING
-    generate_cell_name(from_solver.num_partition, &cell_name);
+    //generate_cell_name(from_solver.num_partition, &cell_name);
     generate_xdc_file(fg_zynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
 #else
-    generate_cell_name(num_rm_partitions, &cell_name);
+    //generate_cell_name(num_rm_partitions, &cell_name);
     generate_xdc_file(fg_zynq_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
 #endif
     
 #elif FPGA_PYNQ
     pynq_fine_grained *fg_pynq_instance = new pynq_fine_grained();
 #ifdef WITH_PARTITIONING
-    generate_cell_name(from_solver.num_partition, &cell_name);
+    //generate_cell_name(from_solver.num_partition, &cell_name);
     generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
 #else
-    generate_cell_name(num_rm_partitions, &cell_name);
+    //generate_cell_name(num_rm_partitions, &cell_name);
     generate_xdc_file(fg_pynq_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
 #endif
 #elif FPGA_ZCU_102
     us_fine_grained *fg_us_instance = new us_fine_grained();
 #ifdef WITH_PARTITIONING
-    generate_cell_name(from_solver.num_partition, &cell_name);
+    //generate_cell_name(from_solver.num_partition, &cell_name);
     generate_xdc_file(fg_us_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
 #else
-    generate_cell_name(num_rm_partitions, &cell_name);
+    //generate_cell_name(num_rm_partitions, &cell_name);
     generate_xdc_file(fg_us_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
 #endif
 
 #elif FPGA_US_96
     us_96_fine_grained *fg_us_96_instance = new us_96_fine_grained();
 #ifdef WITH_PARTITIONING
-    generate_cell_name(from_solver.num_partition, &cell_name);
+    //generate_cell_name(from_solver.num_partition, &cell_name);
     generate_xdc_file(fg_us_96_instance, from_sol_ptr, param, from_solver.num_partition, cell_name, fplan_xdc_file);
 #else
-    generate_cell_name(num_rm_partitions, &cell_name);
+    //generate_cell_name(num_rm_partitions, &cell_name);
     generate_xdc_file(fg_us_96_instance, from_sol_ptr, param, num_rm_partitions, cell_name, fplan_xdc_file);
 #endif
 

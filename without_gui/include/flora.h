@@ -161,7 +161,8 @@ public:
     void clear_vectors();
     void prep_input();
     void start_optimizer();
-    void generate_cell_name(unsigned long num_part, vector<std::string> *cell);
+    //void generate_cell_name(unsigned long num_part, vector<std::string> *cell);
+    void generate_cell_name(unsigned long num_part);
     void generate_xdc(std::string fplan_file_name);
 
 //    void init_fpga(enum fpga_type);

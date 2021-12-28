@@ -3,7 +3,7 @@
 DART is a tool that fully automates the FPGA design flow for a real-time, dynamic partially reconfigurable (DPR) co-designed system that comprises both software and hardware components. DART fully automates the partitioning, floorplanning, and implementation (routing and bitstream generation) phases of the DPR flow. Besides, DART supports the Zynq 7-series and Ultrascale+ FPGA-based SoCs by Xilinx. 
 
 DART must be used with [FRED](http://fred.santannapisa.it/runtime/) runtime for a complete real-time FPGA offloading solution. While DART automates the hardware design,
-FRED manages the hw/sw interface, easing the software application design. 
+FRED manages the hw/sw interface, easing the Linux-based application design. 
 
 [TOC]
 
@@ -52,6 +52,12 @@ Please cite this paper if you are using DART:
   year={2021}
 }
 ```
+
+## References
+
+- [Dynamic Function eXchange - UG909 (v2020.2)](https://www.xilinx.com/support/documentation/sw_manuals/xilinx2020_2/ug909-vivado-partial-reconfiguration.pdf)
+- [XAPP1231 - Partial Reconfiguration of a Hardware Accelerator with Vivado Design Suite](https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/18841851/XAPP1231+-+Partial+Reconfiguration+of+a+Hardware+Accelerator+with+Vivado+Design+Suite)
+- 
 
 ## License
 

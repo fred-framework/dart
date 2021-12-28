@@ -275,7 +275,7 @@ void check_yaml(void){
     // checking for unsupported keys under the root
     for(YAML::const_iterator it=config.begin();it!=config.end();++it) {
         key_name = it->first.as<std::string>();
-        if (key_name != "dart" && key_name != "skip_ip_synthesis" && key_name != "skip_static_synthesis"){
+        if (key_name != "dart" && key_name != "skip_ip_synthesis" && key_name != "skip_static_synthesis" && key_name != "pblocks_xdc" ){
             cerr << "ERROR: unexpected key '" << key_name << "' under the YAML root" << endl;
             exit(EXIT_FAILURE);
         }
@@ -304,6 +304,22 @@ void check_yaml(void){
         cerr << "ERROR: key 'skip_static_synthesis' must be True or False" << endl;
         exit(EXIT_FAILURE);
     }
+    // test the pblock XDC file. this key is optional 
+    try{
+        if (config["pblocks_xdc"]){
+            fs::path xdc_file( config["pblocks_xdc"].as<string>() );
+            if (!fs::exists(xdc_file)){
+                cerr << "ERROR: pblocks XDC file not found\n\n";
+                exit(EXIT_FAILURE);
+            }
+        }
+    } catch (const std::exception &e) {
+        cerr << "ERROR: key 'pblocks_xdc' must point to a XDC file" << endl;
+        exit(EXIT_FAILURE);
+    } catch (...) {
+        cerr << "ERROR: key 'pblocks_xdc' must point to a XDC file" << endl;
+        exit(EXIT_FAILURE);
+    }    
 #ifdef WITH_PARTITIONING
     // a list IPs is mandatory
     if (!config["dart"]["hw_ips"]){

@@ -95,7 +95,22 @@ pr_tool::pr_tool(string path_to_output)
         fl_inst->clear_vectors();       
         fl_inst->prep_input();
         fl_inst->start_optimizer();
-        fl_inst->generate_xdc(fplan_xdc_file);
+
+        // generate the instance name, used in the xdc file and in the impl.tcl
+        #ifdef WITH_PARTITIONING
+            fl_inst->generate_cell_name(from_solver.num_partition);
+        #else
+            fl_inst->generate_cell_name(num_rm_partitions);
+        #endif
+
+        // the user might want to ignore DART floorplanning/partitioning optimization and use his own pblock XDc file
+        if (config["pblocks_xdc"]){
+            fs::path xdc_file( config["pblocks_xdc"].as<string>() );
+            // the file existance has been tested before
+            fs::copy_file(xdc_file.string(), fplan_xdc_file,fs::copy_options::update_existing);
+        } else {
+            fl_inst->generate_xdc(fplan_xdc_file);
+        }
 
 // TODO: that's BAD. I had to duplicate the attribute use ila here and in the main to support both part and flora modes
 // #ifdef WITH_PARTITIONING
