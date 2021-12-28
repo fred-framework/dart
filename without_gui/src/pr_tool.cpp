@@ -147,8 +147,10 @@ pr_tool::pr_tool(string path_to_output)
         generate_impl_tcl(fl_inst);
 
         //run vivado implementation
-        run_vivado(impl_script);    
-      
+        if (!config["skip_implementation"] || !config["skip_implementation"].as<bool>()){
+            run_vivado(impl_script);
+        }
+
         //generate the run-time management files for FRED
         generate_fred_files(fl_inst);
         generate_fred_device_tree(fl_inst);  
@@ -180,6 +182,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 {
     int i, j, k;
     unsigned int num_partitions = 0;
+    // the 1st interrupt signal has value 89, the 2nd 90, and so on
     unsigned int first_interrupt = 0x1d;
     unsigned int first_reg_addr = 0xc0;
     ofstream write_dev_tree;
@@ -190,7 +193,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     num_partitions = num_rm_partitions;
 #endif
     
-    write_dev_tree.open(fred_dir + "/dart_dev_tree.dts");
+    write_dev_tree.open(fred_dir + "/static.dts");
     
     write_dev_tree << "/* DART generated device tree overlay */"<<endl;
 #if defined (FPGA_ZCU_102) || defined (FPGA_US_96)
@@ -209,33 +212,34 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 	write_dev_tree <<"\t};" <<endl;
     write_dev_tree <<endl;
 	
-    write_dev_tree <<"\t/* Disable PYNQ base */" <<endl;
-	write_dev_tree <<"\tfragment@1 {"<<endl;
-	write_dev_tree <<"\t\ttarget-path = \"/amba/fabric@A0000000\";" <<endl;
-	write_dev_tree <<"\t\t\toverlay1: __overlay__ {" <<endl;
-	write_dev_tree <<"\t\t\t\tstatus = \"disabled\";" <<endl;
-	write_dev_tree <<"\t\t\t};" <<endl;
-	write_dev_tree <<"\t\t};" <<endl;
-    write_dev_tree <<endl;
+    // write_dev_tree <<"\t/* Disable PYNQ base */" <<endl;
+	// write_dev_tree <<"\tfragment@1 {"<<endl;
+	// write_dev_tree <<"\t\ttarget-path = \"/amba/fabric@A0000000\";" <<endl;
+	// write_dev_tree <<"\t\t\toverlay1: __overlay__ {" <<endl;
+	// write_dev_tree <<"\t\t\t\tstatus = \"disabled\";" <<endl;
+	// write_dev_tree <<"\t\t\t};" <<endl;
+	// write_dev_tree <<"\t\t};" <<endl;
+    // write_dev_tree <<endl;
 	
-    write_dev_tree <<"\t/* PL base configuration */ " <<endl;
-	write_dev_tree <<"\tfragment@2 {" <<endl;
-	write_dev_tree <<"\t\ttarget = <&amba>;" <<endl;
-	write_dev_tree <<"\t\t\toverlay2: __overlay__ {" <<endl;
-	write_dev_tree <<"\t\t\t\tafi0: afi0 {" <<endl;
-	write_dev_tree <<"\t\t\t\t\tcompatible = \"xlnx,afi-fpga\";" <<endl;
-	write_dev_tree <<"\t\t\t\t\tconfig-afi = < 0 0>, <1 0>, <2 0>, <3 0>, <4 0>, <5 0>, <6 0>, <7 0>, <8 0>, <9 0>, <10 0>, <11 0>, <12 0>, <13 0>, <14 0xa00>, <15 0x000>;" <<endl;
-	write_dev_tree <<"\t\t\t\t};" <<endl;
-	write_dev_tree <<"\t\t\t\tclocking0: clocking0 {" <<endl;
-	write_dev_tree <<"\t\t\t\t\t#clock-cells = <0>;" <<endl;
-	write_dev_tree <<"\t\t\t\t\tassigned-clock-rates = <100000000>;" <<endl;
-	write_dev_tree <<"\t\t\t\t\tassigned-clocks = <&zynqmp_clk 71>;" <<endl;
-	write_dev_tree <<"\t\t\t\t\tclock-output-names = \"fabric_clk\"; " <<endl;
-	write_dev_tree <<"\t\t\t\t\tclocks = <&zynqmp_clk 71>;" <<endl;
-	write_dev_tree <<"\t\t\t\t\tcompatible = \"xlnx,fclk\"; "<< endl;
-	write_dev_tree <<"\t\t\t\t};" <<endl;
-	write_dev_tree <<"\t\t\t};" <<endl;
-	write_dev_tree <<"\t\t};" <<endl;
+    
+    // write_dev_tree <<"\t/* PL base configuration */ " <<endl;
+	// write_dev_tree <<"\tfragment@2 {" <<endl;
+	// write_dev_tree <<"\t\ttarget = <&amba>;" <<endl;
+	// write_dev_tree <<"\t\t\toverlay2: __overlay__ {" <<endl;
+	// write_dev_tree <<"\t\t\t\tafi0: afi0 {" <<endl;
+	// write_dev_tree <<"\t\t\t\t\tcompatible = \"xlnx,afi-fpga\";" <<endl;
+	// write_dev_tree <<"\t\t\t\t\tconfig-afi = < 0 0>, <1 0>, <2 0>, <3 0>, <4 0>, <5 0>, <6 0>, <7 0>, <8 0>, <9 0>, <10 0>, <11 0>, <12 0>, <13 0>, <14 0xa00>, <15 0x000>;" <<endl;
+	// write_dev_tree <<"\t\t\t\t};" <<endl;
+	// write_dev_tree <<"\t\t\t\tclocking0: clocking0 {" <<endl;
+	// write_dev_tree <<"\t\t\t\t\t#clock-cells = <0>;" <<endl;
+	// write_dev_tree <<"\t\t\t\t\tassigned-clock-rates = <100000000>;" <<endl;
+	// write_dev_tree <<"\t\t\t\t\tassigned-clocks = <&zynqmp_clk 71>;" <<endl;
+	// write_dev_tree <<"\t\t\t\t\tclock-output-names = \"fabric_clk\"; " <<endl;
+	// write_dev_tree <<"\t\t\t\t\tclocks = <&zynqmp_clk 71>;" <<endl;
+	// write_dev_tree <<"\t\t\t\t\tcompatible = \"xlnx,fclk\"; "<< endl;
+	// write_dev_tree <<"\t\t\t\t};" <<endl;
+	// write_dev_tree <<"\t\t\t};" <<endl;
+	// write_dev_tree <<"\t\t};" <<endl;
     
     
     write_dev_tree <<"/* FRED slots layout */"<<endl;
@@ -244,51 +248,72 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     write_dev_tree <<"\t\toverlay3: __overlay__ {"<<endl;
 
     //write_dev_tree <<"\tamba { \n" <<endl;
-    write_dev_tree <<"\t\t#address-cells = <1>;" <<endl;
-    write_dev_tree <<"\t\t#size-cells = <1>;" <<endl;
+    write_dev_tree <<"\t\t\t#address-cells = <2>;" <<endl;
+    write_dev_tree <<"\t\t\t#size-cells = <2>;" <<endl;
+
+    for (i = 0; i < num_partitions * 2; i+=2) {
+        // write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl; 
+        // write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
+        // write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i<<"0000 0x10000>;" <<endl;
+        // write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
+        // write_dev_tree <<"\t\t\t\tinterrupts = <0x0 0x"<< std::hex << first_interrupt + i <<" 0x4>; " <<endl;
+        // write_dev_tree <<"\t\t\t\t}; " <<endl;
+        // write_dev_tree <<endl;
+
+        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl;
+		//write_dev_tree <<"\t\t\t\tclock-names = \"ap_clk\";" <<endl;
+		//write_dev_tree <<"\t\t\t\tclocks = <&zynqmp_clk 71>;" <<endl;
+		write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
+		write_dev_tree <<"\t\t\t\treg = <0x0 0xA00"<< std::hex << i<<"0000 0x0 0x10000>;" <<endl;
+		//write_dev_tree <<"\t\t\t\txlnx,s-axi-ctrl-bus-addr-width = <0x8>;" <<endl;
+		//write_dev_tree <<"\t\t\t\txlnx,s-axi-ctrl-bus-data-width = <0x20>;" <<endl;
+		write_dev_tree <<"\t\t\t\tinterrupt-parent = <&gic>;" <<endl;
+		write_dev_tree <<"\t\t\t\tinterrupts = <0 " << first_interrupt + i <<" 4>;" <<endl;
+        write_dev_tree <<"\t\t\t}; " <<endl;
+        write_dev_tree <<endl;
+
+        // write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
+        // write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
+        // write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i+1 <<"0000 0x10000>;" <<endl;
+        // write_dev_tree <<"\t\t\t\t}; " <<endl;
+        // write_dev_tree <<endl;
+        // write_dev_tree <<"\t\t}; " <<endl;
+
+        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
+		//write_dev_tree <<"\t\t\t\tclock-names = \"aclk\";" <<endl;
+		//write_dev_tree <<"\t\t\t\tclocks = <&zynqmp_clk 71>;" <<endl;
+		write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
+		write_dev_tree <<"\t\t\t\treg = <0x0 0xA00"<<std::hex << i+1<<"0000 0x0 0x10000>;" <<endl;         
+        write_dev_tree <<"\t\t\t}; " <<endl;
+    }
+    write_dev_tree <<"\t\t}; " <<endl;
+    write_dev_tree <<"\t}; " <<endl;
+    write_dev_tree <<"}; " <<endl;
+
 #endif
 
 #if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
     write_dev_tree <<"/ {"<<endl;
     write_dev_tree <<"\tamba {"<<endl;
     write_dev_tree << endl;
-#endif
-
     for (i = 0; i < num_partitions * 2; i+=2) {
-#if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
-        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
-        write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
-        write_dev_tree <<"\t\t\t\treg = <0x43" <<std::hex << first_reg_addr + i <<"0000 0x10000>;" <<endl; 
-        write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
-        write_dev_tree <<"\t\t\t\tinterrupts = <0x0 0x"<< std::hex << first_interrupt + i <<" 0x4>; " <<endl;
-        write_dev_tree <<"\t\t\t\t}; " <<endl;
-        write_dev_tree <<endl;
-
-        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
-        write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
-        write_dev_tree <<"\t\t\t\treg =  <0x43" <<std::hex << first_reg_addr + i + 1 <<"0000 0x10000>;" <<endl; 
-        write_dev_tree <<"\t\t\t\t}; " <<endl;
-        write_dev_tree <<endl;
-
-#elif defined (FPGA_ZCU_102) || defined (FPGA_US_96)
-        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl; 
-        write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
-        write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i<<"0000 0x10000>;" <<endl;
-        write_dev_tree <<"\t\t\t\tinterrupt-parent = <0x4>;" <<endl;
-        write_dev_tree <<"\t\t\t\tinterrupts = <0x0 0x"<< std::hex << first_interrupt + i <<" 0x4>; " <<endl;
-        write_dev_tree <<"\t\t\t\t}; " <<endl;
-        write_dev_tree <<endl;
-
-        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
-        write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
-        write_dev_tree <<"\t\t\t\treg = <0xA00"<< std::hex << i+1 <<"0000 0x10000>;" <<endl;
-        write_dev_tree <<"\t\t\t\t}; " <<endl;
-        write_dev_tree <<endl;
+        write_dev_tree <<"\t\tslot_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tcompatible = \"generic-uio\";" <<endl;
+        write_dev_tree <<"\t\t\treg = <0x43" <<std::hex << first_reg_addr + i <<"0000 0x10000>;" <<endl; 
+        write_dev_tree <<"\t\t\tinterrupt-parent = <0x4>;" <<endl;
+        write_dev_tree <<"\t\t\tinterrupts = <0x0 0x"<< std::hex << first_interrupt + i <<" 0x4>; " <<endl;
         write_dev_tree <<"\t\t}; " <<endl;
-#endif    
-    }
+        write_dev_tree <<endl;
+
+        write_dev_tree <<"\t\tpr_decoupler_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tcompatible = \"generic-uio\";" <<endl;
+        write_dev_tree <<"\t\t\treg =  <0x43" <<std::hex << first_reg_addr + i + 1 <<"0000 0x10000>;" <<endl; 
+        write_dev_tree <<"\t\t}; " <<endl;
+        write_dev_tree <<endl; 
+    }   
     write_dev_tree <<"\t}; " <<endl;
     write_dev_tree <<"}; " <<endl;
+#endif
     
 }
 
@@ -300,7 +325,7 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     // TODO: why these buffer sizes are hardcoded ? why using only 2 buffers ?
     //unsigned long fred_input_buff_size = 1048576;
     //unsigned long fred_output_buff_size = 32768;
-
+    fs::current_path(Project_dir);
     try {
     
         ofstream write_fred_arch, write_fred_hw;

@@ -275,7 +275,7 @@ void check_yaml(void){
     // checking for unsupported keys under the root
     for(YAML::const_iterator it=config.begin();it!=config.end();++it) {
         key_name = it->first.as<std::string>();
-        if (key_name != "dart" && key_name != "skip_ip_synthesis" && key_name != "skip_static_synthesis" && key_name != "pblocks_xdc" ){
+        if (key_name != "dart" && key_name != "skip_ip_synthesis" && key_name != "skip_static_synthesis" && key_name != "skip_implementation" && key_name != "pblocks_xdc" ){
             cerr << "ERROR: unexpected key '" << key_name << "' under the YAML root" << endl;
             exit(EXIT_FAILURE);
         }
@@ -302,6 +302,17 @@ void check_yaml(void){
         exit(EXIT_FAILURE);
     } catch (...) {
         cerr << "ERROR: key 'skip_static_synthesis' must be True or False" << endl;
+        exit(EXIT_FAILURE);
+    }
+    try{
+        if (config["skip_implementation"]){
+            test = config["skip_implementation"].as<bool>();
+        }
+    } catch (const std::exception &e) {
+        cerr << "ERROR: key 'skip_implementation' must be True or False" << endl;
+        exit(EXIT_FAILURE);
+    } catch (...) {
+        cerr << "ERROR: key 'skip_implementation' must be True or False" << endl;
         exit(EXIT_FAILURE);
     }
     // test the pblock XDC file. this key is optional 
