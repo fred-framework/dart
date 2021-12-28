@@ -1,0 +1,23 @@
+dart:
+    partitions: 
+      - hw_ips:
+        - ip_name: "sum_vec"
+          top_name: "sum_vec_top"
+          timeout: 1000
+          buffers: [32768, 32768, 32768]
+        - ip_name: "sub_vec"
+          top_name: "sub_vec_top"
+          timeout: 1000
+          buffers: [32768, 32768, 32769]
+        - ip_name: "mul_vec"
+          top_name: "mul_vec_top"
+          timeout: 1000
+          buffers: [32768, 32768, 32769]
+        - ip_name: "xor_vec"
+          top_name: "xor_vec_top"
+          timeout: 1000
+          buffers: [32768, 32768, 32770]
+        - ip_name: "nor_vec"
+          top_name: "nor_vec_top"
+          timeout: 1000
+          buffers: [32768, 32768, 32770]

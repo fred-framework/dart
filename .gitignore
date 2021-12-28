@@ -1,4 +1,13 @@
+#################################################
+# removing the files generated during the tutorials
+#################################################
+docs/tutorial/**/dart
+docs/tutorial/**/vivado*
+docs/tutorial/**/fred.tar.gz
+
+#################################################
 bin/run_*
+bin/dart
 
 #################################################
 # place your DART design under this directory 
