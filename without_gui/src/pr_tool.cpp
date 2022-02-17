@@ -1290,10 +1290,10 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
 #elif FPGA_ZCU_102
      write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
-     write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.2 [current_project] " <<endl;
+     write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.4 [current_project] " <<endl;
 #elif FPGA_US_96
      write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu3eg-sbva484-1-e" <<endl;
-     write_static_tcl << "set_property board_part em.avnet.com:ultra96v2:part0:1.0 [current_project]" <<endl;
+     write_static_tcl << "set_property board_part em.avnet.com:ultra96v2:part0:1.2 [current_project]" <<endl;
 #else
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
     write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
@@ -1314,7 +1314,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "endgroup " <<endl;
 #elif FPGA_US_96
     write_static_tcl << "startgroup " <<endl;
-    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.2 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.3 zynq_ultra_ps_e_0" <<endl; //TODO: PS must be templated
     write_static_tcl << "endgroup " <<endl;
 #endif
 
