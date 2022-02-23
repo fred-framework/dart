@@ -1,5 +1,13 @@
 #include <fstream>
 
+/*
+  TODO: zynq-7000 devices are 32 bits, therefore, C_M_AXI_MEM_BUS_ADDR_WIDTH = 32
+    acc_wrapper << "parameter    C_M_AXI_MEM_BUS_ADDR_WIDTH = 32;" <<endl;
+ However, for Ultrascale devices, C_M_AXI_MEM_BUS_ADDR_WIDTH could be 64 bits.
+
+ At this moment, even for Ultrascale devices, C_M_AXI_MEM_BUS_ADDR_WIDTH is fixed to 32 bits. 
+ Thus, when using a dart-generated design, make sure that FRED server is compiled without the define `HW_TASKS_A64`, to make it compatible with 32 bits
+*/ 
 #define create_acc_wrapper(top, rm_tag, partition_id)\
 {\
     ofstream acc_wrapper;  \

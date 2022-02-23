@@ -597,7 +597,7 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
 #elif FPGA_ZCU_102
     write_synth_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
 #elif FPGA_US_96
-    write_synth_tcl << "set part xczu3eg-sbva484-1-e" <<endl;
+    write_synth_tcl << "set part xczu3eg-sbva484-1-i" <<endl;
 #else
      write_synth_tcl << "set part xc7z010clg400-1" <<endl;
 #endif
@@ -1049,7 +1049,7 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
 #elif FPGA_ZCU_102
     write_impl_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
 #elif FPGA_US_96
-    write_impl_tcl << "set part xczu3eg-sbva484-1-e" <<endl;
+    write_impl_tcl << "set part xczu3eg-sbva484-1-i" <<endl;
 #else
      write_impl_tcl << "set part xc7z010clg400-1" <<endl;
 #endif

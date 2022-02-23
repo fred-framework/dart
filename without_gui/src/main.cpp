@@ -28,7 +28,7 @@ void usage(){
     cout << "  - FPGA device: xczu9eg-ffvb1156-2-e" <<endl;
     #elif FPGA_US_96
     cout << "  - Ultra96-V2 board;" <<endl;
-    cout << "  - FPGA device: xczu3eg-sbva484-1-e" <<endl;
+    cout << "  - FPGA device: xczu3eg-sbva484-1-i" <<endl;
     #else
         #error "FPGA not suported!"
     #endif    
