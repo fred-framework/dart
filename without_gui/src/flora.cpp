@@ -77,15 +77,7 @@ void flora::clear_vectors()
 
 void flora::prep_input()
 {
-    //unsigned long row, col;
     int i, clbs, brams, dsps;
-    //unsigned int ptr;
-    //string str;
-    // TODO remove CSV and replace it by YAML
-    //CSVData csv_data(flora_input->path_to_input);
-
-    //row = csv_data.rows();
-    //col = csv_data.columns();
 
     cout << endl << "FLORA: resource requirement of the input slots " <<endl;
     cout << "\t clb " << " \t bram " << "\t dsp " <<endl;

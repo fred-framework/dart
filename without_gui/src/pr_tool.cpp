@@ -112,12 +112,6 @@ pr_tool::pr_tool(string path_to_output)
             fl_inst->generate_xdc(fplan_xdc_file);
         }
 
-// TODO: that's BAD. I had to duplicate the attribute use ila here and in the main to support both part and flora modes
-// #ifdef WITH_PARTITIONING
-//         use_ila = input_pr->use_ila;
-// #else
-//         use_ila = in_flora.use_ila;
-// #endif
         //generate static hardware
         generate_static_part(fl_inst);
 
@@ -322,9 +316,6 @@ void pr_tool::generate_fred_files(flora *fl_ptr)
     int k, i,j, bitstream_id = 100;
     unsigned long partitions;
     std::string str, src, dest;
-    // TODO: why these buffer sizes are hardcoded ? why using only 2 buffers ?
-    //unsigned long fred_input_buff_size = 1048576;
-    //unsigned long fred_output_buff_size = 32768;
     fs::current_path(Project_dir);
     try {
     
@@ -509,7 +500,6 @@ void pr_tool::prep_proj_directory()
     
     try{
         cout << "PR_TOOL: creating project directory "<<endl;
-        //TODO: check if directory exists
         fs::create_directories(Src_path);
         fs::create_directories(Src_path / fs::path("project"));
         fs::create_directories(Src_path / fs::path("constraints"));
@@ -1041,16 +1031,6 @@ void pr_tool::parse_synthesis_report()
     }
         
         write_flora_input.close();
-/*
-#ifdef WITH_PARTITIONING 
-        in_flora = {num_rm_modules, Project_dir +"/flora_input.csv", input_pr->static_top_module};
-#else
-        //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv", input_pr->static_top_modul};
-        //TODO: replace this CSV by YAML
-        //in_flora = {num_rm_partitions, Project_dir +"/flora_input.csv",};
-        in_flora = {num_rm_partitions};
-#endif
-*/
 }
 
 void pr_tool::generate_impl_tcl(flora *fl_ptr)
@@ -1324,10 +1304,10 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     //create the project
 #ifdef FPGA_PYNQ
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z020clg400-1 " <<endl;  
-    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
+    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl;
 #elif FPGA_ZYNQ
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
-    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
+    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl;
 #elif FPGA_ZCU_102
      write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
      write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.4 [current_project] " <<endl;
@@ -1338,7 +1318,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
      write_static_tcl << "set_property board_part avnet.com:ultra96v2:part0:1.2 [current_project]" <<endl;
 #else
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
-    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl; //TODO: define Board
+    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl;
 #endif
 
     write_static_tcl << "set_property  ip_repo_paths "<<ip_repo_path<<" [current_project]" <<endl;
@@ -1347,7 +1327,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "update_compile_order -fileset sources_1 " <<endl;
 #if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
     write_static_tcl << "startgroup " <<endl;
-    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0" <<endl; //TODO: PS must be templated
+    write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0" <<endl;
     write_static_tcl << "endgroup " <<endl;
 #elif defined (FPGA_ZCU_102) || defined (FPGA_US_96)
     write_static_tcl << "startgroup " <<endl;

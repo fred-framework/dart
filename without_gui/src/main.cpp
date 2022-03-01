@@ -553,11 +553,6 @@ int main(int argc, char* argv[])
     input_to_flora in_flora;
     // the mandatory arguments for flora
     in_flora.num_rm_modules = atol(argv[1]);
-    //in_flora.type_of_fpga = (fpga_type) atol(argv[2]);
-    //in_flora.path_to_input = argv[2];
-    // set the optinal arguments
-    // TODO: that's BAD. attributes in input_to_flora and input_to_pr are duplicated 
-    //in_flora.use_ila = use_ila;
 
     flora fl(&in_flora);
     fl.clear_vectors();
