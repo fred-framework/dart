@@ -39,7 +39,7 @@ fi
 # prepare for running DART
 mkdir -p dart
 cd dart
-${DART_HOME}/bin/dart ../1rr.yaml
+${DART_HOME}/bin/dart ../dart.yaml
 cd fred
 tar czf ../../fred.tar.gz .
 cd ../..

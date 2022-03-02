@@ -167,21 +167,21 @@ The example above shows that the generated design has a single partition called 
 ```bash
 $ cat hw_tasks.csv
 # FRED hw-tasks description file. 
- # Warning: This file must match synthesized hardware! 
- 
+# Warning: This file must match synthesized hardware! 
+
 # Each line defines a HW-Tasks: 
- # <name>, <hw_id>, <partition>, <bistream_path>, <buff_0_size>, ... <buff_7_size> 
- # Note: the association between a hw-task and its partition 
- # it's defined during the synthesis flow! Here is specified only 
- # to guess the number of bistreams and their length. 
+# <name>, <hw_id>, <partition>, <bistream_path>, <buff_0_size>, ... <buff_7_size> 
+# Note: the association between a hw-task and its partition 
+# it's defined during the synthesis flow! Here is specified only 
+# to guess the number of bistreams and their length. 
+
+# example: 
+# "ex_hw_task, 64, ex_partition, bits, 1024, 1024, 1024" 
+# defines a hw-task named "ex_hw_task", with id 64, allocated on a 
+# partition named "ex_partition", whose bitstreams are located in 
+# the "/bits" folder, and uses three input/output buffers of size 1024 bytes. 
  
- # example: 
- # "ex_hw_task, 64, ex_partition, bits, 1024, 1024, 1024" 
- # defines a hw-task named "ex_hw_task", with id 64, allocated on a 
- # partition named "ex_partition", whose bitstreams are located in 
- # the "/bits" folder, and uses three input/output buffers of size 1024 bytes. 
- 
- memcpy, 100, 1000, p0, dart_fred/bits, 32768, 32768
+memcpy, 100, 1000, p0, dart_fred/bits, 32768, 32768
 ```
 
 The CSV file presented above shows the corresponding `hw_tasks.csv` file for the same example design. It shows the name of the IP, its FRED Hw ID, its timeout, the partition it is assigned, the bitstream location, and the sizes of the input and output buffers. If the design has multiple IPs, each one appears in a different line. DART assumes the following conventions:
@@ -191,7 +191,7 @@ The CSV file presented above shows the corresponding `hw_tasks.csv` file for the
  - bitstream location is fixed, i.e. it is always *dart_fred/bits*;
  - the number and sizes of the buffers correspond to the information provided in the YAML file.
 
-Finally, the `static.dts` file represents the devicetree to be included in the Linux OS so that the new partitions are recognized by Linux. For this example with one partition, this file is like this, depending on the target board:
+Finally, the `static.dts` file represents the devicetree to be included in the Linux OS so that the new partitions are recognized by Linux. For this example with one partition, the devicetree  file would be like this, depending on the target board:
 
 ```
 	amba {
@@ -208,12 +208,11 @@ Finally, the `static.dts` file represents the devicetree to be included in the L
 			reg = <0x43c10000 0x10000>;
 		};
 	};
-};
 ```
 
 ### Example with two partitions and FRED
 
-In this example we show how to run DART with two partitions where each partition has only one slot. Two IPs from *DART IPs* are used: `sub_vec` and `sum_vec`. This step-by-step tutorial assumes partitioning mode OFF and FPGA=pynq. A [Pynq board](https://digilent.com/reference/programmable-logic/pynq-z1/start) is required to run the example in the FPGA. We are also assuming that the FRED server is already installed in the FPGA.
+In this example we show how to run DART with two partitions where each partition has only one slot. Two IPs from *DART IPs* are used: `sum_vec` and `sub_vec`. This step-by-step tutorial assumes partitioning mode OFF and FPGA=pynq. A [Pynq board](https://digilent.com/reference/programmable-logic/pynq-z1/start) is required to run the example in the FPGA. We are also assuming that the FRED server is already installed in the FPGA.
 
 #### Running DART
 
@@ -222,23 +221,23 @@ Let's follow these steps to create a DART design integrated with FRED.
 
 ```bash
 $ mkdir -p ~/2ips/dart
-cd ~/2ips
-nano 2ips.yaml
+$ cd ~/2ips
+$ nano 2ips.yaml
 ```
 
-Write the YAML file with the following content, meaning that the `sub_vec` IP is mapped to partition 0 and the `sum_vec` IP is mapped to partition 1.
+Write the YAML file with the following content, meaning that the `sum_vec` IP is mapped to partition 0 and the `sub_vec` IP is mapped to partition 1.
 
 ```yaml
 dart:
     partitions: 
       - hw_ips:
-        - ip_name: "sub_vec"
-          top_name: "sub_vec_top"
+        - ip_name: "sum_vec"
+          top_name: "sum_vec_top"
           timeout: 100000
           buffers: [32768, 32768, 32768]
       - hw_ips:
-        - ip_name: "sum_vec"
-          top_name: "sum_vec_top"
+        - ip_name: "sub_vec"
+          top_name: "sub_vec_top"
           timeout: 100000
           buffers: [32768, 32768, 32768]
 ```
@@ -271,9 +270,9 @@ $ tree
 ├── dart_fred
     └── bits
         ├── p0
-        │   └── sub_vec_s0.bin
-        ├── p1
         │   └── sum_vec_s0.bin
+        ├── p1
+        │   └── sub_vec_s0.bin
         └── static.bin
 ```
 
@@ -287,104 +286,53 @@ p1, 1
 ```
 
 This file maps the IPs to their partitions. So, for instance, 
-the IP `sub_vec` has FRED ID `100` and it is assigned to partition `p0`.
+the IP `sum_vec` has FRED ID `100` and it is assigned to partition `p0`.
 
 ```bash
 $ cat hw_tasks.csv
 ...
-sub_vec, 100, 1000, p0, dart_fred/bits, 32768, 32768, 32768 
-sum_vec, 101, 1000, p1, dart_fred/bits, 32768, 32768, 32768
+sum_vec, 100, 1000, p0, dart_fred/bits, 32768, 32768, 32768 
+sub_vec, 101, 1000, p1, dart_fred/bits, 32768, 32768, 32768
 ```
 
 For learning purposes, it's recommended to explore the generated Vivado design located in the **static_hw** directory. 
 
-Now, let's prepare the FPGA to receive the newly generated hardware design. In the FPGA terminal, create the directory for this example. 
-
-```bash
-$ mkdir -p ~/dart/2ips/
-```
-
-In the host computer, let's export the design to the FPGA board running the following commands in the terminal.
+Finally, let's package the resulting design so that later we can import it into FRED runtime:
 
 ```bash
 $ cd ~/2ips/dart/fred
 $ tar czf ../fred.tar.gz .
-$ scp ../fred.tar.gz username@fpga_ip:~/dart/2ips/
 ```
 
-Reboot the FPGA board. It's important to reboot the FPGA before loading a new hardware design for FRED.
+The next step would be to setup an adequate Linux image with FRED Framwork to run the designs generated by DART. For this purpose, please refer to [FRED Runtime documentation](https://fred-framework-docs.readthedocs.io/en/latest/docs/03_runtime/index.html) for further instructions. A ready to use Linux image is available `here <>`_ if you prefer to skip the Linux image generation and FRED Framework compilation processes.
+
+Now, assuming your are already running a FRED compatible Linux distribution, let's import the DART design to the FPGA board and start fred-server by running the following commands in the terminal:
 
 ```bash
-$ sudo shutdown -r now
+$ update_hw <user> <ip> <path>
+$ load_hw
+$ fred-server &
+fred_sys: building hw-tasks
+fred_sys: pars: parsing file: /opt/fredsys/hw_tasks.csv
+buff: buffer mapped at addresses: 0xffffa65f1000, length:1942168 
+fred_sys: loaded slot 0 bitstream for hw-task sum_vec, size: 1942168
+fred_sys: creating data buffer 0 of size 32768 for HW-task sum_vec
+fred_sys: creating data buffer 1 of size 32768 for HW-task sum_vec
+fred_sys: creating data buffer 2 of size 32768 for HW-task sum_vec
 ```
 
-Back in the FPGA terminal, the file `fred.tar.gz` must be found. Run the following script that extracts the file exported from DART and apply it to the FRED folders.
+The use of `update_hw` and `load_hw` is documented [here](https://github.com/fred-framework/meta-fred#updating-the-hardware-desgin). The parameters `update_hw <user> <ip> <path>` refer to the username, IP address, and full path to the `fred.tar.gz` file.
 
-```bash
-$ cd ~/dart/2ips/
-$ sudo su
-$ /fredsys/launch_fred_server.sh .
-   - Updating the FRED design ...
-   - Launching the FRED device drivers ...
-   - Loading the FPGA static part ...
-   - Launching the FRED server ...
-   - FRED server is up! Ready to run FRED applications ...
+In another terminal of the board, run:
+
 ```
-
-If the FRED server is not launched successfully, a red error message will appear instead of the messages showed above in green. Up to this part, we successfully loaded a new FRED design generated by DART in the FPGA. The next step is to run a FRED test application to check whether the design is actually running.
-
-#### Running the example in the FPGA
-
-
-Let's prepare the FPGA for the software execution:
-
-```bash
-$ cd ~/dart/
-$ mkdir -p 2ips/code/sub
-$ mkdir -p 2ips/code/sum
-```
-
-In the host computer side, copy the example software provided by DART IPs:
-
-
-```bash
-$ cd dart_ips/ips/sub_vec
-$ scp -r sw/ username@fpga_ip:~/dart/2ips/code/sub
-$ cd dart_ips/ips/sum_vec
-$ scp -r sw/ username@fpga_ip:~/dart/2ips/code/sum
-```
-
-Back to the FPGA terminal, let's compile the example applications.
-But, before, it's important to do a minor change in the example software for the `sum_vec` IP.
-
-```bash
-$ cd ~/dart/2ips/code/sum/src
-$ nano sum.c
-```
-
-Replace the line **const int hw_id = 100;** by **101**. Note that this value matches with the FRED hardware IP showed before in the **hw_tasks.csv** file.
-
-```bash
-$ cd ~/dart/2ips/code/sum/
-$ mkdir build; cd build
-$ cmake ..
-$ make
-Scanning dependencies of target synthetic
-[ 50%] Building C object CMakeFiles/synthetic.dir/src/sum.c.o
-[100%] Linking C executable ../synthetic
-[100%] Built target synthetic
-```
-
-Now let's run the sum application with FRED. This example sums 0 + 1.
-Feel free to change the input values to check the results generated by the FPGA.
-
-```bash
-$ ../synthetic
+$ sum-vec
+sum-vec 
  starting vector sum 
 fred_lib: connected to fred server!
-buff: buffer mapped at addresses: 0x36f5a000, length:32768 
-buff: buffer mapped at addresses: 0x36f24000, length:32768 
-buff: buffer mapped at addresses: 0x36f1c000, length:32768 
+buff: buffer mapped at addresses: 0xffff89bc1000, length:32768 
+buff: buffer mapped at addresses: 0xffff89a15000, length:32768 
+buff: buffer mapped at addresses: 0xffff89a0d000, length:32768 
 Match!
 Content of A[0:9]:
 [ 0 0 0 0 0 0 0 0 0 0 ] 
@@ -395,27 +343,6 @@ Content of C[0:9]:
 Fred finished
 ```
 
-The message **Match!** indicates that the test was successful. Otherwise, the message **Mismatch!** will appear.
+This example [application](https://github.com/fred-framework/meta-fred/tree/main/recipes-example/sum-vec) issues an FPGA offloading to perform the sum of two vectors. The message **Match!** indicates that the test was successful. Otherwise, the message **Mismatch!** will appear.
 
-Follow similar steps to test the `sub_vec` IP. In this case, the IP already has the correct FRED **hw_id**. So, no change is required. The expected output is:
-
-```bash
-$ ../synthetic
- starting vector sub 
-fred_lib: connected to fred server!
-buff: buffer mapped at addresses: 0x36fe7000, length:32768 
-buff: buffer mapped at addresses: 0x36fb1000, length:32768 
-buff: buffer mapped at addresses: 0x36fa9000, length:32768 
-Match!
-Content of A[0:9]:
-[ 2 2 2 2 2 2 2 2 2 2 ] 
-Content of B[0:9]:
-[ 1 1 1 1 1 1 1 1 1 1 ] 
-Content of C[0:9]:
-[ 1 1 1 1 1 1 1 1 1 1 ] 
-Fred finished
-```
-
-When FRED is running, it logs some performance data in the `\fredsys\log.txt`. It might be useful to explore this file to learn the kind of runtime information provided by FRED.
-
-So, this is the end of this initial tutorial. Feel free to play with DART, adding more IPs and configuring more partitions.
+Every time the hardware design is changed, it is important to reboot the board before loading the new device tree and fred-server. 

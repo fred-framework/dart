@@ -55,7 +55,7 @@ $ dmesg | tail -n 30
 [   63.400433] OF: overlay: WARNING: memory leak will occur if overlay removed, property: /__symbols__/overlay3
 ```
 
-The command [`update_hw`](https://github.com/fred-framework/meta-fred/blob/main/scripts/update_hw) fetches the new DART design and compile the new Linux devicetree segment, `load_hw` loads the new bitstream using `fpga-manager` device driver. Note that `dmesg` shows the devicetree messages. Always check these messages because they are a common source of mismatches in the hardware/software interface. Still in `dmesg` messages, note that the `fpga_manager` device driver is the modified one. See the message *Xilinx ZynqMP FPGA Manager Fmod*.
+The command [`update_hw`](https://github.com/fred-framework/meta-fred/blob/main/scripts/update_hw) fetches the new DART design and compile the new Linux devicetree segment, [`load_hw`](https://github.com/fred-framework/meta-fred/blob/main/scripts/load_hw) loads the new bitstream using `fpga-manager` device driver.
 
 Next we execute the FRED server, where it loads the bitstream into bufffers, according to the `hw_tasks.csv` configuration.
 

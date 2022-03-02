@@ -11,8 +11,9 @@ FRED manages the hw/sw interface, easing the Linux-based application design.
 
 [DART Installation](./docs/install.md)
 
-[Running DART](./docs/running.md)
+[Initial DART Example](./docs/example.md)
 
+[Additional DART Designs](./docs/tutorial/readme.md)
 
 ## Authors
 
