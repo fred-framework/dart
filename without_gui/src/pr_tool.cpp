@@ -262,7 +262,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 		//write_dev_tree <<"\t\t\t\txlnx,s-axi-ctrl-bus-addr-width = <0x8>;" <<endl;
 		//write_dev_tree <<"\t\t\t\txlnx,s-axi-ctrl-bus-data-width = <0x20>;" <<endl;
 		write_dev_tree <<"\t\t\t\tinterrupt-parent = <&gic>;" <<endl;
-		write_dev_tree <<"\t\t\t\tinterrupts = <0x0 " << std::hex << first_interrupt + i <<" 0x4>;" <<endl;
+		write_dev_tree <<"\t\t\t\tinterrupts = <0x0 0x" << std::hex << first_interrupt + i <<" 0x4>;" <<endl;
         write_dev_tree <<"\t\t\t}; " <<endl;
         write_dev_tree <<endl;
 
