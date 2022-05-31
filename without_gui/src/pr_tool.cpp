@@ -1003,21 +1003,36 @@ void pr_tool::parse_synthesis_report()
         dsps = config["dart"]["partitions"][i]["DSPs"].as<int>();
 #endif
         //write_flora_input <<extracted_res[i].clb + CLB_MARGIN <<"," ; 
-        write_flora_input << clbs + CLB_MARGIN <<"," ; 
+        //write_flora_input << clbs + CLB_MARGIN <<"," ; 
+        clbs += CLB_MARGIN; 
         
         if(brams > 0)
             //write_flora_input << extracted_res[i].bram + BRAM_MARGIN <<",";
-            write_flora_input << brams + BRAM_MARGIN <<",";
+            // write_flora_input << brams + BRAM_MARGIN <<",";
+            brams += BRAM_MARGIN;
         else
             //write_flora_input << extracted_res[i].bram << "," ;
-            write_flora_input << brams << "," ;
+            //write_flora_input << brams << "," ;
+            brams = 0;
 
         if(dsps > 0)
             //write_flora_input << extracted_res[i].dsp + DSP_MARGIN <<"," ;
-            write_flora_input << dsps + DSP_MARGIN <<"," ;
+            //write_flora_input << dsps + DSP_MARGIN <<"," ;
+            dsps += DSP_MARGIN;
         else
             //write_flora_input << extracted_res[i].dsp <<"," ;
-            write_flora_input << dsps <<"," ;
+            // write_flora_input << dsps <<"," ;
+            dsps = 0;
+
+#ifdef WITH_PARTITIONING         
+        config["dart"]["hw_ips"][i]["CLBs"] = clbs;
+        config["dart"]["hw_ips"][i]["BRAMs"] = brams;
+        config["dart"]["hw_ips"][i]["DSPs"] = dsps;
+#else
+        config["dart"]["partitions"][i]["CLBs"] = clbs;
+        config["dart"]["partitions"][i]["BRAMs"] = brams;
+        config["dart"]["partitions"][i]["DSPs"] = dsps;
+#endif
 
 #ifdef WITH_PARTITIONING
         //write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
