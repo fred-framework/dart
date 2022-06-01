@@ -988,8 +988,8 @@ void pr_tool::parse_synthesis_report()
     }
 
 #endif    
-    ofstream write_flora_input;
-    write_flora_input.open(Project_dir +"/flora_input.csv");
+    // ofstream write_flora_input;
+    // write_flora_input.open(Project_dir +"/flora_input.csv");
     int clbs, brams, dsps;
 #ifdef WITH_PARTITIONING         
     for(i = 0; i < num_rm_modules; i++){
@@ -1034,18 +1034,18 @@ void pr_tool::parse_synthesis_report()
         config["dart"]["partitions"][i]["DSPs"] = dsps;
 #endif
 
-#ifdef WITH_PARTITIONING
-        //write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
-        //write_flora_input << HW_WCET[i] << "," <<slacks[i]  ;
-        write_flora_input << 
-            config["dart"]["hw_ips"][i]["wcet"].as<int>() << "," << 
-            config["dart"]["hw_ips"][i]["slack_time"].as<int>();
-#endif
+// #ifdef WITH_PARTITIONING
+//         //write_flora_input << HW_WCET[i] << "," <<slacks[i] <<"," ;
+//         //write_flora_input << HW_WCET[i] << "," <<slacks[i]  ;
+//         write_flora_input << 
+//             config["dart"]["hw_ips"][i]["wcet"].as<int>() << "," << 
+//             config["dart"]["hw_ips"][i]["slack_time"].as<int>();
+// #endif
         //write_flora_input << rm_list[i].rm_tag <<endl;
-        write_flora_input <<endl;
+        // write_flora_input <<endl;
     }
         
-        write_flora_input.close();
+        // write_flora_input.close();
 }
 
 void pr_tool::generate_impl_tcl(flora *fl_ptr)
