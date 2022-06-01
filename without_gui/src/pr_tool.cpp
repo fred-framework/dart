@@ -176,8 +176,8 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 {
     int i, j, k;
     unsigned int num_partitions = 0;
-    // the 1st interrupt signal has value 89, the 2nd 90, and so on
-    unsigned int first_interrupt = 0x1d;
+    // the 1st interrupt signal depends on the fpga device
+    unsigned int first_interrupt;
     unsigned int first_reg_addr = 0xc0;
     ofstream write_dev_tree;
 
@@ -191,6 +191,12 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     
     write_dev_tree << "/* DART generated device tree overlay */"<<endl;
 #if defined (FPGA_ZCU_102) || defined (FPGA_US_96)
+    // the 1st interrupt signal has value 121-32 = 89, the 2nd 90, and so on
+    // https://support.xilinx.com/s/question/0D52E00006iHoK5SAK/device-tree-interrupt-number-for-plps-interrupt?language=en_US
+    // https://www.xilinx.com/support/documentation/user_guides/ug1085-zynq-ultrascale-trm.pdf
+    // chapter 13, table 13-1. 121-128 for pl_ps_irq0 and 136-143 for pl_ps_irq1.
+    first_interrupt = 89;
+
     write_dev_tree <<"/dts-v1/;" <<endl;
     write_dev_tree <<"/plugin/;" <<endl;
     write_dev_tree <<"/ { \n" <<endl;
@@ -287,6 +293,11 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 #endif
 
 #if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
+    // the 1st interrupt signal has value 61-32 = 29, the 2nd 30, and so on
+    // https://docs.xilinx.com/v/u/en-US/ug585-Zynq-7000-TRM
+    // chapter 7, table 7.4. Source PL. int numbers from 61:63 and 64:68
+    first_interrupt = 29;
+
     write_dev_tree <<"/ {"<<endl;
     write_dev_tree <<"\tamba {"<<endl;
     write_dev_tree << endl;
