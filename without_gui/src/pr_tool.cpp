@@ -268,7 +268,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 		//write_dev_tree <<"\t\t\t\txlnx,s-axi-ctrl-bus-addr-width = <0x8>;" <<endl;
 		//write_dev_tree <<"\t\t\t\txlnx,s-axi-ctrl-bus-data-width = <0x20>;" <<endl;
 		write_dev_tree <<"\t\t\t\tinterrupt-parent = <&gic>;" <<endl;
-		write_dev_tree <<"\t\t\t\tinterrupts = <0 " << first_interrupt <<" 4>;" <<endl;
+		write_dev_tree <<"\t\t\t\tinterrupts = <0 " <<std::dec << first_interrupt <<" 4>;" <<endl;
         write_dev_tree <<"\t\t\t}; " <<endl;
         write_dev_tree <<endl;
         first_interrupt ++;
@@ -307,7 +307,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         write_dev_tree <<"\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\treg = <0x43" <<std::hex << first_reg_addr + i <<"0000 0x10000>;" <<endl; 
         write_dev_tree <<"\t\t\tinterrupt-parent = <0x4>;" <<endl;
-        write_dev_tree <<"\t\t\tinterrupts = <0 " << first_interrupt <<" 4>; " <<endl;
+        write_dev_tree <<"\t\t\tinterrupts = <0 " <<std::dec << first_interrupt <<" 4>; " <<endl;
         write_dev_tree <<"\t\t}; " <<endl;
         write_dev_tree <<endl;
         first_interrupt ++;
