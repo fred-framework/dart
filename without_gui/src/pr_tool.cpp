@@ -176,6 +176,9 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 {
     int i, j, k;
     unsigned int num_partitions = 0;
+    // the partition names are p0, p1, p2, ...
+    // on ther other hand, the slot is always s0 because dart does not support multiple slots, as FRED supports
+    unsigned int partition_index=0;
     // the 1st interrupt signal depends on the fpga device
     unsigned int first_interrupt;
     unsigned int first_reg_addr = 0xc0;
@@ -260,7 +263,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         // write_dev_tree <<"\t\t\t\t}; " <<endl;
         // write_dev_tree <<endl;
 
-        write_dev_tree <<"\t\t\tslot_p"<<i<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tslot_p"<<partition_index<<"_s0@A00"<< std::hex << i <<"0000 { " <<endl;
 		//write_dev_tree <<"\t\t\t\tclock-names = \"ap_clk\";" <<endl;
 		//write_dev_tree <<"\t\t\t\tclocks = <&zynqmp_clk 71>;" <<endl;
 		write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
@@ -280,12 +283,13 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         // write_dev_tree <<endl;
         // write_dev_tree <<"\t\t}; " <<endl;
 
-        write_dev_tree <<"\t\t\tpr_decoupler_p"<<i<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\t\tpr_decoupler_p"<<partition_index<<"_s0@A00"<<std::hex << i+1<<"0000 { " <<endl;
 		//write_dev_tree <<"\t\t\t\tclock-names = \"aclk\";" <<endl;
 		//write_dev_tree <<"\t\t\t\tclocks = <&zynqmp_clk 71>;" <<endl;
 		write_dev_tree <<"\t\t\t\tcompatible = \"generic-uio\";" <<endl;
 		write_dev_tree <<"\t\t\t\treg = <0x0 0xA00"<<std::hex << i+1<<"0000 0x0 0x10000>;" <<endl;         
         write_dev_tree <<"\t\t\t}; " <<endl;
+        partition_index++;
     }
     write_dev_tree <<"\t\t}; " <<endl;
     write_dev_tree <<"\t}; " <<endl;
@@ -303,7 +307,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
     write_dev_tree <<"\tamba {"<<endl;
     write_dev_tree << endl;
     for (i = 0; i < num_partitions * 2; i+=2) {
-        write_dev_tree <<"\t\tslot_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
+        write_dev_tree <<"\t\tslot_p"<<partition_index<<"_s0@43"<<std::hex << first_reg_addr + i <<"0000 { " <<endl;
         write_dev_tree <<"\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\treg = <0x43" <<std::hex << first_reg_addr + i <<"0000 0x10000>;" <<endl; 
         write_dev_tree <<"\t\t\tinterrupt-parent = <0x4>;" <<endl;
@@ -312,11 +316,12 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
         write_dev_tree <<endl;
         first_interrupt ++;
 
-        write_dev_tree <<"\t\tpr_decoupler_p"<<i<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
+        write_dev_tree <<"\t\tpr_decoupler_p"<<partition_index<<"_s0@43"<<std::hex << first_reg_addr + i + 1<<"0000 { " <<endl;
         write_dev_tree <<"\t\t\tcompatible = \"generic-uio\";" <<endl;
         write_dev_tree <<"\t\t\treg =  <0x43" <<std::hex << first_reg_addr + i + 1 <<"0000 0x10000>;" <<endl; 
         write_dev_tree <<"\t\t}; " <<endl;
         write_dev_tree <<endl; 
+        partition_index++;
     }   
     write_dev_tree <<"\t}; " <<endl;
     write_dev_tree <<"}; " <<endl;
