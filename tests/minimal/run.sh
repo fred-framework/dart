@@ -40,7 +40,7 @@ do
     exit 1
  fi
  YAML_FILE=""
- if [[ $PART_MODE -eq "ON" ]]
+ if [[ "$PART_MODE" == "ON" ]]
  then
     YAML_FILE="../part-on.yaml"
  else
