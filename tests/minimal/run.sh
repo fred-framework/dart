@@ -2,14 +2,14 @@
 
 
 ############################################################
-# Check petalinux version                                  #
+# Check vivado version                                     #
 ############################################################
-peta_ver=$PETALINUX_VER
-if [[ "$peta_ver" != "2020.2" ]]
+if [[ -z "$XILINX_VIVADO" ]]
 then
     echo
-    echo "WARNINIG: Expecting petalinux 2020.2. The process is not tested with other versions..."
+    echo "ERROR: Expecting vivado 2020.2. The process is not tested with other versions..."
     echo
+    exit 1
 fi
 
 ############################################################
@@ -31,6 +31,8 @@ do
  PART_MODE=$(echo $n | cut -d "," -f 1)
  FPGA_BOARD=$(echo $n | cut -d "," -f 2)
  DIR_NAME="build_${PART_MODE}_${FPGA_BOARD}"
+ mkdir -p ${DIR_NAME}
+ cd ${DIR_NAME}
  DART_PATH="../../build/${DIR_NAME}/dart"
  if [[ ! -f ${DART_PATH} ]]
  then
@@ -38,15 +40,13 @@ do
     exit 1
  fi
  YAML_FILE=""
- if [[ PART_MODE -eq "ON" ]]
+ if [[ $PART_MODE -eq "ON" ]]
  then
     YAML_FILE="../part-on.yaml"
  else
     YAML_FILE="../part-off.yaml"
  fi
- mkdir -p ${DIR_NAME}
- cd ${DIR_NAME}
- CMD="${DART_PATH} ${PART_MODE}"
+ CMD="${DART_PATH} ${YAML_FILE}"
  echo
  echo
  echo "Executing DART: '${CMD}'"
