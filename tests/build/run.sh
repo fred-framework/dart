@@ -1,8 +1,9 @@
 #!/bin/bash
 
-#expected format: PARTITIONING_MODE, FPGA
+# Expected format of configuration.cfg: PARTITIONING_MODE, FPGA
+# Note that us_96 and zcu_102 boards are not implemented in partitioning mode.
 
-for n in $(cat ./configuration.cfg)
+for n in $(cat ../configuration.cfg)
 do
  PART_MODE=$(echo $n | cut -d "," -f 1)
  FPGA_BOARD=$(echo $n | cut -d "," -f 2)
@@ -17,7 +18,8 @@ do
  echo
  echo
  eval "${CMD}"
- CMD="nice -n 19 make -j 4 &"
+#  CMD="nice -n 19 make -j 4 &"
+ CMD="nice -n 19 make -j 4"
  echo
  echo
  echo "Compiling '${CMD}'"
@@ -25,9 +27,15 @@ do
  echo
  eval "${CMD}"
  status=$?
- [ $status -eq 0 ] && echo "Compilation successful" || echo "Compilation error"; exit 1
+ if [ $status -eq 0 ]
+ then
+    echo "Compilation successful"
+ else
+    echo "Compilation error"
+    exit 1
+ fi
  cd ..
- exit 0
+#  exit 0
 done
 wait
 echo "Compilation execution completed"

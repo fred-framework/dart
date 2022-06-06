@@ -98,7 +98,7 @@ pr_tool::pr_tool(string path_to_output)
 
         // generate the instance name, used in the xdc file and in the impl.tcl
         #ifdef WITH_PARTITIONING
-            fl_inst->generate_cell_name(from_solver.num_partition);
+            fl_inst->generate_cell_name(fl_inst->from_solver.num_partition);
         #else
             fl_inst->generate_cell_name(num_rm_partitions);
         #endif
