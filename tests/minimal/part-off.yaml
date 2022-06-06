@@ -3,4 +3,5 @@ dart:
       - hw_ips:
         - ip_name: "sum_vec"
           top_name: "sum_vec_top"
+          timeout: 1000
           buffers: [32768, 32768, 32768]

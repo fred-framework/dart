@@ -5,4 +5,5 @@ dart:
       top_name: "sum_vec_top"
       slack_time: 10000
       wcet: 100
+      timeout: 1000
       buffers: [32768, 32768, 32768]
