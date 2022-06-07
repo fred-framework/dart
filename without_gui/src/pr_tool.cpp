@@ -59,9 +59,7 @@ pr_tool::pr_tool(string path_to_output)
 #else
         cout << "PR_TOOL: num of partitions **** " << num_rm_partitions <<endl;
 #endif        
-        //cout << "PR_TOOL: type of FPGA pr_tool **** " << type <<endl;
         cout << "PR_TOOL: type of FPGA pr_tool **** " << fpga_type_name[type] <<endl;
-        //cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
         cout << "PR_TOOL: path for output pr_tool **** " <<     Project_dir  <<endl;
         
         //Instantiate flora
@@ -1340,7 +1338,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl;
 #elif FPGA_ZYNQ
     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
-    write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl;
+    write_static_tcl << "set_property board_part www.digilentinc.com:zybo:part0:1.0 [current_project] " <<endl;
 #elif FPGA_ZCU_102
      write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
      write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.4 [current_project] " <<endl;
