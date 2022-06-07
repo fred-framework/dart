@@ -13,6 +13,7 @@ using namespace std;
 
 extern YAML::Node config;
 
+
 pr_tool::pr_tool(string path_to_output) 
 //pr_tool::pr_tool(input_to_pr *pr_input) 
 {
@@ -42,24 +43,14 @@ pr_tool::pr_tool(string path_to_output)
     }         
 #endif
 
-#ifdef FPGA_ZYNQ
-    type = TYPE_ZYNQ;
-#elif FPGA_PYNQ 
-    type = TYPE_PYNQ;
-#elif FPGA_ZCU_102
-    type = TYPE_ZCU_102;
-#elif FPGA_US_96
-    type = TYPE_US_96;
-#else
-    type = TYPE_ZYNQ;
-#endif
 
 #ifdef WITH_PARTITIONING
         cout << "PR_TOOL: num of slots  **** " << num_rm_modules <<endl;
 #else
         cout << "PR_TOOL: num of partitions **** " << num_rm_partitions <<endl;
-#endif        
-        cout << "PR_TOOL: type of FPGA pr_tool **** " << fpga_type_name[type] <<endl;
+#endif
+        cout << "PR_TOOL: FPGA board **** " << fpga_board_name[ftype] <<endl;
+        cout << "PR_TOOL: FPGA device **** " << fpga_device_name[ftype] <<endl;
         cout << "PR_TOOL: path for output pr_tool **** " <<     Project_dir  <<endl;
         
         //Instantiate flora
@@ -635,20 +626,8 @@ void pr_tool::generate_synthesis_tcl(flora *fl_ptr)
                         "### Define Part, Package, Speedgrade \n" <<
                         "###############################################################"<<endl;
 
-    //TODO:automate FPGA type here
-#ifdef FPGA_PYNQ
-     write_synth_tcl << "set part xc7z020clg400-1" <<endl;
-#elif FPGA_ZYNQ
-     write_synth_tcl << "set part xc7z010clg400-1" <<endl;
-#elif FPGA_ZCU_102
-    write_synth_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
-#elif FPGA_US_96
-    write_synth_tcl << "set part xczu3eg-sbva484-1-i" <<endl;
-#else
-     write_synth_tcl << "set part xc7z010clg400-1" <<endl;
-#endif
-
-    write_synth_tcl << "check_part $part" <<endl;
+     write_synth_tcl << "set part " << fpga_device_name[ftype] <<endl;
+     write_synth_tcl << "check_part $part" <<endl;
 
      write_synth_tcl << "####flow control" <<endl;
      write_synth_tcl << "set run.topSynth       0" <<endl;
@@ -1091,21 +1070,8 @@ void pr_tool::generate_impl_tcl(flora *fl_ptr)
      write_impl_tcl << "############################################################### \n" <<
                         "### Define Part, Package, Speedgrade \n" <<
                         "###############################################################"<<endl;
-
-    //TODO:automate FPGA type here
-#ifdef FPGA_PYNQ
-     write_impl_tcl << "set part xc7z020clg400-1" <<endl;
-#elif FPGA_ZYNQ
-     write_impl_tcl << "set part xc7z010clg400-1" <<endl;
-#elif FPGA_ZCU_102
-    write_impl_tcl << "set part xczu9eg-ffvb1156-2-e" <<endl;
-#elif FPGA_US_96
-    write_impl_tcl << "set part xczu3eg-sbva484-1-i" <<endl;
-#else
-     write_impl_tcl << "set part xc7z010clg400-1" <<endl;
-#endif
-
-    write_impl_tcl << "check_part $part" <<endl;
+     write_impl_tcl << "set part " << fpga_device_name[ftype] <<endl;
+     write_impl_tcl << "check_part $part" <<endl;
 
      write_impl_tcl << "####flow control" <<endl;
      write_impl_tcl << "set run.topSynth       0" <<endl;
@@ -1331,20 +1297,21 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     
     static_hw_script = Project_dir + "/static.tcl";
     write_static_tcl.open(static_hw_script);
+    write_static_tcl << "create_project dart_project -force " << static_dir << " -part " << fpga_device_name[ftype] <<endl;  
 
     //create the project
 #ifdef FPGA_PYNQ
-    write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z020clg400-1 " <<endl;  
+    // write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z020clg400-1 " <<endl;  
     write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl;
 #elif FPGA_ZYNQ
-    write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
-    write_static_tcl << "set_property board_part www.digilentinc.com:zybo:part0:1.0 [current_project] " <<endl;
+    // write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
+    write_static_tcl << "set_property board_part digilentinc.com:zybo:part0:1.0 [current_project] " <<endl;
 #elif FPGA_ZCU_102
-     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
+    //  write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
      write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.4 [current_project] " <<endl;
 #elif FPGA_US_96
      //write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu3eg-sbva484-1-e" <<endl;
-     write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu3eg-sbva484-1-i" <<endl;
+    //  write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu3eg-sbva484-1-i" <<endl;
      //write_static_tcl << "set_property board_part em.avnet.com:ultra96v2:part0:1.2 [current_project]" <<endl;
      write_static_tcl << "set_property board_part avnet.com:ultra96v2:part0:1.2 [current_project]" <<endl;
 #else

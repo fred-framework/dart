@@ -10,14 +10,31 @@ using namespace std;
 
 extern YAML::Node config;
 
-char const *fpga_type_name[]= {
-    "zynq",
-    "virtex",
-    "virtex5",
-    "pynq",
-    "ultrascale zcu-102",
-    "ultra96"
+char const *fpga_board_name[]= {
+    "Zybo board",
+    "Pynq board",
+    "ultrascale ZCU-102 board",
+    "ultra96-v2 board"
 };
+
+char const *fpga_device_name[]= {
+    "xc7z010clg400-1",
+    "xc7z020clg400-1",
+    "xczu9eg-ffvb1156-2-e",
+    "xczu3eg-sbva484-1-i"
+};
+
+#ifdef FPGA_ZYNQ
+    const fpga_type ftype = TYPE_ZYNQ;
+#elif FPGA_PYNQ 
+    const fpga_type ftype  = TYPE_PYNQ;
+#elif FPGA_ZCU_102
+    const fpga_type ftype  = TYPE_ZCU_102;
+#elif FPGA_US_96
+    const fpga_type ftype  = TYPE_US_96;
+#else
+    #error "FPGA not suported!"
+#endif
 
 //flora::flora(input_to_flora *input_fl)
 flora::flora()

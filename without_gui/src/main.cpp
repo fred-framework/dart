@@ -9,6 +9,8 @@
 // lets make the configuration file global, against all recommendations
 YAML::Node config;
 
+
+
 void usage(){
     cout << "Dart, rev "<< GIT_REV << ", 2021, ReTiS Laboratory, Scuola Sant'Anna, Pisa, Italy\n";
     cout << "Last commit time: " << GIT_DATE <<endl;
@@ -17,21 +19,9 @@ void usage(){
     #else
     cout << "  - Partitioning mode OFF;" <<endl;
     #endif
-    #ifdef FPGA_PYNQ
-    cout << "  - Pynq board;" <<endl;
-    cout << "  - FPGA device: xc7z020clg400-1" <<endl;
-    #elif FPGA_ZYNQ
-    cout << "  - Zynq board;" <<endl;
-    cout << "  - FPGA device: xc7z010clg400-1" <<endl;
-    #elif FPGA_ZCU_102
-    cout << "  - Zynq board;" <<endl;
-    cout << "  - FPGA device: xczu9eg-ffvb1156-2-e" <<endl;
-    #elif FPGA_US_96
-    cout << "  - Ultra96-V2 board;" <<endl;
-    cout << "  - FPGA device: xczu3eg-sbva484-1-i" <<endl;
-    #else
-        #error "FPGA not suported!"
-    #endif    
+    cout << "  - " << fpga_board_name[ftype] <<endl;
+    cout << "  - FPGA device: " << fpga_device_name[ftype] <<endl;
+   
     cout << "Usage:\n";
     cout << "  dart <YAML file>\n";
     cout << "Environment variables:\n";

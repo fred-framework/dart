@@ -25,14 +25,14 @@ class fp;
 
 enum fpga_type {
     TYPE_ZYNQ = 0,
-    TYPE_VIRTEX,
-    TYPE_VIRTEX_5,
     TYPE_PYNQ,
     TYPE_ZCU_102,
     TYPE_US_96
 };
 
-extern char const *fpga_type_name[];
+extern const fpga_type ftype;
+extern char const *fpga_board_name[];
+extern char const *fpga_device_name[];
 
 typedef std::vector<pos> position_vec;
 typedef std::vector<std::vector<unsigned long>> vec_2d;
@@ -79,7 +79,7 @@ public:
     unsigned long num_rm_partitions = 0;
 #endif
     //enum fpga_type type = ZYNQ;
-    enum fpga_type type;
+    //enum fpga_type type;
     unsigned long connections = 0;
 
     std::vector<unsigned long> clb_vector =  std::vector<unsigned long>(MAX_SLOTS);
