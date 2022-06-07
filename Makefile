@@ -56,13 +56,6 @@ SOURCES_SHARED = src/csv_data_manipulator.cpp include/fpga.h without_gui/src/mai
 ifeq ($(FPGA),PYNQ)
 SOURCES_SHARED += include/pynq.h src/pynq.cpp include/pynq_fine_grained.h src/pynq_fine_grained.cpp
 CFLAGS += -DFPGA_PYNQ
-else ifeq ($(FPGA),ZYNQ)
-SOURCES_SHARED += include/zynq.h src/zynq.cpp include/zynq_fine_grained.h src/zynq_fine_grained.cpp
-CFLAGS += -DFPGA_ZYNQ
-# remove the default value. this way LOWER_FPGA will work
-#else 
-#SOURCES_SHARED += include/zynq.h src/zynq.cpp include/zynq_fine_grained.h src/zynq_fine_grained.cpp
-#CFLAGS += -DFPGA_ZYNQ
 else ifeq ($(FPGA),US)
 SOURCES_SHARED += include/ultrascale.h src/us.cpp include/ultrascale_fine_grained.h src/us_fine_grained.cpp
 CFLAGS += -DFPGA_US

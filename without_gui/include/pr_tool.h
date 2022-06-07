@@ -23,10 +23,6 @@
 #define CLB_MARGIN  150
 #define BRAM_MARGIN 10
 #define DSP_MARGIN  10
-#elif FPGA_ZYNQ
-#define CLB_MARGIN 30
-#define BRAM_MARGIN 0
-#define DSP_MARGIN  0
 #else
 #define CLB_MARGIN  30
 #define BRAM_MARGIN  0

@@ -16,7 +16,6 @@ DART has been tested with:
 The supported FPGAs are:
 
  - [Pynq board](https://store.digilentinc.com/pynq-z1-python-productivity-for-zynq-7000-arm-fpga-soc/): with device XC7Z020-1CLG400C;
- - [Zybo board](https://reference.digilentinc.com/programmable-logic/zybo/start): with the device XC7Z010-1CLG400C; 
  - [ZCU102 board](https://www.xilinx.com/products/boards-and-kits/ek-u1-zcu102-g.html): with Zynq UltraScale+ XCZU9EG-2FFVB1156 MPSoC;
  - [Ultra96v2 board](https://www.avnet.com/wps/portal/us/products/new-product-introductions/npi/aes-ultra96-v2/): with device XCZU3EG-SBVA484-1-I.
 

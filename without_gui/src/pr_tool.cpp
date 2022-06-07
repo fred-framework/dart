@@ -286,7 +286,7 @@ void pr_tool::generate_fred_device_tree(flora *fl_ptr)
 
 #endif
 
-#if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
+#if defined(FPGA_PYNQ)
     // the 1st interrupt signal has value 61-32 = 29, the 2nd 30, and so on
     // https://docs.xilinx.com/v/u/en-US/ug585-Zynq-7000-TRM
     // chapter 7, table 7.4. Source PL. int numbers from 61:63 and 64:68
@@ -1303,9 +1303,6 @@ void pr_tool::generate_static_part(flora *fl_ptr)
 #ifdef FPGA_PYNQ
     // write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z020clg400-1 " <<endl;  
     write_static_tcl << "set_property board_part www.digilentinc.com:pynq-z1:part0:1.0 [current_project] " <<endl;
-#elif FPGA_ZYNQ
-    // write_static_tcl << "create_project dart_project -force " << static_dir << " -part xc7z010clg400-1 " <<endl;
-    write_static_tcl << "set_property board_part digilentinc.com:zybo:part0:1.0 [current_project] " <<endl;
 #elif FPGA_ZCU_102
     //  write_static_tcl << "create_project dart_project -force " << static_dir << " -part xczu9eg-ffvb1156-2-e" <<endl;
      write_static_tcl << "set_property board_part xilinx.com:zcu102:part0:3.4 [current_project] " <<endl;
@@ -1323,7 +1320,7 @@ void pr_tool::generate_static_part(flora *fl_ptr)
     write_static_tcl << "update_ip_catalog " <<endl;
     write_static_tcl << "create_bd_design \"dart\" " <<endl;
     write_static_tcl << "update_compile_order -fileset sources_1 " <<endl;
-#if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ)
+#if defined(FPGA_PYNQ)
     write_static_tcl << "startgroup " <<endl;
     write_static_tcl << "create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0" <<endl;
     write_static_tcl << "endgroup " <<endl;

@@ -12,7 +12,7 @@ using namespace std;
 string slot_names[] = {"slot_0", "slot_1", "slot_2", "slot_3",
                        "slot_4", "slot_5"};
 
-#if defined(FPGA_PYNQ) || defined(FPGA_ZYNQ) 
+#if defined(FPGA_PYNQ)
 #define generate_xdc_file(fpga_type, from_fp_solver, to_solver,  num_slots, cell_name, fplan_xdc_file)\
 {\
     unsigned long a;\

@@ -45,7 +45,7 @@ message(STATUS "Partitioning mode: '${PARTITIONING_MODE}'")
 
 set(FPGA "pynq" CACHE STRING
   "FPGA board chosen for DART")
-set(FPGAValues "pynq;zynq;zcu_102;us_96" CACHE STRING
+set(FPGAValues "pynq;zcu_102;us_96" CACHE STRING
   "List of possible FPGAs supported by DART")
 set_property(CACHE FPGA PROPERTY STRINGS ${FPGAValues})
 message(STATUS "Supported FPGA: '${FPGA}'")

@@ -7,10 +7,7 @@
 #include <string>
 
 #include "fine_grained.h"
-#ifdef FPGA_ZYNQ
-    #include "zynq_fine_grained.h"
-//    #include "zynq.h"
-#elif FPGA_PYNQ
+#ifdef FPGA_PYNQ
     #include "pynq_fine_grained.h"
 //    #include "pynq.h"
 #elif FPGA_ZCU_102
@@ -63,9 +60,7 @@ public:
     explicit flora();
     ~flora();
 
-#ifdef FPGA_ZYNQ
-    zynq_7010 *zynq;
-#elif FPGA_PYNQ
+#ifdef FPGA_PYNQ
     pynq *pynq_inst;
 #elif FPGA_ZCU_102
     ultrascale *us_inst;
