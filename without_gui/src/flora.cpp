@@ -10,6 +10,15 @@ using namespace std;
 
 extern YAML::Node config;
 
+char const *fpga_type_name[]= {
+    "zynq",
+    "virtex",
+    "virtex5",
+    "pynq",
+    "ultrascale zcu-102",
+    "ultra96"
+};
+
 //flora::flora(input_to_flora *input_fl)
 flora::flora()
 {

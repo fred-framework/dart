@@ -47,7 +47,7 @@ pr_tool::pr_tool(string path_to_output)
 #elif FPGA_PYNQ 
     type = TYPE_PYNQ;
 #elif FPGA_ZCU_102
-    type = TYPE_US;
+    type = TYPE_ZCU_102;
 #elif FPGA_US_96
     type = TYPE_US_96;
 #else
@@ -59,8 +59,8 @@ pr_tool::pr_tool(string path_to_output)
 #else
         cout << "PR_TOOL: num of partitions **** " << num_rm_partitions <<endl;
 #endif        
-        cout << "PR_TOOL: type of FPGA pr_tool **** " << type <<endl;
-        //cout << "PR_TOOL: type of FPGA pr_tool **** " << fpga_type_name[type] <<endl;
+        //cout << "PR_TOOL: type of FPGA pr_tool **** " << type <<endl;
+        cout << "PR_TOOL: type of FPGA pr_tool **** " << fpga_type_name[type] <<endl;
         //cout << "PR_TOOL: path for input pr_tool **** " << pr_input->path_to_input <<endl;
         cout << "PR_TOOL: path for output pr_tool **** " <<     Project_dir  <<endl;
         

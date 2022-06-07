@@ -6,23 +6,6 @@
 #include "csv_data_manipulator.hpp"
 #include <string>
 
-/*                                                                         
-#ifdef WITH_PARTITIONING                                                 
-    #include "fine_grained.h"                                            
-    #ifdef FPGA_ZYNQ                                                     
-        #include "zynq_fine_grained.h"                                   
-    #elif FPGA_PYNQ                                                      
-        #include "pynq_fine_grained.h"                                   
-    #endif                                                               
-#else                                                                    
-    #ifdef FPGA_ZYNQ                                                     
-        #include "zynq.h"                                                
-    #elif FPGA_PYNQ                                                      
-        #include "pynq.h"                                                
-    #endif                                                               
-#endif 
-*/
-
 #include "fine_grained.h"
 #ifdef FPGA_ZYNQ
     #include "zynq_fine_grained.h"
@@ -45,19 +28,11 @@ enum fpga_type {
     TYPE_VIRTEX,
     TYPE_VIRTEX_5,
     TYPE_PYNQ,
-    TYPE_US,
+    TYPE_ZCU_102,
     TYPE_US_96
 };
-/*
-const char * fpga_type_name[]= {
-    "zynq",
-    "virtex",
-    "virtex5",
-    "pynq",
-    "ultrascale",
-    "ultra96"
-};
-*/
+
+extern char const *fpga_type_name[];
 
 typedef std::vector<pos> position_vec;
 typedef std::vector<std::vector<unsigned long>> vec_2d;

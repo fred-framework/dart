@@ -1,3 +1,6 @@
+#ifndef PR_TOOL_H
+#define PR_TOOL_H
+
 #include <string.h>
 #include <vector>
 #include <sstream>
@@ -164,3 +167,5 @@ private:
 
     std::string exec(const char*  cmd);
 };
+
+#endif // PR_TOOL_H
