@@ -1519,20 +1519,22 @@ void pr_tool::generate_static_part(flora *fl_ptr)
         write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j-1)<<"/decouple_status] [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/decouple]" <<endl;
         if(config["dart"]["partitions"][i]["debug"]){
             write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_data] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_0_AXI]" <<endl;
-            write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/s_acc_data]" <<endl;
             write_static_tcl << "connect_bd_intf_net [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl] [get_bd_intf_pins system_ila_"<<std::to_string(i)<<"/SLOT_1_AXI]" <<endl;
-            write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
             write_static_tcl << "connect_bd_net [get_bd_pins pr_decoupler_"<<std::to_string(j)<<"/s_acc_interrupt_INTERRUPT] [get_bd_pins system_ila_"<<std::to_string(i)<<"/probe0]" <<endl;
             write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/resetn] [get_bd_pins acc_"<<std::to_string(i)<<"/ap_rst_n]" <<endl;
         }
 #ifdef FPGA_PYNQ
         if(config["dart"]["partitions"][i]["debug"]){
+            write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins acc_"<<std::to_string(i)<<"/s_acc_data]" <<endl;
+            write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_pins pr_decoupler_"<<std::to_string(j-1)<<"/rp_acc_ctrl]" <<endl;
             write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins processing_system7_0/FCLK_CLK0]" <<endl;
         }
 //TODO: add ila for US96_v2. It might be just a matter of replacing the following line, but this need to be confirmed 
 // #elif defined(FPGA_ZCU_102) || defined(FPGA_US_96)        
 #elif FPGA_ZCU_102
         if(config["dart"]["partitions"][i]["debug"]){
+            write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_nets pr_decoupler_"<<std::to_string(j)<<"_s_acc_data]" <<endl;
+            write_static_tcl << "set_property HDL_ATTRIBUTE.DEBUG {true} [get_bd_intf_nets pr_decoupler_"<<std::to_string(j-1)<<"_rp_acc_ctrl]" <<endl;
             write_static_tcl << "connect_bd_net [get_bd_pins system_ila_"<<std::to_string(i)<<"/clk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0]" <<endl;
         }
 #else
