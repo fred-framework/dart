@@ -243,7 +243,7 @@ void flora::start_optimizer()
     platform->recTimePerUnit[BRAM] = 1.0/4500.0;
     platform->recTimePerUnit[DSP]  = 1.0/4000.0;
 #endif
-    cout <<"FLORA: starting ULTRASCALE MILP optimizer " <<endl;
+    cout <<"FLORA: starting ZCU102 MILP optimizer " <<endl;
     us_start_optimizer(&param, &from_solver);
     cout <<"FLORA: finished MILP optimizer " <<endl;
 
